@@ -16,7 +16,7 @@ loginRedirectUrl =
 
 type Model
     = {- User is logged in, token is verified -} LoggedIn User Nav.Key
-    | {- User has not started the login process -} NotLoggedIn Nav.Key
+    | {- User has not started the login process -} NotLoggedIn (Maybe Http.Error) Nav.Key
     | {- User has logged in via twitch, but we have yet to validate the token and fetch user details -} PreValidation String Nav.Key
 
 
@@ -44,7 +44,7 @@ init url navKey =
             ( PreValidation token navKey, Cmd.map GotValidateTokenResponse (Twitch.validateToken token) )
 
         Nothing ->
-            ( NotLoggedIn navKey, Cmd.none )
+            ( NotLoggedIn Nothing navKey, Cmd.none )
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -57,8 +57,8 @@ update msg model =
 
                 GotValidateTokenResponse response ->
                     case response of
-                        Err _ ->
-                            Debug.todo "error handling"
+                        Err err ->
+                            ( NotLoggedIn (Just err) navKey, Cmd.none )
 
                         Ok value ->
                             ( LoggedIn { token = token, loginName = value.login, userID = value.userID } navKey, Cmd.none )
@@ -71,7 +71,7 @@ update msg model =
                 GotValidateTokenResponse _ ->
                     ( LoggedIn user navKey, Cmd.none )
 
-        NotLoggedIn navKey ->
+        NotLoggedIn _ navKey ->
             case msg of
                 UrlMsg urlMsg ->
                     ( model, handleUrlMsg urlMsg navKey )
@@ -96,6 +96,32 @@ handleUrlMsg msg navKey =
             Cmd.none
 
 
+errorToString : Http.Error -> String
+errorToString error =
+    let
+        networkProblem =
+            "Failed to connect to the server. Is your internet ok?"
+
+        generalProblem =
+            "There was a problem :("
+    in
+    case error of
+        Http.Timeout ->
+            networkProblem
+
+        Http.NetworkError ->
+            networkProblem
+
+        Http.BadUrl _ ->
+            generalProblem
+
+        Http.BadBody _ ->
+            generalProblem
+
+        Http.BadStatus _ ->
+            generalProblem
+
+
 view : Model -> Document Msg
 view model =
     { title = "Twitch schedule"
@@ -105,10 +131,16 @@ view model =
                 [ text ("user: " ++ Debug.toString user)
                 ]
 
-            NotLoggedIn _ ->
+            NotLoggedIn err _ ->
                 [ a
                     [ href (Twitch.loginFlowUrl TwitchConfig.clientId loginRedirectUrl) ]
                     [ text "Login" ]
+                , case err of
+                    Nothing ->
+                        text ""
+
+                    Just e ->
+                        text (errorToString e)
                 ]
 
             PreValidation _ _ ->
