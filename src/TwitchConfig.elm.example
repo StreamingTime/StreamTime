@@ -1,0 +1,6 @@
+module TwitchConfig exposing (..)
+
+
+clientId : String
+clientId =
+    "twitch_client_id"
