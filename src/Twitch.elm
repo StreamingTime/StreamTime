@@ -1,4 +1,4 @@
-module Twitch exposing (ValidateTokenResponse, accessTokenFromUrl, loginFlowUrl, validateToken)
+module Twitch exposing (ValidateTokenResponse, accessTokenFromUrl, decodeValidateTokenResponse, loginFlowUrl, validateToken)
 
 import Http
 import Json.Decode as Decode
