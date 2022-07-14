@@ -102,7 +102,7 @@ view model =
     , body =
         case model of
             LoggedIn user _ ->
-                [ text user.token
+                [ text ("user: " ++ Debug.toString user)
                 ]
 
             NotLoggedIn _ ->
