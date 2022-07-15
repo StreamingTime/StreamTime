@@ -2,6 +2,7 @@ module Main exposing (..)
 
 import Browser exposing (Document)
 import Browser.Navigation as Nav
+import Css
 import Css.Global
 import Html.Styled as Html exposing (Html, a, div, text, toUnstyled)
 import Html.Styled.Attributes exposing (css, href, style)
@@ -140,7 +141,7 @@ view model =
                             validationView
 
                         LoggedIn user _ ->
-                            appView user
+                            validationView
                     ]
                 ]
         ]
@@ -174,18 +175,29 @@ validationView =
         ]
         [ div
             [ css
-                [ Tw.w_16
-                , Tw.h_16
-                , Tw.border_4
-                , Tw.border_solid
-                , Tw.border_white
-                , Tw.rounded_full
-                , Tw.animate_spin
-                ]
-            , style "border-top-color" "transparent"
+                []
             ]
-            []
+            [ loadingSpinner [ Tw.w_16, Tw.h_16 ] ]
         ]
+
+
+loadingSpinner : List Css.Style -> Html Msg
+loadingSpinner styles =
+    div
+        [ css
+            (List.concat
+                [ styles
+                , [ Tw.border_4
+                  , Tw.border_solid
+                  , Tw.border_white
+                  , Tw.rounded_full
+                  , Tw.animate_spin
+                  ]
+                ]
+            )
+        , style "border-top-color" "transparent"
+        ]
+        []
 
 
 appView : User -> Html Msg
