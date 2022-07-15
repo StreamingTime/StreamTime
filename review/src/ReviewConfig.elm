@@ -11,17 +11,24 @@ when inside the directory containing this file.
 
 -}
 
-
 import Docs.ReviewAtDocs
 import NoDebug.Log
 import NoDebug.TodoOrToString
+import NoDuplicatePorts
 import NoExposingEverything
 import NoImportingEverything
+import NoInconsistentAliases
+import NoMissingSubscriptionsCall
 import NoMissingTypeAnnotation
 import NoMissingTypeAnnotationInLetIn
 import NoMissingTypeExpose
+import NoModuleOnExposedNames
 import NoPrematureLetComputation
+import NoRecursiveUpdate
+import NoRedundantCons
 import NoSimpleLetBody
+import NoSinglePatternCase
+import NoUnsafePorts
 import NoUnused.CustomTypeConstructorArgs
 import NoUnused.CustomTypeConstructors
 import NoUnused.Dependencies
@@ -30,16 +37,8 @@ import NoUnused.Modules
 import NoUnused.Parameters
 import NoUnused.Patterns
 import NoUnused.Variables
-import NoDuplicatePorts
-import NoUnsafePorts
 import NoUnusedPorts
-import NoInconsistentAliases
-import NoModuleOnExposedNames
-import NoMissingSubscriptionsCall
-import NoRecursiveUpdate
 import NoUselessSubscriptions
-import NoRedundantCons
-import NoSinglePatternCase
 import Review.Rule as Rule exposing (Rule)
 import Simplify
 
@@ -47,14 +46,17 @@ import Simplify
 config : List Rule
 config =
     [ Docs.ReviewAtDocs.rule
-    , NoDebug.Log.rule
-    , NoDebug.TodoOrToString.rule
-        |> Rule.ignoreErrorsForDirectories [ "tests/" ]
+
+    --, NoDebug.Log.rule
+    --, NoDebug.TodoOrToString.rule
+    --    |> Rule.ignoreErrorsForDirectories [ "tests/" ]
     , NoExposingEverything.rule
     , NoImportingEverything.rule []
     , NoMissingTypeAnnotation.rule
-    , NoMissingTypeAnnotationInLetIn.rule
+
+    -- NoMissingTypeAnnotationInLetIn.rule
     , NoMissingTypeExpose.rule
+        |> Rule.ignoreErrorsForFiles [ "src/Main.elm" ]
     , NoSimpleLetBody.rule
     , NoPrematureLetComputation.rule
     , NoUnused.CustomTypeConstructors.rule []
@@ -69,17 +71,17 @@ config =
     , NoDuplicatePorts.rule
     , NoUnsafePorts.rule NoUnsafePorts.any
     , NoUnusedPorts.rule
-    ,NoInconsistentAliases.config
+    , NoInconsistentAliases.config
         [ ( "Html.Styled.Attributes", "Attr" )
         , ( "Json.Decode", "Decode" )
         , ( "Json.Encode", "Encode" )
         , ( "Html.Styled", "Html" )
-        , ("Tailwind.Utilities", "Tw")
+        , ( "Tailwind.Utilities", "Tw" )
         ]
         |> NoInconsistentAliases.noMissingAliases
         |> NoInconsistentAliases.rule
     , NoModuleOnExposedNames.rule
-    ,NoMissingSubscriptionsCall.rule
+    , NoMissingSubscriptionsCall.rule
     , NoRecursiveUpdate.rule
     , NoUselessSubscriptions.rule
     , NoRedundantCons.rule
