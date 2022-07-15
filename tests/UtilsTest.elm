@@ -1,4 +1,4 @@
-module UtilsTest exposing (..)
+module UtilsTest exposing (concatMaybeListTest)
 
 import Expect
 import Test exposing (Test, describe, test)
