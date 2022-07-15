@@ -1,11 +1,11 @@
-module Main exposing (..)
+module Main exposing (main)
 
 import Browser exposing (Document)
 import Browser.Navigation as Nav
 import Css
 import Css.Global
 import Data exposing (Data(..))
-import Html.Styled as Html exposing (Html, a, div, img, text, toUnstyled)
+import Html.Styled exposing (Html, a, div, img, text, toUnstyled)
 import Html.Styled.Attributes exposing (css, href, src, style)
 import Http
 import Tailwind.Utilities as Tw
@@ -15,6 +15,7 @@ import Url
 import Utils
 
 
+loginRedirectUrl : String
 loginRedirectUrl =
     "http://localhost:8000/src/Main.elm"
 
@@ -50,7 +51,7 @@ type Msg
 
 type UrlMsg
     = LinkClicked Browser.UrlRequest
-    | UrlChanged Url.Url
+    | UrlChanged
 
 
 init : Url.Url -> Nav.Key -> ( Model, Cmd Msg )
@@ -155,7 +156,7 @@ handleUrlMsg msg navKey =
                 Browser.External href ->
                     Nav.load href
 
-        UrlChanged _ ->
+        UrlChanged ->
             Cmd.none
 
 
@@ -192,7 +193,7 @@ view model =
         [ toUnstyled <|
             div []
                 [ Css.Global.global Tw.globalStyles
-                , Html.div []
+                , div []
                     [ case model of
                         NotLoggedIn err _ ->
                             loginView err
@@ -225,7 +226,39 @@ loginView err =
 
 validationView : Html Msg
 validationView =
-    div [] [ text "Loading..." ]
+    div
+        [ css
+            [ Tw.h_screen
+            , Tw.flex
+            , Tw.items_center
+            , Tw.justify_center
+            ]
+        ]
+        [ div
+            [ css
+                []
+            ]
+            [ loadingSpinner [ Tw.w_16, Tw.h_16 ] ]
+        ]
+
+
+loadingSpinner : List Css.Style -> Html Msg
+loadingSpinner styles =
+    div
+        [ css
+            (List.concat
+                [ styles
+                , [ Tw.border_4
+                  , Tw.border_solid
+                  , Tw.border_white
+                  , Tw.rounded_full
+                  , Tw.animate_spin
+                  ]
+                ]
+            )
+        , style "border-top-color" "transparent"
+        ]
+        []
 
 
 appView : SignedInUser -> Data (List Twitch.User) -> Html Msg
@@ -289,5 +322,5 @@ main =
         , update = update
         , subscriptions = \_ -> Sub.none
         , onUrlRequest = \urlRequest -> UrlMsg (LinkClicked urlRequest)
-        , onUrlChange = \url -> UrlMsg (UrlChanged url)
+        , onUrlChange = \_ -> UrlMsg UrlChanged
         }
