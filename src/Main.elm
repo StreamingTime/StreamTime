@@ -1,10 +1,10 @@
-module Main exposing (..)
+module Main exposing (main)
 
 import Browser exposing (Document)
 import Browser.Navigation as Nav
 import Css
 import Css.Global
-import Html.Styled as Html exposing (Html, a, div, text, toUnstyled)
+import Html.Styled exposing (Html, a, div, text, toUnstyled)
 import Html.Styled.Attributes exposing (css, href, style)
 import Http
 import Tailwind.Utilities as Tw
@@ -13,6 +13,7 @@ import TwitchConfig
 import Url
 
 
+loginRedirectUrl : String
 loginRedirectUrl =
     "http://localhost:8000/src/Main.elm"
 
@@ -37,7 +38,7 @@ type Msg
 
 type UrlMsg
     = LinkClicked Browser.UrlRequest
-    | UrlChanged Url.Url
+    | UrlChanged
 
 
 init : Url.Url -> Nav.Key -> ( Model, Cmd Msg )
@@ -95,7 +96,7 @@ handleUrlMsg msg navKey =
                 Browser.External href ->
                     Nav.load href
 
-        UrlChanged _ ->
+        UrlChanged ->
             Cmd.none
 
 
@@ -132,7 +133,7 @@ view model =
         [ toUnstyled <|
             div []
                 [ Css.Global.global Tw.globalStyles
-                , Html.div []
+                , div []
                     [ case model of
                         NotLoggedIn err _ ->
                             loginView err
@@ -215,5 +216,5 @@ main =
         , update = update
         , subscriptions = \_ -> Sub.none
         , onUrlRequest = \urlRequest -> UrlMsg (LinkClicked urlRequest)
-        , onUrlChange = \url -> UrlMsg (UrlChanged url)
+        , onUrlChange = \_ -> UrlMsg UrlChanged
         }
