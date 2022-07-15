@@ -1,8 +1,47 @@
-module Twitch exposing (accessTokenFromUrl, loginFlowUrl)
+module Twitch exposing (ValidateTokenResponse, accessTokenFromUrl, decodeValidateTokenResponse, loginFlowUrl, validateToken)
 
+import Http
+import Json.Decode as Decode
 import Maybe exposing (andThen)
 import Url
 import Url.Builder
+
+
+type alias ValidateTokenResponse =
+    { clientID : String
+    , login : String
+    , userID : String
+    }
+
+
+validateToken : String -> Cmd (Result Http.Error ValidateTokenResponse)
+validateToken =
+    oAuthRequest "https://id.twitch.tv/oauth2/validate" decodeValidateTokenResponse
+
+
+decodeValidateTokenResponse : Decode.Decoder ValidateTokenResponse
+decodeValidateTokenResponse =
+    Decode.map3 ValidateTokenResponse
+        (Decode.field "client_id" Decode.string)
+        (Decode.field "login" Decode.string)
+        (Decode.field "user_id" Decode.string)
+
+
+
+{- create an HTTP.request with OAuth header -}
+
+
+oAuthRequest : String -> Decode.Decoder a -> String -> Cmd (Result Http.Error a)
+oAuthRequest url decoder token =
+    Http.request
+        { method = "GET"
+        , headers = [ Http.header "Authorization" ("OAuth " ++ token) ]
+        , url = url
+        , body = Http.emptyBody
+        , expect = Http.expectJson identity decoder
+        , timeout = Nothing
+        , tracker = Nothing
+        }
 
 
 
