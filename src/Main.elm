@@ -2,10 +2,11 @@ module Main exposing (..)
 
 import Browser exposing (Document)
 import Browser.Navigation as Nav
+import Css
 import Css.Global
 import Data exposing (Data(..))
-import Html.Styled as Html exposing (Html, a, div, text, toUnstyled)
-import Html.Styled.Attributes exposing (href)
+import Html.Styled as Html exposing (Html, a, div, img, text, toUnstyled)
+import Html.Styled.Attributes exposing (css, href, src, style)
 import Http
 import Tailwind.Utilities as Tw
 import Twitch
@@ -204,7 +205,52 @@ appView : SignedInUser -> Data (List Twitch.User) -> Html Msg
 appView user streamers =
     div []
         [ text ("user: " ++ Debug.toString user)
-        , div [] [ text ("streamers: " ++ Debug.toString streamers) ]
+        , streamerListView streamers
+        ]
+
+
+streamerListView : Data (List Twitch.User) -> Html msg
+streamerListView streamers =
+    div [ style "width" "200px" ]
+        [ case streamers of
+            Failure e ->
+                text (Debug.toString e)
+
+            Loading ->
+                div [ css [ Tw.italic ] ] [ text "Loading..." ]
+
+            Success list ->
+                div []
+                    (List.map
+                        streamerView
+                        list
+                    )
+        ]
+
+
+streamerView : Twitch.User -> Html msg
+streamerView streamer =
+    let
+        avatar =
+            div [ css [ Tw.avatar ] ]
+                [ div [ css [ Tw.rounded_full, Tw.w_10, Tw.h_10 ] ]
+                    [ img [ src streamer.profileImageUrl ] []
+                    ]
+                ]
+    in
+    a [ href ("https://twitch.tv/" ++ streamer.displayName) ]
+        [ div
+            [ css
+                [ Tw.flex
+                , Tw.gap_2
+                , Tw.items_center -- center text vertically
+                , Tw.m_1
+                , Css.hover [ Tw.bg_primary_focus ]
+                ]
+            ]
+            [ avatar
+            , div [ css [ Tw.p_1, Tw.font_medium, Tw.truncate ] ] [ text streamer.displayName ]
+            ]
         ]
 
 
