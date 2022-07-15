@@ -2,12 +2,10 @@ module Main exposing (..)
 
 import Browser exposing (Document)
 import Browser.Navigation as Nav
-import Css
 import Css.Global
 import Html.Styled as Html exposing (Html, a, div, text, toUnstyled)
-import Html.Styled.Attributes as Attr exposing (href)
+import Html.Styled.Attributes exposing (href)
 import Http
-import Tailwind.Breakpoints as Breakpoints
 import Tailwind.Utilities as Tw
 import Twitch
 import TwitchConfig
