@@ -1,8 +1,8 @@
-module TwitchTest exposing (..)
+module TwitchTest exposing (decodeValidateTokenResponseTest)
 
 import Expect
 import Json.Decode as Decode
-import Test exposing (..)
+import Test exposing (Test, test)
 import Twitch
 
 
