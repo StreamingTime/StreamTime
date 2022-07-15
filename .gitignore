@@ -1,4 +1,6 @@
 TwitchConfig.elm
+node_modules
+gen
 
 # Created by https://www.toptal.com/developers/gitignore/api/elm,visualstudiocode,intellij+all,vim,linux,macos,windows
 # Edit at https://www.toptal.com/developers/gitignore?templates=elm,visualstudiocode,intellij+all,vim,linux,macos,windows

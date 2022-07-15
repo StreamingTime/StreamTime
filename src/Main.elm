@@ -2,9 +2,13 @@ module Main exposing (..)
 
 import Browser exposing (Document)
 import Browser.Navigation as Nav
-import Html exposing (a, text)
-import Html.Attributes exposing (href)
+import Css
+import Css.Global
+import Html.Styled as Html exposing (Html, a, div, text, toUnstyled)
+import Html.Styled.Attributes as Attr exposing (href)
 import Http
+import Tailwind.Breakpoints as Breakpoints
+import Tailwind.Utilities as Tw
 import Twitch
 import TwitchConfig
 import Url
@@ -126,26 +130,50 @@ view : Model -> Document Msg
 view model =
     { title = "Twitch schedule"
     , body =
-        case model of
-            LoggedIn user _ ->
-                [ text ("user: " ++ Debug.toString user)
+        [ toUnstyled <|
+            div []
+                [ Css.Global.global Tw.globalStyles
+                , Html.div []
+                    [ case model of
+                        NotLoggedIn err _ ->
+                            loginView err
+
+                        PreValidation _ _ ->
+                            validationView
+
+                        LoggedIn user _ ->
+                            appView user
+                    ]
                 ]
-
-            NotLoggedIn err _ ->
-                [ a
-                    [ href (Twitch.loginFlowUrl TwitchConfig.clientId loginRedirectUrl) ]
-                    [ text "Login" ]
-                , case err of
-                    Nothing ->
-                        text ""
-
-                    Just e ->
-                        text (errorToString e)
-                ]
-
-            PreValidation _ _ ->
-                [ text "verifying twitch token" ]
+        ]
     }
+
+
+loginView : Maybe Http.Error -> Html Msg
+loginView err =
+    div []
+        [ a
+            [ href (Twitch.loginFlowUrl TwitchConfig.clientId loginRedirectUrl) ]
+            [ text "Login" ]
+        , case err of
+            Nothing ->
+                text ""
+
+            Just e ->
+                text (errorToString e)
+        ]
+
+
+validationView : Html Msg
+validationView =
+    div [] [ text "Loading..." ]
+
+
+appView : User -> Html Msg
+appView user =
+    div []
+        [ text ("user: " ++ Debug.toString user)
+        ]
 
 
 main : Program () Model Msg
