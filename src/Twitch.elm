@@ -77,7 +77,11 @@ getUserFollows userID =
         u =
             apiUrlBuilder
                 [ "users", "follows" ]
-                [ Url.Builder.string "from_id" userID ]
+                [ Url.Builder.string "from_id" userID
+
+                -- fetch up to 100 users (yes, this is the "first" parameter)
+                , Url.Builder.int "first" 100
+                ]
     in
     bearerRequest u (Decode.field "data" (Decode.list decodeFollowRelation))
 
