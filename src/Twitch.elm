@@ -1,4 +1,4 @@
-module Twitch exposing (FollowRelation, User, ValidateTokenResponse, accessTokenFromUrl, decodeFollowRelation, decodeUser, decodeValidateTokenResponse, getUserFollows, getUsers, loginFlowUrl, validateToken)
+module Twitch exposing (FollowRelation, PaginatedResponse, User, ValidateTokenResponse, accessTokenFromUrl, decodeFollowRelation, decodePaginated, decodeUser, decodeValidateTokenResponse, getUserFollows, getUsers, loginFlowUrl, validateToken)
 
 import Http
 import Json.Decode as Decode
@@ -68,22 +68,34 @@ decodeFollowRelation =
 
 {-
    https://dev.twitch.tv/docs/api/reference#get-users-follows
+
+   Takes an optional cursor to fetch paginated results
 -}
 
 
-getUserFollows : String -> String -> String -> Cmd (Result Http.Error (List FollowRelation))
-getUserFollows userID =
+getUserFollows : String -> Maybe String -> String -> String -> Cmd (Result Http.Error (PaginatedResponse (List FollowRelation)))
+getUserFollows userID cursor =
     let
+        params =
+            [ Url.Builder.string "from_id" userID
+
+            -- fetch up to 100 users per page (yes, this is the "first" parameter)
+            , Url.Builder.int "first" 100
+            ]
+
         u =
             apiUrlBuilder
                 [ "users", "follows" ]
-                [ Url.Builder.string "from_id" userID
+                (case cursor of
+                    Just c ->
+                        -- pagination
+                        Url.Builder.string "after" c :: params
 
-                -- fetch up to 100 users (yes, this is the "first" parameter)
-                , Url.Builder.int "first" 100
-                ]
+                    Nothing ->
+                        params
+                )
     in
-    bearerRequest u (Decode.field "data" (Decode.list decodeFollowRelation))
+    bearerRequest u (decodePaginated (Decode.list decodeFollowRelation))
 
 
 
@@ -158,6 +170,27 @@ bearerRequest url decoder clientID token =
         , timeout = Nothing
         , tracker = Nothing
         }
+
+
+
+{- Wrapper to fetch paginated resources -}
+
+
+type alias PaginatedResponse a =
+    { cursor : Maybe String
+    , data : a
+    }
+
+
+
+{- Decode a paginated resource. Uses the passed decoder to decode the "data" field -}
+
+
+decodePaginated : Decode.Decoder a -> Decode.Decoder (PaginatedResponse a)
+decodePaginated dataDecoder =
+    Decode.map2 PaginatedResponse
+        (Decode.field "pagination" (Decode.maybe (Decode.field "cursor" Decode.string)))
+        (Decode.field "data" dataDecoder)
 
 
 

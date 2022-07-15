@@ -49,3 +49,37 @@ decodeFollowRelation =
                     "{\"from_id\": \"171003792\",\"from_login\": \"iiisutha067iii\",\"from_name\": \"IIIsutha067III\",\"to_id\": \"23161357\",\"to_name\": \"LIRIK\",\"followed_at\": \"2017-08-22T22:55:24Z\"      }"
                 )
         )
+
+
+decodePaginatedTest : Test
+decodePaginatedTest =
+    describe "decode paginated responses"
+        [ test
+            "decode with cursor"
+            (\_ ->
+                Expect.equal
+                    (Result.Ok
+                        { cursor = Just "somecursor", data = "some value" }
+                    )
+                    (Decode.decodeString
+                        (Twitch.decodePaginated
+                            Decode.string
+                        )
+                        "{ \"pagination\": {\"cursor\": \"somecursor\"}, \"data\": \"some value\"}"
+                    )
+            )
+        , test
+            "decode without cursor"
+            (\_ ->
+                Expect.equal
+                    (Result.Ok
+                        { cursor = Nothing, data = "some value" }
+                    )
+                    (Decode.decodeString
+                        (Twitch.decodePaginated
+                            Decode.string
+                        )
+                        "{ \"pagination\": {}, \"data\": \"some value\"}"
+                    )
+            )
+        ]

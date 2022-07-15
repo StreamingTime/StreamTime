@@ -12,6 +12,7 @@ import Tailwind.Utilities as Tw
 import Twitch
 import TwitchConfig
 import Url
+import Utils
 
 
 loginRedirectUrl =
@@ -27,6 +28,9 @@ type Model
 type alias TwitchData =
     { signedInUser : SignedInUser
     , streamers : Data (List Twitch.User)
+
+    -- a list of follow relation metadata originating from our user
+    , follows : Maybe (List Twitch.FollowRelation)
     }
 
 
@@ -40,7 +44,7 @@ type alias SignedInUser =
 type Msg
     = UrlMsg UrlMsg
     | GotValidateTokenResponse (Result Http.Error Twitch.ValidateTokenResponse)
-    | GotUserFollows (Result Http.Error (List Twitch.FollowRelation))
+    | GotUserFollows (Result Http.Error (Twitch.PaginatedResponse (List Twitch.FollowRelation)))
     | GotFollowedStreamers (Result Http.Error (List Twitch.User))
 
 
@@ -73,9 +77,9 @@ update msg model =
                             ( NotLoggedIn (Just err) navKey, Cmd.none )
 
                         Ok value ->
-                            ( LoggedIn { signedInUser = { token = token, loginName = value.login, userID = value.userID }, streamers = Data.Loading } navKey
+                            ( LoggedIn { signedInUser = { token = token, loginName = value.login, userID = value.userID }, streamers = Data.Loading, follows = Nothing } navKey
                               -- Fetch streamers our user follows
-                            , Cmd.map GotUserFollows (Twitch.getUserFollows value.userID TwitchConfig.clientId token)
+                            , Cmd.map GotUserFollows (Twitch.getUserFollows value.userID Nothing TwitchConfig.clientId token)
                             )
 
                 GotUserFollows _ ->
@@ -90,19 +94,36 @@ update msg model =
                     ( LoggedIn twitchData navKey, handleUrlMsg urlMsg navKey )
 
                 GotValidateTokenResponse _ ->
-                    ( LoggedIn { twitchData | streamers = Data.Loading } navKey, Cmd.map GotUserFollows (Twitch.getUserFollows twitchData.signedInUser.userID TwitchConfig.clientId twitchData.signedInUser.token) )
+                    ( LoggedIn { twitchData | streamers = Data.Loading } navKey, Cmd.map GotUserFollows (Twitch.getUserFollows twitchData.signedInUser.userID Nothing TwitchConfig.clientId twitchData.signedInUser.token) )
 
                 GotUserFollows response ->
                     case response of
                         Err e ->
                             Debug.todo ("error at GotUserFollows " ++ Debug.toString e)
 
-                        Ok value ->
+                        Ok paginatedResponse ->
                             let
-                                followingIDs =
-                                    List.map (\followRelation -> followRelation.toID) value
+                                -- append the new page to the axisting values, if any
+                                oldAndNewValues =
+                                    Utils.concatMaybeList twitchData.follows paginatedResponse.data
+
+                                -- use the cursor from the response to fetch the next page
+                                nextPage : String -> Cmd Msg
+                                nextPage cursor =
+                                    Cmd.map GotUserFollows (Twitch.getUserFollows twitchData.signedInUser.userID (Just cursor) TwitchConfig.clientId twitchData.signedInUser.token)
+
+                                nextCommand =
+                                    -- if there is more to load, fetch the next page
+                                    case paginatedResponse.cursor of
+                                        Nothing ->
+                                            Cmd.map
+                                                GotFollowedStreamers
+                                                (Twitch.getUsers (List.map .toID oldAndNewValues) TwitchConfig.clientId twitchData.signedInUser.token)
+
+                                        Just cursor ->
+                                            nextPage cursor
                             in
-                            ( model, Cmd.map GotFollowedStreamers (Twitch.getUsers followingIDs TwitchConfig.clientId twitchData.signedInUser.token) )
+                            ( LoggedIn { twitchData | follows = Just oldAndNewValues } navKey, nextCommand )
 
                 GotFollowedStreamers response ->
                     ( LoggedIn { twitchData | streamers = Data.fromResult response } navKey, Cmd.none )
