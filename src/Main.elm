@@ -141,7 +141,7 @@ view model =
                             validationView
 
                         LoggedIn user _ ->
-                            validationView
+                            appView user
                     ]
                 ]
         ]
