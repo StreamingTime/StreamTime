@@ -19,9 +19,15 @@ loginRedirectUrl =
 
 
 type Model
-    = {- User is logged in, token is verified -} LoggedIn SignedInUser (Data (List Twitch.User)) Nav.Key
+    = {- User is logged in, token is verified -} LoggedIn TwitchData Nav.Key
     | {- User has not started the login process -} NotLoggedIn (Maybe Http.Error) Nav.Key
     | {- User has logged in via twitch, but we have yet to validate the token and fetch user details -} PreValidation String Nav.Key
+
+
+type alias TwitchData =
+    { signedInUser : SignedInUser
+    , streamers : Data (List Twitch.User)
+    }
 
 
 type alias SignedInUser =
@@ -67,7 +73,7 @@ update msg model =
                             ( NotLoggedIn (Just err) navKey, Cmd.none )
 
                         Ok value ->
-                            ( LoggedIn { token = token, loginName = value.login, userID = value.userID } Data.Loading navKey
+                            ( LoggedIn { signedInUser = { token = token, loginName = value.login, userID = value.userID }, streamers = Data.Loading } navKey
                               -- Fetch streamers our user follows
                             , Cmd.map GotUserFollows (Twitch.getUserFollows value.userID TwitchConfig.clientId token)
                             )
@@ -78,13 +84,13 @@ update msg model =
                 GotFollowedStreamers _ ->
                     ( model, Cmd.none )
 
-        LoggedIn user _ navKey ->
+        LoggedIn twitchData navKey ->
             case msg of
                 UrlMsg urlMsg ->
-                    ( LoggedIn user Data.Loading navKey, handleUrlMsg urlMsg navKey )
+                    ( LoggedIn twitchData navKey, handleUrlMsg urlMsg navKey )
 
                 GotValidateTokenResponse _ ->
-                    ( LoggedIn user Data.Loading navKey, Cmd.map GotUserFollows (Twitch.getUserFollows user.userID TwitchConfig.clientId user.token) )
+                    ( LoggedIn { twitchData | streamers = Data.Loading } navKey, Cmd.map GotUserFollows (Twitch.getUserFollows twitchData.signedInUser.userID TwitchConfig.clientId twitchData.signedInUser.token) )
 
                 GotUserFollows response ->
                     case response of
@@ -96,10 +102,10 @@ update msg model =
                                 followingIDs =
                                     List.map (\followRelation -> followRelation.toID) value
                             in
-                            ( model, Cmd.map GotFollowedStreamers (Twitch.getUsers followingIDs TwitchConfig.clientId user.token) )
+                            ( model, Cmd.map GotFollowedStreamers (Twitch.getUsers followingIDs TwitchConfig.clientId twitchData.signedInUser.token) )
 
                 GotFollowedStreamers response ->
-                    ( LoggedIn user (Data.fromResult response) navKey, Cmd.none )
+                    ( LoggedIn { twitchData | streamers = Data.fromResult response } navKey, Cmd.none )
 
         NotLoggedIn _ navKey ->
             case msg of
@@ -173,8 +179,8 @@ view model =
                         PreValidation _ _ ->
                             validationView
 
-                        LoggedIn user streamers _ ->
-                            appView user streamers
+                        LoggedIn { signedInUser, streamers } _ ->
+                            appView signedInUser streamers
                     ]
                 ]
         ]
