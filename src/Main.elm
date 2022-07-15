@@ -4,7 +4,7 @@ import Browser exposing (Document)
 import Browser.Navigation as Nav
 import Css.Global
 import Html.Styled as Html exposing (Html, a, div, text, toUnstyled)
-import Html.Styled.Attributes exposing (href)
+import Html.Styled.Attributes exposing (css, href, style)
 import Http
 import Tailwind.Utilities as Tw
 import Twitch
@@ -164,7 +164,28 @@ loginView err =
 
 validationView : Html Msg
 validationView =
-    div [] [ text "Loading..." ]
+    div
+        [ css
+            [ Tw.h_screen
+            , Tw.flex
+            , Tw.items_center
+            , Tw.justify_center
+            ]
+        ]
+        [ div
+            [ css
+                [ Tw.w_16
+                , Tw.h_16
+                , Tw.border_4
+                , Tw.border_solid
+                , Tw.border_white
+                , Tw.rounded_full
+                , Tw.animate_spin
+                ]
+            , style "border-top-color" "transparent"
+            ]
+            []
+        ]
 
 
 appView : User -> Html Msg
