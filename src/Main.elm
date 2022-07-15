@@ -3,6 +3,7 @@ module Main exposing (..)
 import Browser exposing (Document)
 import Browser.Navigation as Nav
 import Css.Global
+import Data exposing (Data(..))
 import Html.Styled as Html exposing (Html, a, div, text, toUnstyled)
 import Html.Styled.Attributes exposing (href)
 import Http
@@ -17,12 +18,12 @@ loginRedirectUrl =
 
 
 type Model
-    = {- User is logged in, token is verified -} LoggedIn User Nav.Key
+    = {- User is logged in, token is verified -} LoggedIn SignedInUser (Data (List Twitch.User)) Nav.Key
     | {- User has not started the login process -} NotLoggedIn (Maybe Http.Error) Nav.Key
     | {- User has logged in via twitch, but we have yet to validate the token and fetch user details -} PreValidation String Nav.Key
 
 
-type alias User =
+type alias SignedInUser =
     { token : String
     , loginName : String
     , userID : String
@@ -32,6 +33,8 @@ type alias User =
 type Msg
     = UrlMsg UrlMsg
     | GotValidateTokenResponse (Result Http.Error Twitch.ValidateTokenResponse)
+    | GotUserFollows (Result Http.Error (List Twitch.FollowRelation))
+    | GotFollowedStreamers (Result Http.Error (List Twitch.User))
 
 
 type UrlMsg
@@ -63,15 +66,39 @@ update msg model =
                             ( NotLoggedIn (Just err) navKey, Cmd.none )
 
                         Ok value ->
-                            ( LoggedIn { token = token, loginName = value.login, userID = value.userID } navKey, Cmd.none )
+                            ( LoggedIn { token = token, loginName = value.login, userID = value.userID } Data.Loading navKey
+                              -- Fetch streamers our user follows
+                            , Cmd.map GotUserFollows (Twitch.getUserFollows value.userID TwitchConfig.clientId token)
+                            )
 
-        LoggedIn user navKey ->
+                GotUserFollows _ ->
+                    ( model, Cmd.none )
+
+                GotFollowedStreamers _ ->
+                    ( model, Cmd.none )
+
+        LoggedIn user _ navKey ->
             case msg of
                 UrlMsg urlMsg ->
-                    ( LoggedIn user navKey, handleUrlMsg urlMsg navKey )
+                    ( LoggedIn user Data.Loading navKey, handleUrlMsg urlMsg navKey )
 
                 GotValidateTokenResponse _ ->
-                    ( LoggedIn user navKey, Cmd.none )
+                    ( LoggedIn user Data.Loading navKey, Cmd.map GotUserFollows (Twitch.getUserFollows user.userID TwitchConfig.clientId user.token) )
+
+                GotUserFollows response ->
+                    case response of
+                        Err e ->
+                            Debug.todo ("error at GotUserFollows " ++ Debug.toString e)
+
+                        Ok value ->
+                            let
+                                followingIDs =
+                                    List.map (\followRelation -> followRelation.toID) value
+                            in
+                            ( model, Cmd.map GotFollowedStreamers (Twitch.getUsers followingIDs TwitchConfig.clientId user.token) )
+
+                GotFollowedStreamers response ->
+                    ( LoggedIn user (Data.fromResult response) navKey, Cmd.none )
 
         NotLoggedIn _ navKey ->
             case msg of
@@ -80,6 +107,12 @@ update msg model =
 
                 -- this msg should not be relevant in NotLoffedIn state
                 GotValidateTokenResponse _ ->
+                    ( model, Cmd.none )
+
+                GotUserFollows _ ->
+                    ( model, Cmd.none )
+
+                GotFollowedStreamers _ ->
                     ( model, Cmd.none )
 
 
@@ -139,8 +172,8 @@ view model =
                         PreValidation _ _ ->
                             validationView
 
-                        LoggedIn user _ ->
-                            appView user
+                        LoggedIn user streamers _ ->
+                            appView user streamers
                     ]
                 ]
         ]
@@ -167,10 +200,11 @@ validationView =
     div [] [ text "Loading..." ]
 
 
-appView : User -> Html Msg
-appView user =
+appView : SignedInUser -> Data (List Twitch.User) -> Html Msg
+appView user streamers =
     div []
         [ text ("user: " ++ Debug.toString user)
+        , div [] [ text ("streamers: " ++ Debug.toString streamers) ]
         ]
 
 
