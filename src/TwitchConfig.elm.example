@@ -1,6 +1,8 @@
-module TwitchConfig exposing (..)
+module TwitchConfig exposing (clientId)
+
+import Twitch
 
 
-clientId : String
+clientId : Twitch.ClientID
 clientId =
-    "twitch_client_id"
+    Twitch.ClientID "twitch_client_id"
