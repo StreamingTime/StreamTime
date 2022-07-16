@@ -17,3 +17,6 @@ npx elm-review --ignore-dirs gen
 - [TailwindCSS](https://v2.tailwindcss.com)
 - [elm-tailwind-modules](https://github.com/matheus23/elm-tailwind-modules)
 - [daisyUI](https://v1.daisyui.com)
+
+## Assets
+- login_background.jpg (https://unsplash.com/photos/2mQSmmge7t8)
