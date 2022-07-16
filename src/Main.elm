@@ -228,7 +228,7 @@ update msg model =
                 UrlMsg urlMsg ->
                     ( model, handleUrlMsg urlMsg navKey )
 
-                -- this msg should not be relevant in NotLoffedIn state
+                -- this msg should not be relevant for the LoadingScreen model
                 GotValidateTokenResponse _ ->
                     ( model, Cmd.none )
 
