@@ -173,10 +173,10 @@ update msg model =
                 StreamerListMsg _ ->
                     ( model, Cmd.none )
 
-        LoggedIn twitchData navKey ->
+        LoggedIn appData navKey ->
             case msg of
                 UrlMsg urlMsg ->
-                    ( LoggedIn twitchData navKey, handleUrlMsg urlMsg navKey )
+                    ( LoggedIn appData navKey, handleUrlMsg urlMsg navKey )
 
                 GotValidateTokenResponse _ ->
                     ( model, Cmd.none )
@@ -187,7 +187,7 @@ update msg model =
                 GotStreamerProfiles response ->
                     case response of
                         Ok newProfiles ->
-                            ( LoggedIn { twitchData | streamers = twitchData.streamers ++ newProfiles } navKey, Cmd.none )
+                            ( LoggedIn { appData | streamers = appData.streamers ++ newProfiles } navKey, Cmd.none )
 
                         Err _ ->
                             Debug.todo "error handling"
@@ -197,23 +197,23 @@ update msg model =
                         count =
                             case streamerListMsg of
                                 ShowMore ->
-                                    min (twitchData.sidebarStreamerCount + streamerListPageSteps) (List.length twitchData.follows)
+                                    min (appData.sidebarStreamerCount + streamerListPageSteps) (List.length appData.follows)
 
                                 ShowLess ->
-                                    max (twitchData.sidebarStreamerCount - streamerListPageSteps) streamerListPageSteps
+                                    max (appData.sidebarStreamerCount - streamerListPageSteps) streamerListPageSteps
 
                         cmd =
                             case streamerListMsg of
                                 ShowMore ->
-                                    if List.length twitchData.follows > List.length twitchData.follows then
+                                    if List.length appData.follows > List.length appData.follows then
                                         let
                                             nextIDs =
-                                                twitchData.follows
-                                                    |> List.drop twitchData.sidebarStreamerCount
+                                                appData.follows
+                                                    |> List.drop appData.sidebarStreamerCount
                                                     |> List.take streamerListPageSteps
                                                     |> List.map .toID
                                         in
-                                        fetchStreamerProfiles nextIDs twitchData.signedInUser.token
+                                        fetchStreamerProfiles nextIDs appData.signedInUser.token
 
                                     else
                                         Cmd.none
@@ -221,7 +221,7 @@ update msg model =
                                 ShowLess ->
                                     Cmd.none
                     in
-                    ( LoggedIn { twitchData | sidebarStreamerCount = count } navKey, cmd )
+                    ( LoggedIn { appData | sidebarStreamerCount = count } navKey, cmd )
 
         NotLoggedIn _ navKey ->
             case msg of
