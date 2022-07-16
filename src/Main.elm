@@ -5,8 +5,9 @@ import Browser.Navigation as Nav
 import Css
 import Css.Global
 import Data exposing (Data(..))
-import Html.Styled exposing (Html, a, div, img, text, toUnstyled)
+import Html.Styled exposing (Html, a, button, div, img, text, toUnstyled)
 import Html.Styled.Attributes exposing (css, href, src, style)
+import Html.Styled.Events exposing (onClick)
 import Http
 import Tailwind.Utilities as Tw
 import Twitch
@@ -32,6 +33,7 @@ type alias TwitchData =
 
     -- a list of follow relation metadata originating from our user
     , follows : Maybe (List Twitch.FollowRelation)
+    , sidebarStreamerCount : Int
     }
 
 
@@ -47,6 +49,12 @@ type Msg
     | GotValidateTokenResponse (Result Http.Error Twitch.ValidateTokenResponse)
     | GotUserFollows (Result Http.Error (Twitch.PaginatedResponse (List Twitch.FollowRelation)))
     | GotFollowedStreamers (Result Http.Error (List Twitch.User))
+    | StreamerListMsg StreamerListMsg
+
+
+type StreamerListMsg
+    = ShowMore
+    | ShowLess
 
 
 type UrlMsg
@@ -78,7 +86,7 @@ update msg model =
                             ( NotLoggedIn (Just err) navKey, Cmd.none )
 
                         Ok value ->
-                            ( LoggedIn { signedInUser = { token = token, loginName = value.login, userID = value.userID }, streamers = Data.Loading, follows = Nothing } navKey
+                            ( LoggedIn { signedInUser = { token = token, loginName = value.login, userID = value.userID }, sidebarStreamerCount = 10, streamers = Data.Loading, follows = Nothing } navKey
                               -- Fetch streamers our user follows
                             , Cmd.map GotUserFollows (Twitch.getUserFollows value.userID Nothing TwitchConfig.clientId token)
                             )
@@ -87,6 +95,9 @@ update msg model =
                     ( model, Cmd.none )
 
                 GotFollowedStreamers _ ->
+                    ( model, Cmd.none )
+
+                StreamerListMsg _ ->
                     ( model, Cmd.none )
 
         LoggedIn twitchData navKey ->
@@ -129,6 +140,26 @@ update msg model =
                 GotFollowedStreamers response ->
                     ( LoggedIn { twitchData | streamers = Data.fromResult response } navKey, Cmd.none )
 
+                StreamerListMsg streamerListMsg ->
+                    case twitchData.streamers of
+                        Data.Success list ->
+                            let
+                                count =
+                                    case streamerListMsg of
+                                        ShowMore ->
+                                            min (twitchData.sidebarStreamerCount + 10) (List.length list)
+
+                                        ShowLess ->
+                                            max (twitchData.sidebarStreamerCount - 10) 10
+                            in
+                            ( LoggedIn { twitchData | sidebarStreamerCount = count } navKey, Cmd.none )
+
+                        Data.Failure _ ->
+                            Debug.todo "error"
+
+                        Data.Loading ->
+                            Debug.todo "error"
+
         NotLoggedIn _ navKey ->
             case msg of
                 UrlMsg urlMsg ->
@@ -142,6 +173,9 @@ update msg model =
                     ( model, Cmd.none )
 
                 GotFollowedStreamers _ ->
+                    ( model, Cmd.none )
+
+                StreamerListMsg _ ->
                     ( model, Cmd.none )
 
 
@@ -201,8 +235,8 @@ view model =
                         PreValidation _ _ ->
                             validationView
 
-                        LoggedIn { signedInUser, streamers } _ ->
-                            appView signedInUser streamers
+                        LoggedIn appData _ ->
+                            appView appData
                     ]
                 ]
         ]
@@ -261,16 +295,16 @@ loadingSpinner styles =
         []
 
 
-appView : SignedInUser -> Data (List Twitch.User) -> Html Msg
-appView user streamers =
+appView : TwitchData -> Html Msg
+appView appData =
     div []
-        [ text ("user: " ++ Debug.toString user)
-        , streamerListView streamers
+        [ text ("user: " ++ Debug.toString appData.signedInUser)
+        , streamerListView appData.streamers appData.sidebarStreamerCount
         ]
 
 
-streamerListView : Data (List Twitch.User) -> Html msg
-streamerListView streamers =
+streamerListView : Data (List Twitch.User) -> Int -> Html Msg
+streamerListView streamers showCount =
     div [ style "width" "200px" ]
         [ case streamers of
             Failure e ->
@@ -280,11 +314,33 @@ streamerListView streamers =
                 div [ css [ Tw.italic ] ] [ text "Loading..." ]
 
             Success list ->
+                let
+                    moreButton =
+                        button [ css [ Tw.btn, Tw.btn_link ], onClick (StreamerListMsg ShowMore) ] [ text "More" ]
+
+                    lessButton =
+                        button [ css [ Tw.btn, Tw.btn_link ], onClick (StreamerListMsg ShowLess) ] [ text "Less" ]
+                in
                 div []
-                    (List.map
-                        streamerView
-                        list
-                    )
+                    [ text ("show: " ++ String.fromInt showCount)
+                    , div []
+                        (list
+                            |> List.take showCount
+                            |> List.map streamerView
+                        )
+                    , div []
+                        (if showCount >= List.length list then
+                            [ lessButton ]
+
+                         else if showCount == 10 then
+                            [ moreButton ]
+
+                         else
+                            [ moreButton
+                            , lessButton
+                            ]
+                        )
+                    ]
         ]
 
 
