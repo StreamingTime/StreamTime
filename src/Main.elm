@@ -4,7 +4,7 @@ import Browser exposing (Document)
 import Browser.Navigation as Nav
 import Css
 import Css.Global
-import Html.Styled exposing (Html, a, div, text, toUnstyled)
+import Html.Styled exposing (Html, a, button, div, h1, p, span, text, toUnstyled)
 import Html.Styled.Attributes exposing (css, href, style)
 import Http
 import Tailwind.Utilities as Tw
@@ -151,16 +151,63 @@ view model =
 
 loginView : Maybe Http.Error -> Html Msg
 loginView err =
-    div []
-        [ a
-            [ href (Twitch.loginFlowUrl TwitchConfig.clientId loginRedirectUrl) ]
-            [ text "Login" ]
-        , case err of
-            Nothing ->
-                text ""
+    div
+        [ css
+            [ Tw.hero
+            , Tw.min_h_screen
+            ]
+        , style "background-image" "url('assets/login_background.jpg')"
+        ]
+        [ div
+            [ css
+                [ Tw.text_center
+                , Tw.hero_content
+                ]
+            ]
+            [ div
+                [ css
+                    [ Tw.max_w_md
+                    ]
+                ]
+                [ h1
+                    [ css
+                        [ Tw.mb_8
+                        , Tw.text_5xl
+                        , Tw.font_bold
+                        ]
+                    ]
+                    [ text "Twitch ", span [ css [ Tw.text_purple_400 ] ] [ text "Schedule" ] ]
+                , p
+                    [ css
+                        [ Tw.mb_8
+                        , Tw.font_semibold
+                        ]
+                    ]
+                    [ text "All schedules from your favorite streamers in one place." ]
+                , button
+                    [ css
+                        [ Tw.btn
+                        , Tw.btn_primary
+                        ]
+                    ]
+                    [ a
+                        [ href (Twitch.loginFlowUrl TwitchConfig.clientId loginRedirectUrl) ]
+                        [ text "Login with twitch" ]
+                    ]
+                , case err of
+                    Just e ->
+                        p
+                            [ css
+                                [ Tw.mt_8
+                                , Tw.text_red_500
+                                ]
+                            ]
+                            [ text (errorToString e) ]
 
-            Just e ->
-                text (errorToString e)
+                    Nothing ->
+                        text ""
+                ]
+            ]
         ]
 
 
