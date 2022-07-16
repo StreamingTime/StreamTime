@@ -42,7 +42,7 @@ type alias AppData =
 
 
 type alias LoadingData =
-    { token : String
+    { token : Twitch.Token
     , follows : Maybe (List Twitch.FollowRelation)
     , signedInUser : Maybe SignedInUser
 
@@ -52,7 +52,7 @@ type alias LoadingData =
 
 
 type alias SignedInUser =
-    { token : String
+    { token : Twitch.Token
     , loginName : String
     , userID : String
     }
@@ -94,7 +94,7 @@ init url navKey =
             ( NotLoggedIn Nothing navKey, Cmd.none )
 
 
-fetchStreamerProfiles : List String -> String -> Cmd Msg
+fetchStreamerProfiles : List String -> Twitch.Token -> Cmd Msg
 fetchStreamerProfiles userIDs token =
     Cmd.map GotStreamerProfiles (Twitch.getUsers userIDs TwitchConfig.clientId token)
 

@@ -1,10 +1,26 @@
-module Twitch exposing (FollowRelation, PaginatedResponse, User, ValidateTokenResponse, accessTokenFromUrl, decodeFollowRelation, decodePaginated, decodeUser, decodeValidateTokenResponse, getUserFollows, getUsers, loginFlowUrl, validateToken)
+module Twitch exposing (ClientID(..), FollowRelation, PaginatedResponse, Token(..), User, ValidateTokenResponse, accessTokenFromUrl, decodeFollowRelation, decodePaginated, decodeUser, decodeValidateTokenResponse, getUserFollows, getUsers, loginFlowUrl, validateToken)
 
 import Http
 import Json.Decode as Decode
 import Maybe exposing (andThen)
 import Url
 import Url.Builder
+
+
+
+{- Twitch user access token -}
+
+
+type Token
+    = Token String
+
+
+
+{- Twitch client id -}
+
+
+type ClientID
+    = ClientID String
 
 
 
@@ -27,7 +43,7 @@ type alias ValidateTokenResponse =
     }
 
 
-validateToken : String -> Cmd (Result Http.Error ValidateTokenResponse)
+validateToken : Token -> Cmd (Result Http.Error ValidateTokenResponse)
 validateToken =
     oAuthRequest "https://id.twitch.tv/oauth2/validate" decodeValidateTokenResponse
 
@@ -73,7 +89,7 @@ decodeFollowRelation =
 -}
 
 
-getUserFollows : String -> Maybe String -> String -> String -> Cmd (Result Http.Error (PaginatedResponse (List FollowRelation)))
+getUserFollows : String -> Maybe String -> ClientID -> Token -> Cmd (Result Http.Error (PaginatedResponse (List FollowRelation)))
 getUserFollows userID cursor =
     let
         params =
@@ -121,7 +137,7 @@ decodeUser =
 {- https://dev.twitch.tv/docs/api/reference#get-users -}
 
 
-getUsers : List String -> String -> String -> Cmd (Result Http.Error (List User))
+getUsers : List String -> ClientID -> Token -> Cmd (Result Http.Error (List User))
 getUsers userIDs =
     let
         u =
@@ -139,8 +155,8 @@ getUsers userIDs =
 {- create an HTTP.request with OAuth header -}
 
 
-oAuthRequest : String -> Decode.Decoder a -> String -> Cmd (Result Http.Error a)
-oAuthRequest url decoder token =
+oAuthRequest : String -> Decode.Decoder a -> Token -> Cmd (Result Http.Error a)
+oAuthRequest url decoder (Token token) =
     Http.request
         { method = "GET"
         , headers = [ Http.header "Authorization" ("OAuth " ++ token) ]
@@ -156,8 +172,8 @@ oAuthRequest url decoder token =
 {- create an HTTP.request with Bearer token and client id header -}
 
 
-bearerRequest : String -> Decode.Decoder a -> String -> String -> Cmd (Result Http.Error a)
-bearerRequest url decoder clientID token =
+bearerRequest : String -> Decode.Decoder a -> ClientID -> Token -> Cmd (Result Http.Error a)
+bearerRequest url decoder (ClientID clientID) (Token token) =
     Http.request
         { method = "GET"
         , headers =
@@ -199,8 +215,8 @@ decodePaginated dataDecoder =
 -}
 
 
-loginFlowUrl : String -> String -> String
-loginFlowUrl clientID redirectUri =
+loginFlowUrl : ClientID -> String -> String
+loginFlowUrl (ClientID clientID) redirectUri =
     Url.Builder.crossOrigin "https://id.twitch.tv"
         [ "oauth2", "authorize" ]
         [ Url.Builder.string "client_id" clientID
@@ -209,19 +225,19 @@ loginFlowUrl clientID redirectUri =
         ]
 
 
-accessTokenFromUrl : Url.Url -> Maybe String
+accessTokenFromUrl : Url.Url -> Maybe Token
 accessTokenFromUrl url =
     url.fragment |> andThen getAccessToken
 
 
-getAccessToken : String -> Maybe String
+getAccessToken : String -> Maybe Token
 getAccessToken fragment =
     case List.filter (\( x, _ ) -> x == "access_token") (parseFragmentValues fragment) of
         [] ->
             Nothing
 
         ( _, y ) :: _ ->
-            Just y
+            Just (Token y)
 
 
 parseFragmentValues : String -> List ( String, String )
