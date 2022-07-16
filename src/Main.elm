@@ -4,7 +4,7 @@ import Browser exposing (Document)
 import Browser.Navigation as Nav
 import Css
 import Css.Global
-import Data exposing (Data)
+import Data
 import Html.Styled exposing (Html, a, button, div, img, text, toUnstyled)
 import Html.Styled.Attributes exposing (css, href, src, style)
 import Html.Styled.Events exposing (onClick)
@@ -22,18 +22,32 @@ loginRedirectUrl =
 
 
 type Model
-    = {- User is logged in, token is verified -} LoggedIn TwitchData Nav.Key
+    = {- User is logged in, token is verified -} LoggedIn AppData Nav.Key
     | {- User has not started the login process -} NotLoggedIn (Maybe Http.Error) Nav.Key
-    | {- User has logged in via twitch, but we have yet to validate the token and fetch user details -} PreValidation String Nav.Key
+    | {- User has logged in via twitch, but we have yet to validate the token and fetch user details -} LoadingScreen LoadingData Nav.Key
 
 
-type alias TwitchData =
+type alias AppData =
     { signedInUser : SignedInUser
-    , streamers : Data (List Twitch.User)
+    , streamers : List Twitch.User
 
     -- a list of follow relation metadata originating from our user
-    , follows : Maybe (List Twitch.FollowRelation)
+    , follows : List Twitch.FollowRelation
     , sidebarStreamerCount : Int
+    }
+
+
+
+{- Data we need or fetch during the loading screen -}
+
+
+type alias LoadingData =
+    { token : String
+    , follows : Maybe (List Twitch.FollowRelation)
+    , signedInUser : Maybe SignedInUser
+
+    -- the first n streamers to display in the streamer list
+    , firstStreamers : Maybe (List Twitch.User)
     }
 
 
@@ -66,7 +80,15 @@ init : Url.Url -> Nav.Key -> ( Model, Cmd Msg )
 init url navKey =
     case Twitch.accessTokenFromUrl url of
         Just token ->
-            ( PreValidation token navKey, Cmd.map GotValidateTokenResponse (Twitch.validateToken token) )
+            ( LoadingScreen
+                { token = token
+                , follows = Nothing
+                , signedInUser = Nothing
+                , firstStreamers = Nothing
+                }
+                navKey
+            , Cmd.map GotValidateTokenResponse (Twitch.validateToken token)
+            )
 
         Nothing ->
             ( NotLoggedIn Nothing navKey, Cmd.none )
@@ -80,7 +102,7 @@ fetchStreamerProfiles userIDs token =
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case model of
-        PreValidation token navKey ->
+        LoadingScreen m navKey ->
             case msg of
                 UrlMsg urlMsg ->
                     ( model, handleUrlMsg urlMsg navKey )
@@ -91,16 +113,62 @@ update msg model =
                             ( NotLoggedIn (Just err) navKey, Cmd.none )
 
                         Ok value ->
-                            ( LoggedIn { signedInUser = { token = token, loginName = value.login, userID = value.userID }, sidebarStreamerCount = 10, streamers = Data.Loading, follows = Nothing } navKey
+                            ( LoadingScreen
+                                { token = m.token
+                                , signedInUser = Just { token = m.token, loginName = value.login, userID = value.userID }
+                                , follows = Nothing
+                                , firstStreamers = Nothing
+                                }
+                                navKey
                               -- Fetch streamers our user follows
-                            , Cmd.map GotUserFollows (Twitch.getUserFollows value.userID Nothing TwitchConfig.clientId token)
+                            , Cmd.map GotUserFollows (Twitch.getUserFollows value.userID Nothing TwitchConfig.clientId m.token)
                             )
 
-                GotUserFollows _ ->
-                    ( model, Cmd.none )
+                GotUserFollows response ->
+                    case ( m.signedInUser, response ) of
+                        ( _, Err e ) ->
+                            ( NotLoggedIn (Just e) navKey, Cmd.none )
 
-                GotStreamerProfiles _ ->
-                    ( model, Cmd.none )
+                        ( Just user, Ok paginatedResponse ) ->
+                            let
+                                -- append the new page to the axisting values, if any
+                                oldAndNewValues =
+                                    Utils.concatMaybeList m.follows paginatedResponse.data
+
+                                -- use the cursor from the response to fetch the next page
+                                nextPage : String -> Cmd Msg
+                                nextPage cursor =
+                                    Cmd.map GotUserFollows (Twitch.getUserFollows user.userID (Just cursor) TwitchConfig.clientId user.token)
+                            in
+                            case paginatedResponse.cursor of
+                                -- if there are more follows to load, fetch the next page
+                                Just cursor ->
+                                    ( LoadingScreen { m | follows = Just oldAndNewValues } navKey
+                                    , nextPage cursor
+                                    )
+
+                                -- after all follows are fetched, fetch the first streamer profiles
+                                Nothing ->
+                                    ( LoadingScreen { m | follows = Just oldAndNewValues } navKey
+                                    , fetchStreamerProfiles (List.map .toID (List.take 10 oldAndNewValues)) user.token
+                                    )
+
+                        ( Nothing, Ok _ ) ->
+                            Debug.todo "this case should not happen"
+
+                GotStreamerProfiles response ->
+                    case ( m.signedInUser, m.follows, Data.fromResult response ) of
+                        ( Just user, Just follows, Data.Success streamers ) ->
+                            -- all good, loading is complete
+                            ( LoggedIn { signedInUser = user, follows = follows, streamers = streamers, sidebarStreamerCount = 10 } navKey
+                            , fetchStreamerProfiles (List.map .toID (List.take 10 follows)) user.token
+                            )
+
+                        ( _, _, Data.Failure e ) ->
+                            ( NotLoggedIn (Just e) navKey, Cmd.none )
+
+                        _ ->
+                            Debug.todo "this case should not happen, since we cant fetch profiles if user or follows are unknown"
 
                 StreamerListMsg _ ->
                     ( model, Cmd.none )
@@ -111,87 +179,49 @@ update msg model =
                     ( LoggedIn twitchData navKey, handleUrlMsg urlMsg navKey )
 
                 GotValidateTokenResponse _ ->
-                    ( LoggedIn { twitchData | streamers = Data.Loading } navKey, Cmd.map GotUserFollows (Twitch.getUserFollows twitchData.signedInUser.userID Nothing TwitchConfig.clientId twitchData.signedInUser.token) )
+                    ( model, Cmd.none )
 
-                GotUserFollows response ->
-                    case response of
-                        Err e ->
-                            Debug.todo ("error at GotUserFollows " ++ Debug.toString e)
-
-                        Ok paginatedResponse ->
-                            let
-                                -- append the new page to the axisting values, if any
-                                oldAndNewValues =
-                                    Utils.concatMaybeList twitchData.follows paginatedResponse.data
-
-                                -- use the cursor from the response to fetch the next page
-                                nextPage : String -> Cmd Msg
-                                nextPage cursor =
-                                    Cmd.map GotUserFollows (Twitch.getUserFollows twitchData.signedInUser.userID (Just cursor) TwitchConfig.clientId twitchData.signedInUser.token)
-
-                                nextCommand =
-                                    -- if there is more to load, fetch the next page
-                                    case paginatedResponse.cursor of
-                                        Nothing ->
-                                            fetchStreamerProfiles (List.map .toID (List.take 10 oldAndNewValues)) twitchData.signedInUser.token
-
-                                        Just cursor ->
-                                            nextPage cursor
-                            in
-                            ( LoggedIn { twitchData | follows = Just oldAndNewValues } navKey, nextCommand )
+                GotUserFollows _ ->
+                    ( model, Cmd.none )
 
                 GotStreamerProfiles response ->
                     case response of
                         Ok newProfiles ->
-                            let
-                                updatedList =
-                                    case twitchData.streamers of
-                                        Data.Success oldList ->
-                                            oldList ++ newProfiles
-
-                                        _ ->
-                                            newProfiles
-                            in
-                            ( LoggedIn { twitchData | streamers = Data.Success updatedList } navKey, Cmd.none )
+                            ( LoggedIn { twitchData | streamers = twitchData.streamers ++ newProfiles } navKey, Cmd.none )
 
                         Err _ ->
                             Debug.todo "error handling"
 
                 StreamerListMsg streamerListMsg ->
-                    case ( twitchData.follows, twitchData.streamers ) of
-                        ( Just follows, Data.Success streamers ) ->
-                            let
-                                count =
-                                    case streamerListMsg of
-                                        ShowMore ->
-                                            min (twitchData.sidebarStreamerCount + 10) (List.length follows)
+                    let
+                        count =
+                            case streamerListMsg of
+                                ShowMore ->
+                                    min (twitchData.sidebarStreamerCount + 10) (List.length twitchData.follows)
 
-                                        ShowLess ->
-                                            max (twitchData.sidebarStreamerCount - 10) 10
+                                ShowLess ->
+                                    max (twitchData.sidebarStreamerCount - 10) 10
 
-                                cmd =
-                                    case streamerListMsg of
-                                        ShowMore ->
-                                            if List.length follows > List.length streamers then
-                                                let
-                                                    nextIDs =
-                                                        follows
-                                                            |> List.drop twitchData.sidebarStreamerCount
-                                                            |> List.take 10
-                                                            |> List.map .toID
-                                                in
-                                                fetchStreamerProfiles nextIDs twitchData.signedInUser.token
+                        cmd =
+                            case streamerListMsg of
+                                ShowMore ->
+                                    if List.length twitchData.follows > List.length twitchData.follows then
+                                        let
+                                            nextIDs =
+                                                twitchData.follows
+                                                    |> List.drop twitchData.sidebarStreamerCount
+                                                    |> List.take 10
+                                                    |> List.map .toID
+                                        in
+                                        fetchStreamerProfiles nextIDs twitchData.signedInUser.token
 
-                                            else
-                                                Cmd.none
+                                    else
+                                        Cmd.none
 
-                                        ShowLess ->
-                                            Cmd.none
-                            in
-                            ( LoggedIn { twitchData | sidebarStreamerCount = count } navKey, cmd )
-
-                        _ ->
-                            Debug.todo "error handling"
+                                ShowLess ->
+                                    Cmd.none
+                    in
+                    ( LoggedIn { twitchData | sidebarStreamerCount = count } navKey, cmd )
 
         NotLoggedIn _ navKey ->
             case msg of
@@ -265,7 +295,7 @@ view model =
                         NotLoggedIn err _ ->
                             loginView err
 
-                        PreValidation _ _ ->
+                        LoadingScreen _ _ ->
                             validationView
 
                         LoggedIn appData _ ->
@@ -328,30 +358,13 @@ loadingSpinner styles =
         []
 
 
-appView : TwitchData -> Html Msg
+appView : AppData -> Html Msg
 appView appData =
     div []
         [ text ("user: " ++ Debug.toString appData.signedInUser)
         , div
             []
-            (case ( appData.follows, appData.streamers ) of
-                ( Just follows, Data.Success streamers ) ->
-                    [ text ("Following " ++ String.fromInt (List.length follows) ++ " streamers")
-                    , streamerListView (List.take appData.sidebarStreamerCount streamers) (List.length follows > appData.sidebarStreamerCount)
-                    ]
-
-                ( Just follows, Data.Loading ) ->
-                    [ text ("Following " ++ String.fromInt (List.length follows) ++ " streamers")
-                    , loadingSpinner
-                        [ Tw.h_14, Tw.w_14 ]
-                    ]
-
-                ( Just follows, Data.Failure e ) ->
-                    [ text ("Following " ++ String.fromInt (List.length follows) ++ " streamers") ]
-
-                _ ->
-                    [ text "error" ]
-            )
+            [ streamerListView (List.take appData.sidebarStreamerCount appData.streamers) (List.length appData.follows > appData.sidebarStreamerCount) ]
         ]
 
 
