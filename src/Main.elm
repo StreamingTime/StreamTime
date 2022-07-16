@@ -96,7 +96,7 @@ init url navKey =
 
 fetchStreamerProfiles : List String -> String -> Cmd Msg
 fetchStreamerProfiles userIDs token =
-    Cmd.map GotStreamerProfiles (Twitch.getUsers (Debug.log "fetching profiles" userIDs) TwitchConfig.clientId token)
+    Cmd.map GotStreamerProfiles (Twitch.getUsers userIDs TwitchConfig.clientId token)
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
