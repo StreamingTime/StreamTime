@@ -175,9 +175,7 @@ validationView =
             ]
         ]
         [ div
-            [ css
-                []
-            ]
+            []
             [ loadingSpinner [ Tw.w_16, Tw.h_16 ] ]
         ]
 
