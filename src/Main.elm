@@ -150,7 +150,7 @@ update msg model =
                                 -- after all follows are fetched, fetch the first streamer profiles
                                 Nothing ->
                                     ( LoadingScreen { m | follows = Just oldAndNewValues } navKey
-                                    , fetchStreamerProfiles (List.map .toID (List.take 10 oldAndNewValues)) user.token
+                                    , fetchStreamerProfiles (List.map .toID (List.take streamerListPageSteps oldAndNewValues)) user.token
                                     )
 
                         ( Nothing, Ok _ ) ->
@@ -160,8 +160,8 @@ update msg model =
                     case ( m.signedInUser, m.follows, Data.fromResult response ) of
                         ( Just user, Just follows, Data.Success streamers ) ->
                             -- all good, loading is complete
-                            ( LoggedIn { signedInUser = user, follows = follows, streamers = streamers, sidebarStreamerCount = 10 } navKey
-                            , fetchStreamerProfiles (List.map .toID (List.take 10 follows)) user.token
+                            ( LoggedIn { signedInUser = user, follows = follows, streamers = streamers, sidebarStreamerCount = streamerListPageSteps } navKey
+                            , fetchStreamerProfiles (List.map .toID (List.take streamerListPageSteps follows)) user.token
                             )
 
                         ( _, _, Data.Failure e ) ->
@@ -197,10 +197,10 @@ update msg model =
                         count =
                             case streamerListMsg of
                                 ShowMore ->
-                                    min (twitchData.sidebarStreamerCount + 10) (List.length twitchData.follows)
+                                    min (twitchData.sidebarStreamerCount + streamerListPageSteps) (List.length twitchData.follows)
 
                                 ShowLess ->
-                                    max (twitchData.sidebarStreamerCount - 10) 10
+                                    max (twitchData.sidebarStreamerCount - streamerListPageSteps) streamerListPageSteps
 
                         cmd =
                             case streamerListMsg of
@@ -210,7 +210,7 @@ update msg model =
                                             nextIDs =
                                                 twitchData.follows
                                                     |> List.drop twitchData.sidebarStreamerCount
-                                                    |> List.take 10
+                                                    |> List.take streamerListPageSteps
                                                     |> List.map .toID
                                         in
                                         fetchStreamerProfiles nextIDs twitchData.signedInUser.token
@@ -368,6 +368,11 @@ appView appData =
         ]
 
 
+streamerListPageSteps : Int
+streamerListPageSteps =
+    10
+
+
 streamerListView : List Twitch.User -> Bool -> Html Msg
 streamerListView streamers moreAvailable =
     let
@@ -385,7 +390,7 @@ streamerListView streamers moreAvailable =
 
                   else
                     text ""
-                , if List.length streamers > 10 then
+                , if List.length streamers > streamerListPageSteps then
                     button [ linkButtonStyle, onClick (StreamerListMsg ShowLess) ] [ text "Less" ]
 
                   else
