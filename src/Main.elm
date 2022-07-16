@@ -188,6 +188,7 @@ loginView err =
                     [ css
                         [ Tw.btn
                         , Tw.btn_primary
+                        , Css.hover [ Tw.bg_primary_focus ]
                         ]
                     ]
                     [ a
