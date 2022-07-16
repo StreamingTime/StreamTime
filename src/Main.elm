@@ -96,7 +96,7 @@ init url navKey =
 
 fetchStreamerProfiles : List String -> String -> Cmd Msg
 fetchStreamerProfiles userIDs token =
-    Cmd.map GotStreamerProfiles (Twitch.getUsers userIDs TwitchConfig.clientId token)
+    Cmd.map GotStreamerProfiles (Twitch.getUsers (Debug.log "fetching profiles" userIDs) TwitchConfig.clientId token)
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -161,7 +161,7 @@ update msg model =
                         ( Just user, Just follows, Data.Success streamers ) ->
                             -- all good, loading is complete
                             ( LoggedIn { signedInUser = user, follows = follows, streamers = streamers, sidebarStreamerCount = streamerListPageSteps } navKey
-                            , fetchStreamerProfiles (List.map .toID (List.take streamerListPageSteps follows)) user.token
+                            , Cmd.none
                             )
 
                         ( _, _, Data.Failure e ) ->
@@ -205,7 +205,7 @@ update msg model =
                         cmd =
                             case streamerListMsg of
                                 ShowMore ->
-                                    if List.length appData.follows > List.length appData.follows then
+                                    if List.length appData.follows > List.length appData.streamers then
                                         let
                                             nextIDs =
                                                 appData.follows
