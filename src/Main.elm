@@ -563,9 +563,8 @@ userView user =
                     ]
                 ]
     in
-    div []
-        [ span []
-            [ text name ]
+    div [ css [ Tw.flex, Tw.items_center ] ]
+        [ p [ css [ Tw.mr_2, Tw.font_semibold ] ] [ text name ]
         , avatar
         ]
 
