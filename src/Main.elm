@@ -6,7 +6,7 @@ import Css
 import Css.Global
 import Data
 import Html.Styled exposing (Html, a, button, div, h1, img, p, span, text, toUnstyled)
-import Html.Styled.Attributes exposing (alt, css, href, src, style)
+import Html.Styled.Attributes exposing (alt, class, css, href, src, style)
 import Html.Styled.Events exposing (onClick)
 import Http
 import Tailwind.Utilities as Tw
@@ -34,6 +34,7 @@ type alias AppData =
     -- a list of follow relation metadata originating from our user
     , follows : List Twitch.FollowRelation
     , sidebarStreamerCount : Int
+    , error : Maybe String
     }
 
 
@@ -174,7 +175,7 @@ update msg model =
                     case ( m.signedInUser, m.follows, Data.fromResult response ) of
                         ( Just user, Just follows, Data.Success streamers ) ->
                             -- all good, loading is complete
-                            ( LoggedIn { signedInUser = user, follows = follows, streamers = streamers, sidebarStreamerCount = streamerListPageSteps } navKey
+                            ( LoggedIn { signedInUser = user, follows = follows, streamers = streamers, sidebarStreamerCount = streamerListPageSteps, error = Nothing } navKey
                             , Cmd.none
                             )
 
@@ -223,8 +224,8 @@ update msg model =
                         Ok newProfiles ->
                             ( LoggedIn { appData | streamers = appData.streamers ++ newProfiles } navKey, Cmd.none )
 
-                        Err _ ->
-                            Debug.todo "error handling"
+                        Err errMsg ->
+                            ( LoggedIn { appData | error = Just (errorToString errMsg) } navKey, Cmd.none )
 
                 StreamerListMsg streamerListMsg ->
                     let
@@ -378,15 +379,15 @@ loginView err =
                         ]
                     ]
                     [ text "All schedules from your favorite streamers in one place." ]
-                , button
-                    [ css
-                        [ Tw.btn
-                        , Tw.btn_primary
-                        , Css.hover [ Tw.bg_primary_focus ]
+                , a
+                    [ href (Twitch.loginFlowUrl TwitchConfig.clientId loginRedirectUrl) ]
+                    [ button
+                        [ css
+                            [ Tw.btn
+                            , Tw.btn_primary
+                            , Css.hover [ Tw.bg_primary_focus ]
+                            ]
                         ]
-                    ]
-                    [ a
-                        [ href (Twitch.loginFlowUrl TwitchConfig.clientId loginRedirectUrl) ]
                         [ text "Login with twitch" ]
                     ]
                 , case err of
@@ -441,10 +442,25 @@ loadingSpinner styles =
         []
 
 
+errorView : Maybe String -> Html Msg
+errorView error =
+    case error of
+        Just errMsg ->
+            div [ css [ Tw.modal, Tw.modal ], class "modal-open" ]
+                [ div [ css [ Tw.modal_box, Tw.alert, Tw.alert_error ] ]
+                    [ text errMsg ]
+                ]
+
+        Nothing ->
+            text ""
+
+
 appView : AppData -> Html Msg
 appView appData =
     div []
-        [ userView appData.signedInUser
+        [ text ("user: " ++ Debug.toString appData.signedInUser)
+        , userView appData.signedInUser
+        , errorView appData.error
         , div
             []
             [ streamerListView (List.take appData.sidebarStreamerCount appData.streamers) (List.length appData.follows > appData.sidebarStreamerCount) ]
