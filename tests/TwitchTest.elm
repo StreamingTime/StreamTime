@@ -1,4 +1,4 @@
-module TwitchTest exposing (accessTokenFromUrlTest, decodeFollowRelation, decodePaginatedTest, decodeUserTest, decodeValidateTokenResponseTest)
+module TwitchTest exposing (accessTokenFromUrlTest, decodeFollowRelation, decodeListHeadTest, decodePaginatedTest, decodeUserTest, decodeValidateTokenResponseTest)
 
 import Expect
 import Json.Decode as Decode
@@ -116,6 +116,44 @@ decodePaginatedTest =
                             Decode.string
                         )
                         "{ \"pagination\": {}, \"data\": \"some value\"}"
+                    )
+            )
+        ]
+
+
+decodeListHeadTest : Test
+decodeListHeadTest =
+    describe "decode json list heads"
+        [ test "decode list with len 2"
+            (\_ ->
+                Expect.equal
+                    (Result.Ok 1)
+                    (Decode.decodeString
+                        (Twitch.decodeListHead
+                            Decode.int
+                        )
+                        "[1,2]"
+                    )
+            )
+        , test "decode list with len 1"
+            (\_ ->
+                Expect.equal
+                    (Result.Ok 1)
+                    (Decode.decodeString
+                        (Twitch.decodeListHead
+                            Decode.int
+                        )
+                        "[1]"
+                    )
+            )
+        , test "decode empty list"
+            (\_ ->
+                Expect.err
+                    (Decode.decodeString
+                        (Twitch.decodeListHead
+                            Decode.int
+                        )
+                        "[]"
                     )
             )
         ]

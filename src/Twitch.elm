@@ -1,4 +1,4 @@
-module Twitch exposing (ClientID(..), FollowRelation, PaginatedResponse, Token(..), User, ValidateTokenResponse, accessTokenFromUrl, decodeFollowRelation, decodePaginated, decodeUser, decodeValidateTokenResponse, getUserFollows, getUsers, loginFlowUrl, validateToken)
+module Twitch exposing (ClientID(..), FollowRelation, PaginatedResponse, Token(..), User, ValidateTokenResponse, accessTokenFromUrl, decodeFollowRelation, decodeListHead, decodePaginated, decodeUser, decodeValidateTokenResponse, getUser, getUserFollows, getUsers, loginFlowUrl, validateToken)
 
 import Http
 import Json.Decode as Decode
@@ -149,6 +149,39 @@ getUsers userIDs =
                 )
     in
     bearerRequest u (Decode.field "data" (Decode.list decodeUser))
+
+
+
+{- https://dev.twitch.tv/docs/api/reference#get-users -}
+
+
+getUser : String -> ClientID -> Token -> Cmd (Result Http.Error User)
+getUser userID =
+    let
+        u =
+            apiUrlBuilder
+                [ "users" ]
+                [ Url.Builder.string "id" userID ]
+    in
+    bearerRequest u
+        (Decode.field "data"
+            (decodeListHead decodeUser)
+        )
+
+
+decodeListHead : Decode.Decoder a -> Decode.Decoder a
+decodeListHead listItemDecoder =
+    let
+        headOrFail : List a -> Decode.Decoder a
+        headOrFail list =
+            case List.head list of
+                Just item ->
+                    Decode.succeed item
+
+                Nothing ->
+                    Decode.fail "Can't take head of empty list"
+    in
+    Decode.andThen headOrFail (Decode.list listItemDecoder)
 
 
 

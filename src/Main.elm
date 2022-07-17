@@ -6,7 +6,7 @@ import Css
 import Css.Global
 import Data
 import Html.Styled exposing (Html, a, button, div, h1, img, p, span, text, toUnstyled)
-import Html.Styled.Attributes exposing (class, css, href, src, style)
+import Html.Styled.Attributes exposing (alt, class, css, href, src, style)
 import Html.Styled.Events exposing (onClick)
 import Http
 import Tailwind.Utilities as Tw
@@ -56,6 +56,8 @@ type alias SignedInUser =
     { token : Twitch.Token
     , loginName : String
     , userID : String
+    , displayName : Maybe String
+    , profileImageUrl : Maybe String
     }
 
 
@@ -64,6 +66,7 @@ type Msg
     | GotValidateTokenResponse (Result Http.Error Twitch.ValidateTokenResponse)
     | GotUserFollows (Result Http.Error (Twitch.PaginatedResponse (List Twitch.FollowRelation)))
     | GotStreamerProfiles (Result Http.Error (List Twitch.User))
+    | GotUserProfile (Result Http.Error Twitch.User)
     | StreamerListMsg StreamerListMsg
 
 
@@ -100,6 +103,11 @@ fetchStreamerProfiles userIDs token =
     Cmd.map GotStreamerProfiles (Twitch.getUsers userIDs TwitchConfig.clientId token)
 
 
+fetchUserProfile : String -> Twitch.Token -> Cmd Msg
+fetchUserProfile userID token =
+    Cmd.map GotUserProfile (Twitch.getUser userID TwitchConfig.clientId token)
+
+
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case model of
@@ -116,13 +124,19 @@ update msg model =
                         Ok value ->
                             ( LoadingScreen
                                 { token = m.token
-                                , signedInUser = Just { token = m.token, loginName = value.login, userID = value.userID }
+                                , signedInUser =
+                                    Just
+                                        { token = m.token
+                                        , loginName = value.login
+                                        , userID = value.userID
+                                        , displayName = Nothing
+                                        , profileImageUrl = Nothing
+                                        }
                                 , follows = Nothing
                                 , firstStreamers = Nothing
                                 }
                                 navKey
-                              -- Fetch streamers our user follows
-                            , Cmd.map GotUserFollows (Twitch.getUserFollows value.userID Nothing TwitchConfig.clientId m.token)
+                            , fetchUserProfile value.userID m.token
                             )
 
                 GotUserFollows response ->
@@ -171,6 +185,23 @@ update msg model =
                         _ ->
                             Debug.todo "this case should not happen, since we cant fetch profiles if user or follows are unknown"
 
+                GotUserProfile response ->
+                    case ( m.signedInUser, response ) of
+                        ( Just user, Ok profile ) ->
+                            let
+                                updatedUser =
+                                    { user | displayName = Just profile.displayName, profileImageUrl = Just profile.profileImageUrl }
+                            in
+                            ( LoadingScreen { m | signedInUser = Just updatedUser } navKey
+                            , Cmd.map GotUserFollows (Twitch.getUserFollows user.userID Nothing TwitchConfig.clientId m.token)
+                            )
+
+                        ( _, Err e ) ->
+                            ( NotLoggedIn (Just e) navKey, Cmd.none )
+
+                        ( Nothing, _ ) ->
+                            Debug.todo "again, a case that should not happen"
+
                 StreamerListMsg _ ->
                     ( model, Cmd.none )
 
@@ -183,6 +214,9 @@ update msg model =
                     ( model, Cmd.none )
 
                 GotUserFollows _ ->
+                    ( model, Cmd.none )
+
+                GotUserProfile _ ->
                     ( model, Cmd.none )
 
                 GotStreamerProfiles response ->
@@ -240,6 +274,9 @@ update msg model =
                     ( model, Cmd.none )
 
                 StreamerListMsg _ ->
+                    ( model, Cmd.none )
+
+                GotUserProfile _ ->
                     ( model, Cmd.none )
 
 
@@ -422,6 +459,7 @@ appView : AppData -> Html Msg
 appView appData =
     div []
         [ text ("user: " ++ Debug.toString appData.signedInUser)
+        , userView appData.signedInUser
         , errorView appData.error
         , div
             []
@@ -484,6 +522,39 @@ streamerView streamer =
             [ avatar
             , div [ css [ Tw.p_1, Tw.font_medium, Tw.truncate ] ] [ text streamer.displayName ]
             ]
+        ]
+
+
+userView : SignedInUser -> Html msg
+userView user =
+    let
+        imgUrl =
+            case user.profileImageUrl of
+                Just url ->
+                    url
+
+                Nothing ->
+                    ""
+
+        name =
+            case user.displayName of
+                Just displayName ->
+                    displayName
+
+                Nothing ->
+                    user.loginName
+
+        avatar =
+            div [ css [ Tw.avatar ] ]
+                [ div [ css [ Tw.rounded_full, Tw.w_10, Tw.h_10 ] ]
+                    [ img [ src imgUrl, alt (name ++ " profile image") ] []
+                    ]
+                ]
+    in
+    div []
+        [ span []
+            [ text name ]
+        , avatar
         ]
 
 
