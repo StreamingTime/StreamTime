@@ -341,15 +341,15 @@ loginView err =
                         ]
                     ]
                     [ text "All schedules from your favorite streamers in one place." ]
-                , button
-                    [ css
-                        [ Tw.btn
-                        , Tw.btn_primary
-                        , Css.hover [ Tw.bg_primary_focus ]
+                , a
+                    [ href (Twitch.loginFlowUrl TwitchConfig.clientId loginRedirectUrl) ]
+                    [ button
+                        [ css
+                            [ Tw.btn
+                            , Tw.btn_primary
+                            , Css.hover [ Tw.bg_primary_focus ]
+                            ]
                         ]
-                    ]
-                    [ a
-                        [ href (Twitch.loginFlowUrl TwitchConfig.clientId loginRedirectUrl) ]
                         [ text "Login with twitch" ]
                     ]
                 , case err of
