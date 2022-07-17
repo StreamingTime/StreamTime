@@ -135,7 +135,6 @@ update msg model =
                                 , firstStreamers = Nothing
                                 }
                                 navKey
-                              -- Fetch streamers our user follows
                             , fetchUserProfile value.userID m.token
                             )
 
