@@ -6,7 +6,7 @@ import Css
 import Css.Global
 import Data
 import Html.Styled exposing (Html, a, button, div, h1, img, p, span, text, toUnstyled)
-import Html.Styled.Attributes exposing (css, href, src, style)
+import Html.Styled.Attributes exposing (alt, css, href, src, style)
 import Html.Styled.Events exposing (onClick)
 import Http
 import Tailwind.Utilities as Tw
@@ -445,7 +445,7 @@ loadingSpinner styles =
 appView : AppData -> Html Msg
 appView appData =
     div []
-        [ text ("user: " ++ Debug.toString appData.signedInUser)
+        [ userView appData.signedInUser
         , div
             []
             [ streamerListView (List.take appData.sidebarStreamerCount appData.streamers) (List.length appData.follows > appData.sidebarStreamerCount) ]
@@ -507,6 +507,39 @@ streamerView streamer =
             [ avatar
             , div [ css [ Tw.p_1, Tw.font_medium, Tw.truncate ] ] [ text streamer.displayName ]
             ]
+        ]
+
+
+userView : SignedInUser -> Html msg
+userView user =
+    let
+        imgUrl =
+            case user.profileImageUrl of
+                Just url ->
+                    url
+
+                Nothing ->
+                    ""
+
+        name =
+            case user.displayName of
+                Just displayName ->
+                    displayName
+
+                Nothing ->
+                    user.loginName
+
+        avatar =
+            div [ css [ Tw.avatar ] ]
+                [ div [ css [ Tw.rounded_full, Tw.w_10, Tw.h_10 ] ]
+                    [ img [ src imgUrl, alt (name ++ " profile image") ] []
+                    ]
+                ]
+    in
+    div []
+        [ span []
+            [ text name ]
+        , avatar
         ]
 
 
