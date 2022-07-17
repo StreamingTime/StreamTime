@@ -33,7 +33,7 @@ accessTokenFromUrlTest =
                 in
                 case urlString of
                     Just u ->
-                        Expect.equal (Just "73d0f8mkabpbmjp921asv2jaidwxn")
+                        Expect.equal (Just (Twitch.Token "73d0f8mkabpbmjp921asv2jaidwxn"))
                             (Twitch.accessTokenFromUrl u)
 
                     Nothing ->
