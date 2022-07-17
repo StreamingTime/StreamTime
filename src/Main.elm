@@ -458,48 +458,62 @@ errorView error =
 appView : AppData -> Html Msg
 appView appData =
     div []
-        [ text ("user: " ++ Debug.toString appData.signedInUser)
-        , userView appData.signedInUser
-        , errorView appData.error
-        , div
-            []
-            [ streamerListView (List.take appData.sidebarStreamerCount appData.streamers) (List.length appData.follows > appData.sidebarStreamerCount) ]
-        ]
+        [ errorView appData.error
+        , headerView appData.signedInUser
+        , div [ css [ Tw.flex ] ]
+            [ streamerListView (List.take appData.sidebarStreamerCount appData.streamers) (List.length appData.follows > appData.sidebarStreamerCount)
 
-
-streamerListPageSteps : Int
-streamerListPageSteps =
-    10
-
-
-streamerListView : List Twitch.User -> Bool -> Html Msg
-streamerListView streamers moreAvailable =
-    let
-        linkButtonStyle =
-            css [ Tw.btn, Tw.btn_link ]
-    in
-    div [ style "width" "200px" ]
-        [ div []
-            [ text ("show: " ++ String.fromInt (List.length streamers))
-            , div []
-                (List.map streamerView streamers)
-            , div []
-                [ if moreAvailable then
-                    button [ linkButtonStyle, onClick (StreamerListMsg ShowMore) ] [ text "More" ]
-
-                  else
-                    text ""
-                , if List.length streamers > streamerListPageSteps then
-                    button [ linkButtonStyle, onClick (StreamerListMsg ShowLess) ] [ text "Less" ]
-
-                  else
-                    text ""
-                ]
+            -- Content placeholder
+            , div [ css [ Tw.bg_base_100, Tw.h_screen, Tw.w_full, Tw.ml_60, Tw.flex, Tw.items_center, Tw.justify_center, Tw.text_5xl, Tw.font_semibold ] ] [ text "Content" ]
             ]
         ]
 
 
-streamerView : Twitch.User -> Html msg
+headerView : SignedInUser -> Html Msg
+headerView user =
+    div [ css [ Tw.bg_base_100, Tw.border_base_200, Tw.border_2, Tw.fixed, Tw.h_16, Tw.w_full ] ]
+        [ div [ css [ Tw.flex, Tw.items_center, Tw.justify_between, Tw.h_full, Tw.mx_6 ] ]
+            [ div [ css [ Tw.text_xl, Tw.font_semibold, Tw.text_white ] ]
+                [ text "Twitch "
+                , span [ css [ Tw.text_purple_400 ] ] [ text "Schedule" ]
+                ]
+            , userView user
+            ]
+        ]
+
+
+streamerListView : List Twitch.User -> Bool -> Html Msg
+streamerListView streamers moreAvailable =
+    div [ css [ Tw.bg_base_200, Tw.fixed, Tw.top_16, Tw.bottom_0, Tw.w_60, Tw.overflow_y_auto ] ]
+        [ div [ css [ Tw.my_2, Tw.text_sm, Tw.font_medium ] ]
+            [ p [ css [ Tw.text_center ] ] [ text "CHANNELS YOU FOLLOW" ]
+            , div [ css [ Tw.mt_2 ] ]
+                (List.map streamerView streamers ++ [ expandstreamerListView moreAvailable (List.length streamers > streamerListPageSteps) ])
+            ]
+        ]
+
+
+expandstreamerListView : Bool -> Bool -> Html Msg
+expandstreamerListView more less =
+    let
+        linkButtonStyle =
+            css [ Tw.text_primary, Tw.underline ]
+    in
+    div [ css [ Tw.mt_2, Tw.mx_2, Tw.flex, Tw.justify_between ] ]
+        [ if more then
+            button [ linkButtonStyle, onClick (StreamerListMsg ShowMore) ] [ text "Show more" ]
+
+          else
+            text ""
+        , if less then
+            button [ linkButtonStyle, onClick (StreamerListMsg ShowLess) ] [ text "Show less" ]
+
+          else
+            text ""
+        ]
+
+
+streamerView : Twitch.User -> Html Msg
 streamerView streamer =
     let
         avatar =
@@ -509,18 +523,16 @@ streamerView streamer =
                     ]
                 ]
     in
-    a [ href ("https://twitch.tv/" ++ streamer.displayName) ]
+    a [ css [ Tw.block, Tw.p_1, Css.hover [ Tw.bg_purple_500 ] ], href ("https://twitch.tv/" ++ streamer.displayName) ]
         [ div
             [ css
                 [ Tw.flex
-                , Tw.gap_2
-                , Tw.items_center -- center text vertically
-                , Tw.m_1
-                , Css.hover [ Tw.bg_primary_focus ]
+                , Tw.space_x_2
+                , Tw.items_center
                 ]
             ]
             [ avatar
-            , div [ css [ Tw.p_1, Tw.font_medium, Tw.truncate ] ] [ text streamer.displayName ]
+            , div [ css [ Tw.font_medium, Tw.truncate ] ] [ text streamer.displayName ]
             ]
         ]
 
@@ -556,6 +568,11 @@ userView user =
             [ text name ]
         , avatar
         ]
+
+
+streamerListPageSteps : Int
+streamerListPageSteps =
+    10
 
 
 main : Program () Model Msg
