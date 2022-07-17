@@ -55,6 +55,8 @@ type alias SignedInUser =
     { token : Twitch.Token
     , loginName : String
     , userID : String
+    , displayName : Maybe String
+    , profileImageUrl : Maybe String
     }
 
 
@@ -63,6 +65,7 @@ type Msg
     | GotValidateTokenResponse (Result Http.Error Twitch.ValidateTokenResponse)
     | GotUserFollows (Result Http.Error (Twitch.PaginatedResponse (List Twitch.FollowRelation)))
     | GotStreamerProfiles (Result Http.Error (List Twitch.User))
+    | GotUserProfile (Result Http.Error Twitch.User)
     | StreamerListMsg StreamerListMsg
 
 
@@ -99,6 +102,11 @@ fetchStreamerProfiles userIDs token =
     Cmd.map GotStreamerProfiles (Twitch.getUsers userIDs TwitchConfig.clientId token)
 
 
+fetchUserProfile : String -> Twitch.Token -> Cmd Msg
+fetchUserProfile userID token =
+    Cmd.map GotUserProfile (Twitch.getUser userID TwitchConfig.clientId token)
+
+
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case model of
@@ -115,13 +123,20 @@ update msg model =
                         Ok value ->
                             ( LoadingScreen
                                 { token = m.token
-                                , signedInUser = Just { token = m.token, loginName = value.login, userID = value.userID }
+                                , signedInUser =
+                                    Just
+                                        { token = m.token
+                                        , loginName = value.login
+                                        , userID = value.userID
+                                        , displayName = Nothing
+                                        , profileImageUrl = Nothing
+                                        }
                                 , follows = Nothing
                                 , firstStreamers = Nothing
                                 }
                                 navKey
                               -- Fetch streamers our user follows
-                            , Cmd.map GotUserFollows (Twitch.getUserFollows value.userID Nothing TwitchConfig.clientId m.token)
+                            , fetchUserProfile value.userID m.token
                             )
 
                 GotUserFollows response ->
@@ -170,6 +185,23 @@ update msg model =
                         _ ->
                             Debug.todo "this case should not happen, since we cant fetch profiles if user or follows are unknown"
 
+                GotUserProfile response ->
+                    case ( m.signedInUser, response ) of
+                        ( Just user, Ok profile ) ->
+                            let
+                                updatedUser =
+                                    { user | displayName = Just profile.displayName, profileImageUrl = Just profile.profileImageUrl }
+                            in
+                            ( LoadingScreen { m | signedInUser = Just updatedUser } navKey
+                            , Cmd.map GotUserFollows (Twitch.getUserFollows user.userID Nothing TwitchConfig.clientId m.token)
+                            )
+
+                        ( _, Err e ) ->
+                            ( NotLoggedIn (Just e) navKey, Cmd.none )
+
+                        ( Nothing, _ ) ->
+                            Debug.todo "again, a case that should not happen"
+
                 StreamerListMsg _ ->
                     ( model, Cmd.none )
 
@@ -182,6 +214,9 @@ update msg model =
                     ( model, Cmd.none )
 
                 GotUserFollows _ ->
+                    ( model, Cmd.none )
+
+                GotUserProfile _ ->
                     ( model, Cmd.none )
 
                 GotStreamerProfiles response ->
@@ -239,6 +274,9 @@ update msg model =
                     ( model, Cmd.none )
 
                 StreamerListMsg _ ->
+                    ( model, Cmd.none )
+
+                GotUserProfile _ ->
                     ( model, Cmd.none )
 
 
