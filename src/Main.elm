@@ -9,11 +9,17 @@ import Html.Styled exposing (Html, a, button, div, h1, img, p, span, text, toUns
 import Html.Styled.Attributes exposing (alt, class, css, href, src, style)
 import Html.Styled.Events exposing (onClick)
 import Http
+import RefreshData exposing (RefreshData(..))
 import Tailwind.Utilities as Tw
 import Twitch
 import TwitchConfig
 import Url
 import Utils
+
+
+refreshDataListLength : RefreshData (List a) -> Int
+refreshDataListLength list =
+    List.length (RefreshData.withDefault [] list)
 
 
 loginRedirectUrl : String
@@ -29,7 +35,7 @@ type Model
 
 type alias AppData =
     { signedInUser : SignedInUser
-    , streamers : List Twitch.User
+    , streamers : RefreshData (List Twitch.User)
 
     -- a list of follow relation metadata originating from our user
     , follows : List Twitch.FollowRelation
@@ -175,7 +181,7 @@ update msg model =
                     case ( m.signedInUser, m.follows, Data.fromResult response ) of
                         ( Just user, Just follows, Data.Success streamers ) ->
                             -- all good, loading is complete
-                            ( LoggedIn { signedInUser = user, follows = follows, streamers = streamers, sidebarStreamerCount = streamerListPageSteps, error = Nothing } navKey
+                            ( LoggedIn { signedInUser = user, follows = follows, streamers = Present streamers, sidebarStreamerCount = streamerListPageSteps, error = Nothing } navKey
                             , Cmd.none
                             )
 
@@ -222,10 +228,32 @@ update msg model =
                 GotStreamerProfiles response ->
                     case response of
                         Ok newProfiles ->
-                            ( LoggedIn { appData | streamers = appData.streamers ++ newProfiles } navKey, Cmd.none )
+                            ( LoggedIn
+                                { appData
+                                    | streamers =
+                                        RefreshData.map
+                                            (\data ->
+                                                case data of
+                                                    Just oldProfiles ->
+                                                        Present (oldProfiles ++ newProfiles)
 
-                        Err errMsg ->
-                            ( LoggedIn { appData | error = Just (errorToString errMsg) } navKey, Cmd.none )
+                                                    Nothing ->
+                                                        Present newProfiles
+                                            )
+                                            appData.streamers
+                                }
+                                navKey
+                            , Cmd.none
+                            )
+
+                        Err err ->
+                            ( LoggedIn
+                                { appData
+                                    | streamers = RefreshData.withError err appData.streamers
+                                }
+                                navKey
+                            , Cmd.none
+                            )
 
                 StreamerListMsg streamerListMsg ->
                     let
@@ -237,10 +265,13 @@ update msg model =
                                 ShowLess ->
                                     max (appData.sidebarStreamerCount - streamerListPageSteps) streamerListPageSteps
 
+                        loadMore =
+                            List.length appData.follows > refreshDataListLength appData.streamers
+
                         cmd =
                             case streamerListMsg of
                                 ShowMore ->
-                                    if List.length appData.follows > List.length appData.streamers then
+                                    if loadMore then
                                         let
                                             nextIDs =
                                                 appData.follows
@@ -256,7 +287,28 @@ update msg model =
                                 ShowLess ->
                                     Cmd.none
                     in
-                    ( LoggedIn { appData | sidebarStreamerCount = count } navKey, cmd )
+                    if loadMore then
+                        ( LoggedIn
+                            { appData
+                                | sidebarStreamerCount = count
+                                , streamers =
+                                    RefreshData.map
+                                        (\data ->
+                                            case data of
+                                                Just value ->
+                                                    RefreshData.LoadingMore value
+
+                                                Nothing ->
+                                                    RefreshData.Initialising
+                                        )
+                                        appData.streamers
+                            }
+                            navKey
+                        , cmd
+                        )
+
+                    else
+                        ( LoggedIn { appData | sidebarStreamerCount = count } navKey, cmd )
 
         NotLoggedIn _ navKey ->
             case msg of
@@ -463,7 +515,7 @@ appView appData =
         , errorView appData.error
         , div
             []
-            [ streamerListView (List.take appData.sidebarStreamerCount appData.streamers) (List.length appData.follows > appData.sidebarStreamerCount) ]
+            [ streamerListView appData.streamers appData.sidebarStreamerCount (List.length appData.follows > appData.sidebarStreamerCount) ]
         ]
 
 
@@ -472,30 +524,56 @@ streamerListPageSteps =
     10
 
 
-streamerListView : List Twitch.User -> Bool -> Html Msg
-streamerListView streamers moreAvailable =
+streamerListView : RefreshData (List Twitch.User) -> Int -> Bool -> Html Msg
+streamerListView incStreamers showCount moreAvailable =
     let
         linkButtonStyle =
             css [ Tw.btn, Tw.btn_link ]
-    in
-    div [ style "width" "200px" ]
-        [ div []
-            [ text ("show: " ++ String.fromInt (List.length streamers))
-            , div []
-                (List.map streamerView streamers)
-            , div []
+
+        listView =
+            div []
+                (incStreamers
+                    |> RefreshData.withDefault []
+                    -- todo: nicer solution than default
+                    |> List.take showCount
+                    |> List.map streamerView
+                )
+
+        buttons =
+            div []
                 [ if moreAvailable then
                     button [ linkButtonStyle, onClick (StreamerListMsg ShowMore) ] [ text "More" ]
 
                   else
                     text ""
-                , if List.length streamers > streamerListPageSteps then
-                    button [ linkButtonStyle, onClick (StreamerListMsg ShowLess) ] [ text "Less" ]
+                , --if List.length streamers > streamerListPageSteps then
+                  -- TODO: dont show less button all the time
+                  button [ linkButtonStyle, onClick (StreamerListMsg ShowLess) ] [ text "Less" ]
 
-                  else
-                    text ""
+                --else
+                --text ""
                 ]
-            ]
+    in
+    div [ style "width" "200px" ]
+        [ listView
+        , buttons
+        , RefreshData.mapError
+            (\mbErr ->
+                text
+                    (case mbErr of
+                        Just err ->
+                            errorToString err
+
+                        Nothing ->
+                            ""
+                    )
+            )
+            incStreamers
+        , if RefreshData.isLoading incStreamers then
+            loadingSpinner [ Tw.w_8, Tw.h_8 ]
+
+          else
+            text ""
         ]
 
 
