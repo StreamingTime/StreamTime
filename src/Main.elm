@@ -30,7 +30,7 @@ type Model
 
 type alias AppData =
     { signedInUser : SignedInUser
-    , streamers : RefreshData (List Twitch.User)
+    , streamers : RefreshData Http.Error (List Twitch.User)
 
     -- a list of follow relation metadata originating from our user
     , follows : List Twitch.FollowRelation
@@ -500,7 +500,7 @@ streamerListPageSteps =
     10
 
 
-streamerListView : RefreshData (List Twitch.User) -> Int -> Bool -> Html Msg
+streamerListView : RefreshData Http.Error (List Twitch.User) -> Int -> Bool -> Html Msg
 streamerListView streamers showCount moreAvailable =
     let
         linkButtonStyle =

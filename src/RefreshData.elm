@@ -1,15 +1,14 @@
 module RefreshData exposing (RefreshData(..), isLoading, map, mapTo)
 
-import Http
-
-
 {-| `RefreshData` holds a value that may be replaced or updated later.
 When the update is in progress or there is an error, it can indicate loading or stores the error without losing the data.
 -}
-type RefreshData a
+
+
+type RefreshData errorType a
     = LoadingMore a
     | Present a
-    | ErrorWithData Http.Error a
+    | ErrorWithData errorType a
 
 
 {-| Transform a `RefreshData` into any other type using as function.
@@ -20,7 +19,7 @@ Useful to unwrap the stored value
     mapTo (\err _ -> err) (ErrorWithData Http.Timeout "x") == Just Timeout
 
 -}
-mapTo : (Maybe Http.Error -> a -> b) -> RefreshData a -> b
+mapTo : (Maybe errorType -> a -> b) -> RefreshData errorType a -> b
 mapTo func data =
     case data of
         LoadingMore value ->
@@ -43,7 +42,7 @@ Useful to convert between two states.
     map (\s -> Present (String.toUpper s)) (Present "x") == Present "X"
 
 -}
-map : (a -> RefreshData b) -> RefreshData a -> RefreshData b
+map : (a -> RefreshData errorTypeB b) -> RefreshData errorType a -> RefreshData errorTypeB b
 map func data =
     case data of
         LoadingMore value ->
@@ -58,7 +57,7 @@ map func data =
 
 {-| Whether this `RefreshData` is currently waiting for (new) data
 -}
-isLoading : RefreshData a -> Bool
+isLoading : RefreshData errorType a -> Bool
 isLoading data =
     case data of
         LoadingMore _ ->
