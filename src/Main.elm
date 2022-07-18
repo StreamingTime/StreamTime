@@ -521,12 +521,11 @@ streamerListView streamers showCount moreAvailable =
 
                   else
                     text ""
-                , --if List.length streamers > streamerListPageSteps then
-                  -- TODO: dont show less button all the time
-                  button [ linkButtonStyle, onClick (StreamerListMsg ShowLess) ] [ text "Less" ]
+                , if showCount > streamerListPageSteps then
+                    button [ linkButtonStyle, onClick (StreamerListMsg ShowLess) ] [ text "Less" ]
 
-                --else
-                --text ""
+                  else
+                    text ""
                 ]
     in
     div [ style "width" "200px" ]
