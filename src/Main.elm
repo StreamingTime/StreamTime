@@ -243,14 +243,6 @@ update msg model =
 
                 StreamerListMsg streamerListMsg ->
                     let
-                        count =
-                            case streamerListMsg of
-                                ShowMore ->
-                                    min (appData.sidebarStreamerCount + streamerListPageSteps) (List.length appData.follows)
-
-                                ShowLess ->
-                                    max (appData.sidebarStreamerCount - streamerListPageSteps) streamerListPageSteps
-
                         loadMore =
                             List.length appData.follows > RefreshData.mapTo (\_ -> List.length) appData.streamers
 
@@ -283,6 +275,15 @@ update msg model =
                         )
 
                     else
+                        let
+                            count =
+                                case streamerListMsg of
+                                    ShowMore ->
+                                        min (appData.sidebarStreamerCount + streamerListPageSteps) (List.length appData.follows)
+
+                                    ShowLess ->
+                                        max (appData.sidebarStreamerCount - streamerListPageSteps) streamerListPageSteps
+                        in
                         ( LoggedIn { appData | sidebarStreamerCount = count } navKey, cmd )
 
         NotLoggedIn _ navKey ->
