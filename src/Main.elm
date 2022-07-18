@@ -17,11 +17,6 @@ import Url
 import Utils
 
 
-refreshDataListLength : RefreshData (List a) -> Int
-refreshDataListLength list =
-    List.length (RefreshData.withDefault [] list)
-
-
 loginRedirectUrl : String
 loginRedirectUrl =
     "http://localhost:8000/src/Main.elm"
@@ -230,17 +225,8 @@ update msg model =
                         Ok newProfiles ->
                             ( LoggedIn
                                 { appData
-                                    | streamers =
-                                        RefreshData.map
-                                            (\data ->
-                                                case data of
-                                                    Just oldProfiles ->
-                                                        Present (oldProfiles ++ newProfiles)
-
-                                                    Nothing ->
-                                                        Present newProfiles
-                                            )
-                                            appData.streamers
+                                    | streamers = RefreshData.map (\oldProfiles -> Present (oldProfiles ++ newProfiles)) appData.streamers
+                                    , sidebarStreamerCount = appData.sidebarStreamerCount + streamerListPageSteps
                                 }
                                 navKey
                             , Cmd.none
@@ -249,7 +235,7 @@ update msg model =
                         Err err ->
                             ( LoggedIn
                                 { appData
-                                    | streamers = RefreshData.withError err appData.streamers
+                                    | streamers = RefreshData.map (RefreshData.ErrorWithData err) appData.streamers
                                 }
                                 navKey
                             , Cmd.none
@@ -266,7 +252,7 @@ update msg model =
                                     max (appData.sidebarStreamerCount - streamerListPageSteps) streamerListPageSteps
 
                         loadMore =
-                            List.length appData.follows > refreshDataListLength appData.streamers
+                            List.length appData.follows > RefreshData.mapTo (\_ -> List.length) appData.streamers
 
                         cmd =
                             case streamerListMsg of
@@ -290,18 +276,7 @@ update msg model =
                     if loadMore then
                         ( LoggedIn
                             { appData
-                                | sidebarStreamerCount = count
-                                , streamers =
-                                    RefreshData.map
-                                        (\data ->
-                                            case data of
-                                                Just value ->
-                                                    RefreshData.LoadingMore value
-
-                                                Nothing ->
-                                                    RefreshData.Initialising
-                                        )
-                                        appData.streamers
+                                | streamers = RefreshData.map LoadingMore appData.streamers
                             }
                             navKey
                         , cmd
@@ -525,16 +500,15 @@ streamerListPageSteps =
 
 
 streamerListView : RefreshData (List Twitch.User) -> Int -> Bool -> Html Msg
-streamerListView incStreamers showCount moreAvailable =
+streamerListView streamers showCount moreAvailable =
     let
         linkButtonStyle =
             css [ Tw.btn, Tw.btn_link ]
 
         listView =
             div []
-                (incStreamers
-                    |> RefreshData.withDefault []
-                    -- todo: nicer solution than default
+                (streamers
+                    |> RefreshData.mapTo (\_ list -> list)
                     |> List.take showCount
                     |> List.map streamerView
                 )
@@ -557,19 +531,17 @@ streamerListView incStreamers showCount moreAvailable =
     div [ style "width" "200px" ]
         [ listView
         , buttons
-        , RefreshData.mapError
-            (\mbErr ->
-                text
-                    (case mbErr of
-                        Just err ->
-                            errorToString err
+        , RefreshData.mapTo
+            (\err _ ->
+                case err of
+                    Just error ->
+                        text (errorToString error)
 
-                        Nothing ->
-                            ""
-                    )
+                    Nothing ->
+                        text ""
             )
-            incStreamers
-        , if RefreshData.isLoading incStreamers then
+            streamers
+        , if RefreshData.isLoading streamers then
             loadingSpinner [ Tw.w_8, Tw.h_8 ]
 
           else

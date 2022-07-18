@@ -1,125 +1,71 @@
-module RefreshData exposing (RefreshData(..), isLoading, map, mapError, toMaybe, withDefault, withError)
+module RefreshData exposing (RefreshData(..), isLoading, map, mapTo)
 
 import Http
 
 
-
-{- RefreshData holds a value that may be replaced or updated later.
-   When the update is in progress or there is an error, it can indicate loading or store the error without losing the data.
+{-| `RefreshData` holds a value that may be replaced or updated later.
+When the update is in progress or there is an error, it can indicate loading or stores the error without losing the data.
 -}
-
-
 type RefreshData a
-    = --add Uninitialized variant neccessary
-      Initialising
-    | LoadingMore a
+    = LoadingMore a
     | Present a
-    | Error Http.Error
     | ErrorWithData Http.Error a
 
 
-withDefault : a -> RefreshData a -> a
-withDefault default inc =
-    case inc of
-        LoadingMore values ->
-            values
+{-| Transform a `RefreshData` into any other type using as function.
+Useful to unwrap the stored value
 
-        Present values ->
-            values
+    mapTo (\_ -> identity) (Present "x") == "x"
 
-        ErrorWithData _ values ->
-            values
+    mapTo (\err _ -> err) (ErrorWithData Http.Timeout "x") == Just Timeout
 
-        Error _ ->
-            default
-
-        Initialising ->
-            default
-
-
-toMaybe : RefreshData a -> Maybe a
-toMaybe inc =
-    case inc of
+-}
+mapTo : (Maybe Http.Error -> a -> b) -> RefreshData a -> b
+mapTo func data =
+    case data of
         LoadingMore value ->
-            Just value
+            func Nothing value
 
         Present value ->
-            Just value
+            func Nothing value
+
+        ErrorWithData error value ->
+            func (Just error) value
+
+
+{-| Transform a `RefreshData` with a given function.
+Useful to convert between two states.
+
+    map LoadingMore (Present "x") == LoadingMore "x"
+
+    map (ErrorWithData Http.Timeout) (LoadingMore "x") == ErrorWithData Timeout "x"
+
+    map (\s -> Present (String.toUpper s)) (Present "x") == Present "X"
+
+-}
+map : (a -> RefreshData b) -> RefreshData a -> RefreshData b
+map func data =
+    case data of
+        LoadingMore value ->
+            func value
+
+        Present value ->
+            func value
 
         ErrorWithData _ value ->
-            Just value
-
-        Error _ ->
-            Nothing
-
-        Initialising ->
-            Nothing
+            func value
 
 
-
-{- Transform the value, if present -}
-
-
-map : (Maybe a -> RefreshData b) -> RefreshData a -> RefreshData b
-map func inc =
-    func (toMaybe inc)
-
-
-
-{- Transform the error value, if present -}
-
-
-mapError : (Maybe Http.Error -> b) -> RefreshData a -> b
-mapError func data =
-    case data of
-        LoadingMore _ ->
-            func Nothing
-
-        Present _ ->
-            func Nothing
-
-        ErrorWithData error _ ->
-            func (Just error)
-
-        Error error ->
-            func (Just error)
-
-        Initialising ->
-            func Nothing
-
-
-
-{- Transform the current state into a state that contains the given error and the eventually present data -}
-
-
-withError : Http.Error -> RefreshData a -> RefreshData a
-withError err data =
-    case toMaybe data of
-        Just value ->
-            ErrorWithData err value
-
-        Nothing ->
-            Error err
-
-
-
-{- whether this RefreshData is currently waiting for (new) data -}
-
-
+{-| Whether this `RefreshData` is currently waiting for (new) data
+-}
 isLoading : RefreshData a -> Bool
 isLoading data =
     case data of
         LoadingMore _ ->
             True
 
-        Initialising ->
-            True
-
         Present _ ->
             False
 
         ErrorWithData _ _ ->
-            False
-
-        Error _ ->
             False
