@@ -507,6 +507,42 @@ streamerListView streamers showCount moreAvailable =
                 |> RefreshData.mapTo (\_ list -> list)
                 |> List.take showCount
                 |> List.map streamerView
+
+        linkButtonStyle =
+            css [ Tw.text_primary, Tw.underline ]
+
+        buttons =
+            div [ css [ Tw.mt_2, Tw.mx_2, Tw.flex, Tw.justify_between ] ]
+                [ if moreAvailable then
+                    button [ linkButtonStyle, onClick (StreamerListMsg ShowMore) ] [ text "Show more" ]
+
+                  else
+                    text ""
+                , if showCount > streamerListPageSteps then
+                    button [ linkButtonStyle, onClick (StreamerListMsg ShowLess) ] [ text "Show less" ]
+
+                  else
+                    text ""
+                ]
+
+        spinner =
+            if RefreshData.isLoading streamers then
+                loadingSpinner [ Tw.w_8, Tw.h_8, Tw.mt_2, Tw.mx_2 ]
+
+            else
+                text ""
+
+        errorText =
+            RefreshData.mapTo
+                (\err _ ->
+                    case err of
+                        Just error ->
+                            div [ css [ Tw.mt_2, Tw.mx_2 ] ] [ text (errorToString error) ]
+
+                        Nothing ->
+                            text ""
+                )
+                streamers
     in
     div
         [ css
@@ -527,46 +563,8 @@ streamerListView streamers showCount moreAvailable =
         [ div [ css [ Tw.my_2, Tw.text_sm, Tw.font_medium ] ]
             [ p [ css [ Tw.text_center ] ] [ text "CHANNELS YOU FOLLOW" ]
             , div [ css [ Tw.mt_2 ] ]
-                (streamerViews
-                    ++ [ expandstreamerListView moreAvailable (showCount > streamerListPageSteps)
-                       , RefreshData.mapTo
-                            (\err _ ->
-                                case err of
-                                    Just error ->
-                                        text (errorToString error)
-
-                                    Nothing ->
-                                        text ""
-                            )
-                            streamers
-                       , if RefreshData.isLoading streamers then
-                            loadingSpinner [ Tw.w_8, Tw.h_8 ]
-
-                         else
-                            text ""
-                       ]
-                )
+                (List.concat [ streamerViews, [ buttons, errorText, spinner ] ])
             ]
-        ]
-
-
-expandstreamerListView : Bool -> Bool -> Html Msg
-expandstreamerListView more less =
-    let
-        linkButtonStyle =
-            css [ Tw.text_primary, Tw.underline ]
-    in
-    div [ css [ Tw.mt_2, Tw.mx_2, Tw.flex, Tw.justify_between ] ]
-        [ if more then
-            button [ linkButtonStyle, onClick (StreamerListMsg ShowMore) ] [ text "Show more" ]
-
-          else
-            text ""
-        , if less then
-            button [ linkButtonStyle, onClick (StreamerListMsg ShowLess) ] [ text "Show less" ]
-
-          else
-            text ""
         ]
 
 
