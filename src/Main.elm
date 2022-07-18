@@ -226,7 +226,7 @@ update msg model =
                             ( LoggedIn
                                 { appData
                                     | streamers = RefreshData.map (\oldProfiles -> Present (oldProfiles ++ newProfiles)) appData.streamers
-                                    , sidebarStreamerCount = appData.sidebarStreamerCount + streamerListPageSteps
+                                    , sidebarStreamerCount = appData.sidebarStreamerCount + List.length newProfiles
                                 }
                                 navKey
                             , Cmd.none
@@ -241,50 +241,39 @@ update msg model =
                             , Cmd.none
                             )
 
-                StreamerListMsg streamerListMsg ->
+                StreamerListMsg ShowLess ->
+                    let
+                        newItemCount =
+                            max (appData.sidebarStreamerCount - streamerListPageSteps) streamerListPageSteps
+                    in
+                    ( LoggedIn { appData | sidebarStreamerCount = newItemCount } navKey, Cmd.none )
+
+                StreamerListMsg ShowMore ->
                     let
                         loadMore =
-                            List.length appData.follows > RefreshData.mapTo (\_ -> List.length) appData.streamers
-
-                        cmd =
-                            case streamerListMsg of
-                                ShowMore ->
-                                    if loadMore then
-                                        let
-                                            nextIDs =
-                                                appData.follows
-                                                    |> List.drop appData.sidebarStreamerCount
-                                                    |> List.take streamerListPageSteps
-                                                    |> List.map .toID
-                                        in
-                                        fetchStreamerProfiles nextIDs appData.signedInUser.token
-
-                                    else
-                                        Cmd.none
-
-                                ShowLess ->
-                                    Cmd.none
+                            (appData.sidebarStreamerCount + streamerListPageSteps) > RefreshData.mapTo (\_ -> List.length) appData.streamers
                     in
                     if loadMore then
-                        ( LoggedIn
-                            { appData
-                                | streamers = RefreshData.map LoadingMore appData.streamers
-                            }
-                            navKey
-                        , cmd
+                        let
+                            nextIDs =
+                                appData.follows
+                                    |> List.drop appData.sidebarStreamerCount
+                                    |> List.take streamerListPageSteps
+                                    |> List.map .toID
+                        in
+                        ( LoggedIn { appData | streamers = RefreshData.map RefreshData.LoadingMore appData.streamers } navKey
+                        , fetchStreamerProfiles nextIDs appData.signedInUser.token
                         )
 
                     else
                         let
-                            count =
-                                case streamerListMsg of
-                                    ShowMore ->
-                                        min (appData.sidebarStreamerCount + streamerListPageSteps) (List.length appData.follows)
+                            numProfiles =
+                                RefreshData.mapTo (\_ -> List.length) appData.streamers
 
-                                    ShowLess ->
-                                        max (appData.sidebarStreamerCount - streamerListPageSteps) streamerListPageSteps
+                            howMuchMore =
+                                min streamerListPageSteps (numProfiles - appData.sidebarStreamerCount)
                         in
-                        ( LoggedIn { appData | sidebarStreamerCount = count } navKey, cmd )
+                        ( LoggedIn { appData | sidebarStreamerCount = appData.sidebarStreamerCount + howMuchMore } navKey, Cmd.none )
 
         NotLoggedIn _ navKey ->
             case msg of
