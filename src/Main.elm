@@ -484,7 +484,22 @@ headerView user =
 
 streamerListView : List Twitch.User -> Bool -> Html Msg
 streamerListView streamers moreAvailable =
-    div [ css [ Tw.bg_base_200, Tw.fixed, Tw.top_16, Tw.bottom_0, Tw.w_60, Tw.overflow_y_auto ] ]
+    div
+        [ css
+            [ Tw.bg_base_200
+            , Tw.fixed
+            , Tw.top_16
+            , Tw.bottom_0
+            , Tw.w_60
+            , Tw.overflow_y_auto
+
+            -- hide scrollbar in firefox browsers
+            , Css.property "scrollbar-width" "none"
+
+            -- hide scrollbar in chrome, edge, opera and other browsers
+            , Css.pseudoClass ":-webkit-scrollbar" [ Css.width (Css.px 0) ]
+            ]
+        ]
         [ div [ css [ Tw.my_2, Tw.text_sm, Tw.font_medium ] ]
             [ p [ css [ Tw.text_center ] ] [ text "CHANNELS YOU FOLLOW" ]
             , div [ css [ Tw.mt_2 ] ]
