@@ -9,6 +9,7 @@ import Html.Styled exposing (Html, a, button, div, h1, img, p, span, text, toUns
 import Html.Styled.Attributes exposing (alt, class, css, href, src, style)
 import Html.Styled.Events exposing (onClick)
 import Http
+import RefreshData exposing (RefreshData(..))
 import Tailwind.Utilities as Tw
 import Twitch
 import TwitchConfig
@@ -29,7 +30,7 @@ type Model
 
 type alias AppData =
     { signedInUser : SignedInUser
-    , streamers : List Twitch.User
+    , streamers : RefreshData Http.Error (List Twitch.User)
 
     -- a list of follow relation metadata originating from our user
     , follows : List Twitch.FollowRelation
@@ -175,7 +176,7 @@ update msg model =
                     case ( m.signedInUser, m.follows, Data.fromResult response ) of
                         ( Just user, Just follows, Data.Success streamers ) ->
                             -- all good, loading is complete
-                            ( LoggedIn { signedInUser = user, follows = follows, streamers = streamers, sidebarStreamerCount = streamerListPageSteps, error = Nothing } navKey
+                            ( LoggedIn { signedInUser = user, follows = follows, streamers = Present streamers, sidebarStreamerCount = streamerListPageSteps, error = Nothing } navKey
                             , Cmd.none
                             )
 
@@ -222,41 +223,57 @@ update msg model =
                 GotStreamerProfiles response ->
                     case response of
                         Ok newProfiles ->
-                            ( LoggedIn { appData | streamers = appData.streamers ++ newProfiles } navKey, Cmd.none )
+                            ( LoggedIn
+                                { appData
+                                    | streamers = RefreshData.map (\oldProfiles -> Present (oldProfiles ++ newProfiles)) appData.streamers
+                                    , sidebarStreamerCount = appData.sidebarStreamerCount + List.length newProfiles
+                                }
+                                navKey
+                            , Cmd.none
+                            )
 
-                        Err errMsg ->
-                            ( LoggedIn { appData | error = Just (errorToString errMsg) } navKey, Cmd.none )
+                        Err err ->
+                            ( LoggedIn
+                                { appData
+                                    | streamers = RefreshData.map (RefreshData.ErrorWithData err) appData.streamers
+                                }
+                                navKey
+                            , Cmd.none
+                            )
 
-                StreamerListMsg streamerListMsg ->
+                StreamerListMsg ShowLess ->
                     let
-                        count =
-                            case streamerListMsg of
-                                ShowMore ->
-                                    min (appData.sidebarStreamerCount + streamerListPageSteps) (List.length appData.follows)
-
-                                ShowLess ->
-                                    max (appData.sidebarStreamerCount - streamerListPageSteps) streamerListPageSteps
-
-                        cmd =
-                            case streamerListMsg of
-                                ShowMore ->
-                                    if List.length appData.follows > List.length appData.streamers then
-                                        let
-                                            nextIDs =
-                                                appData.follows
-                                                    |> List.drop appData.sidebarStreamerCount
-                                                    |> List.take streamerListPageSteps
-                                                    |> List.map .toID
-                                        in
-                                        fetchStreamerProfiles nextIDs appData.signedInUser.token
-
-                                    else
-                                        Cmd.none
-
-                                ShowLess ->
-                                    Cmd.none
+                        newItemCount =
+                            max (appData.sidebarStreamerCount - streamerListPageSteps) streamerListPageSteps
                     in
-                    ( LoggedIn { appData | sidebarStreamerCount = count } navKey, cmd )
+                    ( LoggedIn { appData | sidebarStreamerCount = newItemCount } navKey, Cmd.none )
+
+                StreamerListMsg ShowMore ->
+                    let
+                        loadMore =
+                            (appData.sidebarStreamerCount + streamerListPageSteps) > RefreshData.mapTo (\_ -> List.length) appData.streamers
+                    in
+                    if loadMore then
+                        let
+                            nextIDs =
+                                appData.follows
+                                    |> List.drop appData.sidebarStreamerCount
+                                    |> List.take streamerListPageSteps
+                                    |> List.map .toID
+                        in
+                        ( LoggedIn { appData | streamers = RefreshData.map RefreshData.LoadingMore appData.streamers } navKey
+                        , fetchStreamerProfiles nextIDs appData.signedInUser.token
+                        )
+
+                    else
+                        let
+                            numProfiles =
+                                RefreshData.mapTo (\_ -> List.length) appData.streamers
+
+                            howMuchMore =
+                                min streamerListPageSteps (numProfiles - appData.sidebarStreamerCount)
+                        in
+                        ( LoggedIn { appData | sidebarStreamerCount = appData.sidebarStreamerCount + howMuchMore } navKey, Cmd.none )
 
         NotLoggedIn _ navKey ->
             case msg of
@@ -461,7 +478,7 @@ appView appData =
         [ errorView appData.error
         , headerView appData.signedInUser
         , div [ css [ Tw.flex ] ]
-            [ streamerListView (List.take appData.sidebarStreamerCount appData.streamers) (List.length appData.follows > appData.sidebarStreamerCount)
+            [ streamerListView appData.streamers appData.sidebarStreamerCount (List.length appData.follows > appData.sidebarStreamerCount)
 
             -- Content placeholder
             , div [ css [ Tw.bg_base_100, Tw.h_screen, Tw.w_full, Tw.ml_60, Tw.flex, Tw.items_center, Tw.justify_center, Tw.text_5xl, Tw.font_semibold ] ] [ text "Content" ]
@@ -482,8 +499,15 @@ headerView user =
         ]
 
 
-streamerListView : List Twitch.User -> Bool -> Html Msg
-streamerListView streamers moreAvailable =
+streamerListView : RefreshData Http.Error (List Twitch.User) -> Int -> Bool -> Html Msg
+streamerListView streamers showCount moreAvailable =
+    let
+        streamerViews =
+            streamers
+                |> RefreshData.mapTo (\_ list -> list)
+                |> List.take showCount
+                |> List.map streamerView
+    in
     div
         [ css
             [ Tw.bg_base_200
@@ -503,7 +527,25 @@ streamerListView streamers moreAvailable =
         [ div [ css [ Tw.my_2, Tw.text_sm, Tw.font_medium ] ]
             [ p [ css [ Tw.text_center ] ] [ text "CHANNELS YOU FOLLOW" ]
             , div [ css [ Tw.mt_2 ] ]
-                (List.map streamerView streamers ++ [ expandstreamerListView moreAvailable (List.length streamers > streamerListPageSteps) ])
+                (streamerViews
+                    ++ [ expandstreamerListView moreAvailable (showCount > streamerListPageSteps)
+                       , RefreshData.mapTo
+                            (\err _ ->
+                                case err of
+                                    Just error ->
+                                        text (errorToString error)
+
+                                    Nothing ->
+                                        text ""
+                            )
+                            streamers
+                       , if RefreshData.isLoading streamers then
+                            loadingSpinner [ Tw.w_8, Tw.h_8 ]
+
+                         else
+                            text ""
+                       ]
+                )
             ]
         ]
 
