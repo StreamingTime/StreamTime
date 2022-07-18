@@ -463,7 +463,7 @@ errorView : Maybe String -> Html Msg
 errorView error =
     case error of
         Just errMsg ->
-            div [ css [ Tw.modal, Tw.modal ], class "modal-open" ]
+            div [ css [ Tw.modal ], class "modal-open" ]
                 [ div [ css [ Tw.modal_box, Tw.alert, Tw.alert_error ] ]
                     [ text errMsg ]
                 ]
@@ -475,91 +475,186 @@ errorView error =
 appView : AppData -> Html Msg
 appView appData =
     div []
-        [ text ("user: " ++ Debug.toString appData.signedInUser)
-        , userView appData.signedInUser
-        , errorView appData.error
-        , div
-            []
-            [ streamerListView appData.streamers appData.sidebarStreamerCount (List.length appData.follows > appData.sidebarStreamerCount) ]
+        [ errorView appData.error
+        , headerView appData.signedInUser
+        , div [ css [ Tw.flex ] ]
+            [ streamerListView appData.streamers appData.sidebarStreamerCount (List.length appData.follows > appData.sidebarStreamerCount)
+
+            -- Content placeholder
+            , div
+                [ css
+                    [ Tw.bg_base_100
+                    , Tw.h_screen
+                    , Tw.w_full
+                    , Tw.ml_60
+                    , Tw.flex
+                    , Tw.items_center
+                    , Tw.justify_center
+                    , Tw.text_5xl
+                    , Tw.font_semibold
+                    ]
+                ]
+                [ text "Content" ]
+            ]
         ]
 
 
-streamerListPageSteps : Int
-streamerListPageSteps =
-    10
+headerView : SignedInUser -> Html Msg
+headerView user =
+    div
+        [ css
+            [ Tw.bg_base_100
+            , Tw.border_base_200
+            , Tw.border_2
+            , Tw.fixed
+            , Tw.h_16
+            , Tw.w_full
+            ]
+        ]
+        [ div
+            [ css
+                [ Tw.flex
+                , Tw.items_center
+                , Tw.justify_between
+                , Tw.h_full
+                , Tw.mx_6
+                ]
+            ]
+            [ div
+                [ css
+                    [ Tw.text_xl
+                    , Tw.font_semibold
+                    , Tw.text_white
+                    ]
+                ]
+                [ text "Twitch "
+                , span [ css [ Tw.text_purple_400 ] ] [ text "Schedule" ]
+                ]
+            , userView user
+            ]
+        ]
 
 
 streamerListView : RefreshData Http.Error (List Twitch.User) -> Int -> Bool -> Html Msg
 streamerListView streamers showCount moreAvailable =
     let
-        linkButtonStyle =
-            css [ Tw.btn, Tw.btn_link ]
+        streamerViews =
+            streamers
+                |> RefreshData.mapTo (\_ list -> list)
+                |> List.take showCount
+                |> List.map streamerView
 
-        listView =
-            div []
-                (streamers
-                    |> RefreshData.mapTo (\_ list -> list)
-                    |> List.take showCount
-                    |> List.map streamerView
-                )
+        linkButtonStyle =
+            css [ Tw.text_primary, Tw.underline ]
 
         buttons =
-            div []
+            div
+                [ css
+                    [ Tw.mt_2
+                    , Tw.mx_2
+                    , Tw.flex
+                    , Tw.justify_between
+                    ]
+                ]
                 [ if moreAvailable then
-                    button [ linkButtonStyle, onClick (StreamerListMsg ShowMore) ] [ text "More" ]
+                    button [ linkButtonStyle, onClick (StreamerListMsg ShowMore) ] [ text "Show more" ]
 
                   else
                     text ""
                 , if showCount > streamerListPageSteps then
-                    button [ linkButtonStyle, onClick (StreamerListMsg ShowLess) ] [ text "Less" ]
+                    button [ linkButtonStyle, onClick (StreamerListMsg ShowLess) ] [ text "Show less" ]
 
                   else
                     text ""
                 ]
+
+        spinner =
+            if RefreshData.isLoading streamers then
+                loadingSpinner
+                    [ Tw.w_8
+                    , Tw.h_8
+                    , Tw.mt_2
+                    , Tw.mx_2
+                    ]
+
+            else
+                text ""
+
+        errorText =
+            RefreshData.mapTo
+                (\err _ ->
+                    case err of
+                        Just error ->
+                            div [ css [ Tw.mt_2, Tw.mx_2 ] ] [ text (errorToString error) ]
+
+                        Nothing ->
+                            text ""
+                )
+                streamers
     in
-    div [ style "width" "200px" ]
-        [ listView
-        , buttons
-        , RefreshData.mapTo
-            (\err _ ->
-                case err of
-                    Just error ->
-                        text (errorToString error)
+    div
+        [ css
+            [ Tw.bg_base_200
+            , Tw.fixed
+            , Tw.top_16
+            , Tw.bottom_0
+            , Tw.w_60
+            , Tw.overflow_y_auto
 
-                    Nothing ->
-                        text ""
-            )
-            streamers
-        , if RefreshData.isLoading streamers then
-            loadingSpinner [ Tw.w_8, Tw.h_8 ]
+            -- hide scrollbar in firefox browsers
+            , Css.property "scrollbar-width" "none"
 
-          else
-            text ""
+            -- hide scrollbar in chrome, edge, opera and other browsers
+            , Css.pseudoClass ":-webkit-scrollbar" [ Css.width (Css.px 0) ]
+            ]
+        ]
+        [ div
+            [ css
+                [ Tw.my_2
+                , Tw.text_sm
+                , Tw.font_medium
+                ]
+            ]
+            [ p [ css [ Tw.text_center ] ] [ text "CHANNELS YOU FOLLOW" ]
+            , div [ css [ Tw.mt_2 ] ]
+                (List.concat [ streamerViews, [ buttons, errorText, spinner ] ])
+            ]
         ]
 
 
-streamerView : Twitch.User -> Html msg
+streamerView : Twitch.User -> Html Msg
 streamerView streamer =
     let
         avatar =
             div [ css [ Tw.avatar ] ]
-                [ div [ css [ Tw.rounded_full, Tw.w_10, Tw.h_10 ] ]
+                [ div
+                    [ css
+                        [ Tw.rounded_full
+                        , Tw.w_10
+                        , Tw.h_10
+                        ]
+                    ]
                     [ img [ src streamer.profileImageUrl ] []
                     ]
                 ]
     in
-    a [ href ("https://twitch.tv/" ++ streamer.displayName) ]
+    a
+        [ css
+            [ Tw.block
+            , Tw.p_1
+            , Css.hover [ Tw.bg_purple_500 ]
+            ]
+        , href ("https://twitch.tv/" ++ streamer.displayName)
+        ]
         [ div
             [ css
                 [ Tw.flex
-                , Tw.gap_2
-                , Tw.items_center -- center text vertically
-                , Tw.m_1
-                , Css.hover [ Tw.bg_primary_focus ]
+                , Tw.space_x_2
+                , Tw.items_center
                 ]
             ]
             [ avatar
-            , div [ css [ Tw.p_1, Tw.font_medium, Tw.truncate ] ] [ text streamer.displayName ]
+            , div [ css [ Tw.font_medium, Tw.truncate ] ] [ text streamer.displayName ]
             ]
         ]
 
@@ -590,11 +685,15 @@ userView user =
                     ]
                 ]
     in
-    div []
-        [ span []
-            [ text name ]
+    div [ css [ Tw.flex, Tw.items_center ] ]
+        [ p [ css [ Tw.mr_2, Tw.font_semibold ] ] [ text name ]
         , avatar
         ]
+
+
+streamerListPageSteps : Int
+streamerListPageSteps =
+    10
 
 
 main : Program () Model Msg
