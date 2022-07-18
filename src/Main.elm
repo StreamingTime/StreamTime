@@ -463,7 +463,7 @@ errorView : Maybe String -> Html Msg
 errorView error =
     case error of
         Just errMsg ->
-            div [ css [ Tw.modal, Tw.modal ], class "modal-open" ]
+            div [ css [ Tw.modal ], class "modal-open" ]
                 [ div [ css [ Tw.modal_box, Tw.alert, Tw.alert_error ] ]
                     [ text errMsg ]
                 ]
