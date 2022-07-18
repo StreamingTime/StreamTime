@@ -550,11 +550,18 @@ streamerListView streamers showCount moreAvailable =
         buttons =
             div
                 [ css
-                    [ Tw.mt_2
-                    , Tw.mx_2
-                    , Tw.flex
-                    , Tw.justify_between
-                    ]
+                    ([ Tw.mt_2
+                     , Tw.mx_2
+                     , Tw.flex
+                     , Tw.justify_between
+                     ]
+                        ++ (if not moreAvailable then
+                                [ Tw.flex_row_reverse ]
+
+                            else
+                                []
+                           )
+                    )
                 ]
                 [ if moreAvailable then
                     button [ linkButtonStyle, onClick (StreamerListMsg ShowMore) ] [ text "Show more" ]
