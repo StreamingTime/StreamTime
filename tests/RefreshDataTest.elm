@@ -1,44 +1,67 @@
-module RefreshDataTest exposing (refreshDataMapComparison)
+module RefreshDataTest exposing (isLoadingTest, mapTest, mapToTest)
 
 import Expect
 import Http
-import RefreshData exposing (RefreshData(..))
+import RefreshData
 import Test exposing (Test, describe, test)
 
 
-refreshDataMapComparison : Test
-refreshDataMapComparison =
-    describe "compare two map implementations"
-        [ test "simple map"
+mapTest : Test
+mapTest =
+    describe "test RefreshData.map"
+        [ test "map to different state"
+            (\_ ->
+                RefreshData.Present "foo"
+                    |> RefreshData.map RefreshData.LoadingMore
+                    |> Expect.equal (RefreshData.LoadingMore "foo")
+            )
+        , test "map to different value"
+            (\_ ->
+                RefreshData.Present "foo"
+                    |> RefreshData.map (\s -> RefreshData.Present (String.toUpper s))
+                    |> Expect.equal (RefreshData.Present "FOO")
+            )
+        ]
+
+
+mapToTest : Test
+mapToTest =
+    describe "test RefreshData.mapTo"
+        [ test "map without error"
+            (\_ ->
+                RefreshData.Present "foo"
+                    |> RefreshData.mapTo (\e _ -> e)
+                    |> Expect.equal Nothing
+            )
+        , test "map with error"
+            (\_ ->
+                RefreshData.ErrorWithData Http.Timeout "foo"
+                    |> RefreshData.mapTo (\e _ -> e)
+                    |> Expect.equal (Just Http.Timeout)
+            )
+        , test "map to string"
+            (\_ ->
+                RefreshData.ErrorWithData Http.Timeout "foo"
+                    |> RefreshData.mapTo (\_ _ -> "FOO")
+                    |> Expect.equal "FOO"
+            )
+        ]
+
+
+isLoadingTest : Test
+isLoadingTest =
+    describe "test RefreshData.isLoading"
+        [ test "loading state"
+            (\_ ->
+                Expect.equal True (RefreshData.isLoading (RefreshData.LoadingMore "foo"))
+            )
+        , test
+            "not loading state"
             (\_ ->
                 let
-                    data =
-                        RefreshData.Present "foo"
+                    values =
+                        [ RefreshData.Present "", RefreshData.ErrorWithData Http.Timeout "" ]
                 in
-                Expect.equal
-                    (RefreshData.LoadingMore "foo")
-                    (RefreshData.map RefreshData.LoadingMore data)
+                Expect.equal [ False, False ] (List.map RefreshData.isLoading values)
             )
-
-        {- , test "map to Error"
-               (\_ ->
-                   let
-                       data =
-                           RefreshData.Present "foo"
-                   in
-                   Expect.equal
-                       (RefreshData.ErrorWithData Http.Timeout "foo")
-                       (RefreshData.map identity (RefreshData.ErrorWithData Http.Timeout) data)
-               )
-           , test "map from Error should work"
-               (\_ ->
-                   let
-                       data =
-                           RefreshData.ErrorWithData Http.Timeout "oldValue"
-                   in
-                   Expect.equal
-                       (RefreshData.Present "foo")
-                       (RefreshData.map (\_ -> "foo") Present data)
-               )
-        -}
         ]
