@@ -481,16 +481,52 @@ appView appData =
             [ streamerListView appData.streamers appData.sidebarStreamerCount (List.length appData.follows > appData.sidebarStreamerCount)
 
             -- Content placeholder
-            , div [ css [ Tw.bg_base_100, Tw.h_screen, Tw.w_full, Tw.ml_60, Tw.flex, Tw.items_center, Tw.justify_center, Tw.text_5xl, Tw.font_semibold ] ] [ text "Content" ]
+            , div
+                [ css
+                    [ Tw.bg_base_100
+                    , Tw.h_screen
+                    , Tw.w_full
+                    , Tw.ml_60
+                    , Tw.flex
+                    , Tw.items_center
+                    , Tw.justify_center
+                    , Tw.text_5xl
+                    , Tw.font_semibold
+                    ]
+                ]
+                [ text "Content" ]
             ]
         ]
 
 
 headerView : SignedInUser -> Html Msg
 headerView user =
-    div [ css [ Tw.bg_base_100, Tw.border_base_200, Tw.border_2, Tw.fixed, Tw.h_16, Tw.w_full ] ]
-        [ div [ css [ Tw.flex, Tw.items_center, Tw.justify_between, Tw.h_full, Tw.mx_6 ] ]
-            [ div [ css [ Tw.text_xl, Tw.font_semibold, Tw.text_white ] ]
+    div
+        [ css
+            [ Tw.bg_base_100
+            , Tw.border_base_200
+            , Tw.border_2
+            , Tw.fixed
+            , Tw.h_16
+            , Tw.w_full
+            ]
+        ]
+        [ div
+            [ css
+                [ Tw.flex
+                , Tw.items_center
+                , Tw.justify_between
+                , Tw.h_full
+                , Tw.mx_6
+                ]
+            ]
+            [ div
+                [ css
+                    [ Tw.text_xl
+                    , Tw.font_semibold
+                    , Tw.text_white
+                    ]
+                ]
                 [ text "Twitch "
                 , span [ css [ Tw.text_purple_400 ] ] [ text "Schedule" ]
                 ]
@@ -512,7 +548,14 @@ streamerListView streamers showCount moreAvailable =
             css [ Tw.text_primary, Tw.underline ]
 
         buttons =
-            div [ css [ Tw.mt_2, Tw.mx_2, Tw.flex, Tw.justify_between ] ]
+            div
+                [ css
+                    [ Tw.mt_2
+                    , Tw.mx_2
+                    , Tw.flex
+                    , Tw.justify_between
+                    ]
+                ]
                 [ if moreAvailable then
                     button [ linkButtonStyle, onClick (StreamerListMsg ShowMore) ] [ text "Show more" ]
 
@@ -527,7 +570,12 @@ streamerListView streamers showCount moreAvailable =
 
         spinner =
             if RefreshData.isLoading streamers then
-                loadingSpinner [ Tw.w_8, Tw.h_8, Tw.mt_2, Tw.mx_2 ]
+                loadingSpinner
+                    [ Tw.w_8
+                    , Tw.h_8
+                    , Tw.mt_2
+                    , Tw.mx_2
+                    ]
 
             else
                 text ""
@@ -560,7 +608,13 @@ streamerListView streamers showCount moreAvailable =
             , Css.pseudoClass ":-webkit-scrollbar" [ Css.width (Css.px 0) ]
             ]
         ]
-        [ div [ css [ Tw.my_2, Tw.text_sm, Tw.font_medium ] ]
+        [ div
+            [ css
+                [ Tw.my_2
+                , Tw.text_sm
+                , Tw.font_medium
+                ]
+            ]
             [ p [ css [ Tw.text_center ] ] [ text "CHANNELS YOU FOLLOW" ]
             , div [ css [ Tw.mt_2 ] ]
                 (List.concat [ streamerViews, [ buttons, errorText, spinner ] ])
@@ -573,12 +627,25 @@ streamerView streamer =
     let
         avatar =
             div [ css [ Tw.avatar ] ]
-                [ div [ css [ Tw.rounded_full, Tw.w_10, Tw.h_10 ] ]
+                [ div
+                    [ css
+                        [ Tw.rounded_full
+                        , Tw.w_10
+                        , Tw.h_10
+                        ]
+                    ]
                     [ img [ src streamer.profileImageUrl ] []
                     ]
                 ]
     in
-    a [ css [ Tw.block, Tw.p_1, Css.hover [ Tw.bg_purple_500 ] ], href ("https://twitch.tv/" ++ streamer.displayName) ]
+    a
+        [ css
+            [ Tw.block
+            , Tw.p_1
+            , Css.hover [ Tw.bg_purple_500 ]
+            ]
+        , href ("https://twitch.tv/" ++ streamer.displayName)
+        ]
         [ div
             [ css
                 [ Tw.flex
