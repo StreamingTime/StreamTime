@@ -36,6 +36,7 @@ type alias AppData =
     , follows : List Twitch.FollowRelation
     , sidebarStreamerCount : Int
     , streamerFilterName : Maybe String
+    , selectedStreamers : List Twitch.User
     , error : Maybe String
     }
 
@@ -77,6 +78,7 @@ type StreamerListMsg
     = ShowMore
     | ShowLess
     | Filter String
+    | SetStreamerSelection Twitch.User Bool
 
 
 type UrlMsg
@@ -186,6 +188,7 @@ update msg model =
 
                                 -- TOOD: sidebarStreamerCount should depend on the number of streamers loaded
                                 , sidebarStreamerCount = streamerListPageSteps
+                                , selectedStreamers = []
                                 , error = Nothing
                                 , streamerFilterName = Nothing
                                 }
@@ -306,6 +309,17 @@ update msg model =
                       else
                         Cmd.none
                     )
+
+                StreamerListMsg (SetStreamerSelection streamer newSelectionState) ->
+                    let
+                        newList =
+                            if newSelectionState then
+                                appData.selectedStreamers ++ [ streamer ]
+
+                            else
+                                List.filter ((/=) streamer) appData.selectedStreamers
+                    in
+                    ( LoggedIn { appData | selectedStreamers = newList } navKey, Cmd.none )
 
                 GotStreamerProfiles (Ok newProfiles) ->
                     ( LoggedIn { appData | streamers = RefreshData.map (\oldProfiles -> Present (oldProfiles ++ newProfiles)) appData.streamers } navKey, Cmd.none )
@@ -520,7 +534,10 @@ appView appData =
         , headerView appData.signedInUser
         , div [ css [ Tw.flex ] ]
             [ streamerListView
-                appData.streamers
+                (RefreshData.map
+                    (\streamers -> Present (streamersWithSelection appData.selectedStreamers streamers))
+                    appData.streamers
+                )
                 appData.follows
                 appData.sidebarStreamerCount
                 (List.length appData.follows > appData.sidebarStreamerCount)
@@ -540,7 +557,9 @@ appView appData =
                     , Tw.font_semibold
                     ]
                 ]
-                [ text "Content" ]
+                (appData.selectedStreamers
+                    |> List.map (\streamer -> text (streamer.displayName ++ " "))
+                )
             ]
         ]
 
@@ -611,14 +630,24 @@ missingProfileLogins follows streamers =
             )
 
 
-streamerListView : RefreshData Http.Error (List Twitch.User) -> List Twitch.FollowRelation -> Int -> Bool -> Maybe String -> Html Msg
+
+{- pair every item of the second list with a bool indicating whether it is part of the selected streamers list -}
+
+
+streamersWithSelection : List Twitch.User -> List Twitch.User -> List ( Twitch.User, Bool )
+streamersWithSelection selected users =
+    users
+        |> List.map (\u -> ( u, List.any ((==) u) selected ))
+
+
+streamerListView : RefreshData Http.Error (List ( Twitch.User, Bool )) -> List Twitch.FollowRelation -> Int -> Bool -> Maybe String -> Html Msg
 streamerListView streamers follows showCount moreAvailable filterString =
     let
         streamerViews =
             streamers
                 |> RefreshData.mapTo (\_ list -> list)
                 |> List.take showCount
-                |> List.map streamerView
+                |> List.map (\( streamer, isSelected ) -> streamerView streamer isSelected)
 
         linkButtonStyle =
             css [ Tw.text_primary, Tw.underline ]
@@ -702,12 +731,12 @@ streamerListView streamers follows showCount moreAvailable filterString =
                                     let
                                         streamerProfile =
                                             RefreshData.mapTo (\_ v -> v) streamers
-                                                |> List.filter (\user -> user.id == follow.toID)
+                                                |> List.filter (\( user, _ ) -> user.id == follow.toID)
                                                 |> List.head
                                     in
                                     case streamerProfile of
-                                        Just s ->
-                                            streamerView s
+                                        Just ( isSelected, streamer ) ->
+                                            streamerView isSelected streamer
 
                                         Nothing ->
                                             loadingSpinner [ Tw.w_8, Tw.h_8 ]
@@ -759,8 +788,8 @@ streamerListView streamers follows showCount moreAvailable filterString =
         ]
 
 
-streamerView : Twitch.User -> Html Msg
-streamerView streamer =
+streamerView : Twitch.User -> Bool -> Html Msg
+streamerView streamer isSelected =
     let
         avatar =
             div [ css [ Tw.avatar ] ]
@@ -775,13 +804,14 @@ streamerView streamer =
                     ]
                 ]
     in
-    a
+    div
         [ css
             [ Tw.block
             , Tw.p_1
             , Css.hover [ Tw.bg_purple_500 ]
             ]
-        , href ("https://twitch.tv/" ++ streamer.displayName)
+        , onClick
+            (StreamerListMsg (SetStreamerSelection streamer (not isSelected)))
         ]
         [ div
             [ css
@@ -790,8 +820,15 @@ streamerView streamer =
                 , Tw.items_center
                 ]
             ]
-            [ avatar
+            [ a [ href ("https://twitch.tv/" ++ streamer.displayName) ] [ avatar ]
             , div [ css [ Tw.font_medium, Tw.truncate ] ] [ text streamer.displayName ]
+            , text
+                (if isSelected then
+                    "✅"
+
+                 else
+                    ""
+                )
             ]
         ]
 
