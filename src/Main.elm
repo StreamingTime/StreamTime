@@ -5,9 +5,9 @@ import Browser.Navigation as Nav
 import Css
 import Css.Global
 import Data
-import Html.Styled exposing (Html, a, button, div, h1, img, p, span, text, toUnstyled)
-import Html.Styled.Attributes exposing (alt, class, css, href, src, style)
-import Html.Styled.Events exposing (onClick)
+import Html.Styled exposing (Html, a, button, div, h1, img, input, label, p, span, text, toUnstyled)
+import Html.Styled.Attributes exposing (alt, class, css, href, placeholder, src, style, type_)
+import Html.Styled.Events exposing (onClick, onInput)
 import Http
 import RefreshData exposing (RefreshData(..))
 import Tailwind.Utilities as Tw
@@ -35,6 +35,7 @@ type alias AppData =
     -- a list of follow relation metadata originating from our user
     , follows : List Twitch.FollowRelation
     , sidebarStreamerCount : Int
+    , streamerFilterName : Maybe String
     , error : Maybe String
     }
 
@@ -66,6 +67,7 @@ type Msg
     = UrlMsg UrlMsg
     | GotValidateTokenResponse (Result Http.Error Twitch.ValidateTokenResponse)
     | GotUserFollows (Result Http.Error (Twitch.PaginatedResponse (List Twitch.FollowRelation)))
+    | GotStreamerProfilesForSidebar (Result Http.Error (List Twitch.User))
     | GotStreamerProfiles (Result Http.Error (List Twitch.User))
     | GotUserProfile (Result Http.Error Twitch.User)
     | StreamerListMsg StreamerListMsg
@@ -74,6 +76,7 @@ type Msg
 type StreamerListMsg
     = ShowMore
     | ShowLess
+    | Filter String
 
 
 type UrlMsg
@@ -101,7 +104,7 @@ init url navKey =
 
 fetchStreamerProfiles : List String -> Twitch.Token -> Cmd Msg
 fetchStreamerProfiles userIDs token =
-    Cmd.map GotStreamerProfiles (Twitch.getUsers userIDs TwitchConfig.clientId token)
+    Cmd.map GotStreamerProfilesForSidebar (Twitch.getUsers userIDs TwitchConfig.clientId token)
 
 
 fetchUserProfile : String -> Twitch.Token -> Cmd Msg
@@ -172,11 +175,21 @@ update msg model =
                         ( Nothing, Ok _ ) ->
                             Debug.todo "this case should not happen"
 
-                GotStreamerProfiles response ->
+                GotStreamerProfilesForSidebar response ->
                     case ( m.signedInUser, m.follows, Data.fromResult response ) of
                         ( Just user, Just follows, Data.Success streamers ) ->
                             -- all good, loading is complete
-                            ( LoggedIn { signedInUser = user, follows = follows, streamers = Present streamers, sidebarStreamerCount = streamerListPageSteps, error = Nothing } navKey
+                            ( LoggedIn
+                                { signedInUser = user
+                                , follows = follows
+                                , streamers = Present streamers
+
+                                -- TOOD: sidebarStreamerCount should depend on the number of streamers loaded
+                                , sidebarStreamerCount = streamerListPageSteps
+                                , error = Nothing
+                                , streamerFilterName = Nothing
+                                }
+                                navKey
                             , Cmd.none
                             )
 
@@ -206,6 +219,9 @@ update msg model =
                 StreamerListMsg _ ->
                     ( model, Cmd.none )
 
+                GotStreamerProfiles _ ->
+                    ( model, Cmd.none )
+
         LoggedIn appData navKey ->
             case msg of
                 UrlMsg urlMsg ->
@@ -220,7 +236,7 @@ update msg model =
                 GotUserProfile _ ->
                     ( model, Cmd.none )
 
-                GotStreamerProfiles response ->
+                GotStreamerProfilesForSidebar response ->
                     case response of
                         Ok newProfiles ->
                             ( LoggedIn
@@ -275,6 +291,28 @@ update msg model =
                         in
                         ( LoggedIn { appData | sidebarStreamerCount = appData.sidebarStreamerCount + howMuchMore } navKey, Cmd.none )
 
+                StreamerListMsg (Filter name) ->
+                    let
+                        -- filter follows by name and find out which profiles are missing
+                        searchResultswithoutProfile =
+                            appData.follows
+                                |> filterFollowsByLogin name
+                                |> (\f -> missingProfileLogins f (RefreshData.mapTo (\_ v -> v) appData.streamers))
+                    in
+                    ( LoggedIn { appData | streamerFilterName = Just name } navKey
+                    , if String.length name >= 4 && List.length searchResultswithoutProfile > 0 then
+                        Cmd.map GotStreamerProfiles (Twitch.getUsers searchResultswithoutProfile TwitchConfig.clientId appData.signedInUser.token)
+
+                      else
+                        Cmd.none
+                    )
+
+                GotStreamerProfiles (Ok newProfiles) ->
+                    ( LoggedIn { appData | streamers = RefreshData.map (\oldProfiles -> Present (oldProfiles ++ newProfiles)) appData.streamers } navKey, Cmd.none )
+
+                GotStreamerProfiles (Err err) ->
+                    ( LoggedIn { appData | streamers = RefreshData.map (ErrorWithData err) appData.streamers } navKey, Cmd.none )
+
         NotLoggedIn _ navKey ->
             case msg of
                 UrlMsg urlMsg ->
@@ -287,13 +325,16 @@ update msg model =
                 GotUserFollows _ ->
                     ( model, Cmd.none )
 
-                GotStreamerProfiles _ ->
+                GotStreamerProfilesForSidebar _ ->
                     ( model, Cmd.none )
 
                 StreamerListMsg _ ->
                     ( model, Cmd.none )
 
                 GotUserProfile _ ->
+                    ( model, Cmd.none )
+
+                GotStreamerProfiles _ ->
                     ( model, Cmd.none )
 
 
@@ -478,7 +519,12 @@ appView appData =
         [ errorView appData.error
         , headerView appData.signedInUser
         , div [ css [ Tw.flex ] ]
-            [ streamerListView appData.streamers appData.sidebarStreamerCount (List.length appData.follows > appData.sidebarStreamerCount)
+            [ streamerListView
+                appData.streamers
+                appData.follows
+                appData.sidebarStreamerCount
+                (List.length appData.follows > appData.sidebarStreamerCount)
+                appData.streamerFilterName
 
             -- Content placeholder
             , div
@@ -535,8 +581,38 @@ headerView user =
         ]
 
 
-streamerListView : RefreshData Http.Error (List Twitch.User) -> Int -> Bool -> Html Msg
-streamerListView streamers showCount moreAvailable =
+filterFollowsByLogin : String -> List Twitch.FollowRelation -> List Twitch.FollowRelation
+filterFollowsByLogin name =
+    List.filter
+        (\f ->
+            f.toName
+                |> String.toLower
+                |> String.contains
+                    name
+        )
+
+
+
+{- Compile a list of all user IDs for streamers that are part of the follows list, but whos profiles are not in the streamers list
+   (aka: the details are not fetched yet)
+-}
+
+
+missingProfileLogins : List Twitch.FollowRelation -> List Twitch.User -> List String
+missingProfileLogins follows streamers =
+    follows
+        |> List.filterMap
+            (\follow ->
+                if List.any (\streamer -> follow.toLogin == streamer.loginName) streamers then
+                    Nothing
+
+                else
+                    Just follow.toID
+            )
+
+
+streamerListView : RefreshData Http.Error (List Twitch.User) -> List Twitch.FollowRelation -> Int -> Bool -> Maybe String -> Html Msg
+streamerListView streamers follows showCount moreAvailable filterString =
     let
         streamerViews =
             streamers
@@ -598,6 +674,54 @@ streamerListView streamers showCount moreAvailable =
                             text ""
                 )
                 streamers
+
+        filter =
+            div []
+                [ label
+                    [ css [ Tw.label ]
+                    ]
+                    [ span [ css [ Tw.label_text ] ] [ text "Search" ]
+                    ]
+                , input
+                    [ type_ "text"
+                    , placeholder "Channel name"
+                    , css [ Tw.input, Tw.input_ghost, Tw.input_bordered ]
+                    , onInput (\s -> StreamerListMsg (Filter s))
+                    ]
+                    []
+                ]
+
+        filteredList =
+            case filterString of
+                Just query ->
+                    if String.length query >= 4 then
+                        -- this is also computed in update, so we could save us the computation here
+                        filterFollowsByLogin query follows
+                            |> List.map
+                                (\follow ->
+                                    let
+                                        streamerProfile =
+                                            RefreshData.mapTo (\_ v -> v) streamers
+                                                |> List.filter (\user -> user.id == follow.toID)
+                                                |> List.head
+                                    in
+                                    case streamerProfile of
+                                        Just s ->
+                                            streamerView s
+
+                                        Nothing ->
+                                            loadingSpinner [ Tw.w_8, Tw.h_8 ]
+                                )
+
+                    else
+                        [ text "enter at least 4 characters" ]
+
+                Nothing ->
+                    [ text "" ]
+
+        filterResultsView =
+            div [ css [ Tw.border, Tw.border_2 ] ]
+                filteredList
     in
     div
         [ css
@@ -624,7 +748,13 @@ streamerListView streamers showCount moreAvailable =
             ]
             [ p [ css [ Tw.text_center ] ] [ text "CHANNELS YOU FOLLOW" ]
             , div [ css [ Tw.mt_2 ] ]
-                (List.concat [ streamerViews, [ buttons, errorText, spinner ] ])
+                [ filter
+                , div
+                    []
+                    (List.concat
+                        [ [ filterResultsView ], streamerViews, [ buttons, errorText, spinner ] ]
+                    )
+                ]
             ]
         ]
 
