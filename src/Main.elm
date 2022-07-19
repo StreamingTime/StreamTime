@@ -9,6 +9,8 @@ import Html.Styled exposing (Html, a, button, div, h1, img, p, span, text, toUns
 import Html.Styled.Attributes exposing (alt, class, css, href, src, style)
 import Html.Styled.Events exposing (onClick)
 import Http
+import Json.Encode as Encode
+import LocalStorage
 import RefreshData exposing (RefreshData(..))
 import Tailwind.Utilities as Tw
 import Twitch
@@ -19,7 +21,7 @@ import Utils
 
 loginRedirectUrl : String
 loginRedirectUrl =
-    "http://localhost:8000/src/Main.elm"
+    "http://localhost:8000"
 
 
 type Model
@@ -81,8 +83,8 @@ type UrlMsg
     | UrlChanged
 
 
-init : Url.Url -> Nav.Key -> ( Model, Cmd Msg )
-init url navKey =
+init : Encode.Value -> Url.Url -> Nav.Key -> ( Model, Cmd Msg )
+init flags url navKey =
     case Twitch.accessTokenFromUrl url of
         Just token ->
             ( LoadingScreen
@@ -96,7 +98,24 @@ init url navKey =
             )
 
         Nothing ->
-            ( NotLoggedIn Nothing navKey, Cmd.none )
+            case LocalStorage.decodePersistentData flags of
+                Err _ ->
+                    ( NotLoggedIn Nothing navKey, Cmd.none )
+
+                Ok data ->
+                    let
+                        token =
+                            Twitch.Token data.token
+                    in
+                    ( LoadingScreen
+                        { token = token
+                        , follows = Nothing
+                        , signedInUser = Nothing
+                        , firstStreamers = Nothing
+                        }
+                        navKey
+                    , Cmd.map GotValidateTokenResponse (Twitch.validateToken token)
+                    )
 
 
 fetchStreamerProfiles : List String -> Twitch.Token -> Cmd Msg
@@ -137,7 +156,7 @@ update msg model =
                                 , firstStreamers = Nothing
                                 }
                                 navKey
-                            , fetchUserProfile value.userID m.token
+                            , Cmd.batch [ LocalStorage.persistToken m.token, fetchUserProfile value.userID m.token ]
                             )
 
                 GotUserFollows response ->
@@ -703,10 +722,10 @@ streamerListPageSteps =
     10
 
 
-main : Program () Model Msg
+main : Program Encode.Value Model Msg
 main =
     Browser.application
-        { init = \_ url navKey -> init url navKey
+        { init = init
         , view = view
         , update = update
         , subscriptions = \_ -> Sub.none

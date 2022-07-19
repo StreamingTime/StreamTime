@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <script type="text/javascript" src="main.js"></script>
+</head>
+
+<body>
+    <div id="app"></div>
+
+    <script type="text/javascript">
+        // Extract data from local storage.
+        const data = localStorage.getItem('data');
+        const flags = data ? JSON.parse(data) : null;
+
+        // Init Elm app, passing in the stored data as flags.
+        const app = Elm.Main.init({
+            node: document.getElementById('app'),
+            flags: flags
+        });
+
+        // Listen for commands from the `setStorage` port and persist data to local storage.
+        app.ports.setStorage.subscribe(function (state) {
+            localStorage.setItem('data', JSON.stringify(state));
+        });
+    </script>
+</body>
+
+</html>
