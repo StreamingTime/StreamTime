@@ -643,9 +643,10 @@ streamersWithSelection selected users =
 streamerListView : RefreshData Http.Error (List ( Twitch.User, Bool )) -> List Twitch.FollowRelation -> Int -> Bool -> Maybe String -> Html Msg
 streamerListView streamers follows showCount moreAvailable filterString =
     let
-        streamerViews =
+        restStreamersView =
             streamers
                 |> RefreshData.mapTo (\_ list -> list)
+                |> List.filter (\( _, selected ) -> not selected)
                 |> List.take showCount
                 |> List.map (\( streamer, isSelected ) -> streamerView streamer isSelected)
 
@@ -751,6 +752,14 @@ streamerListView streamers follows showCount moreAvailable filterString =
         filterResultsView =
             div [ css [ Tw.border, Tw.border_2 ] ]
                 filteredList
+
+        selectedView =
+            div []
+                (streamers
+                    |> RefreshData.mapTo (\_ list -> list)
+                    |> List.filter (\( _, selected ) -> selected)
+                    |> List.map (\( selected, streamer ) -> streamerView selected streamer)
+                )
     in
     div
         [ css
@@ -781,7 +790,7 @@ streamerListView streamers follows showCount moreAvailable filterString =
                 , div
                     []
                     (List.concat
-                        [ [ filterResultsView ], streamerViews, [ buttons, errorText, spinner ] ]
+                        [ [ filterResultsView, selectedView ], restStreamersView, [ buttons, errorText, spinner ] ]
                     )
                 ]
             ]
