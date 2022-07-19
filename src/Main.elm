@@ -36,6 +36,7 @@ type alias AppData =
     , follows : List Twitch.FollowRelation
     , sidebarStreamerCount : Int
     , error : Maybe String
+    , schedules : RefreshData Http.Error (List Twitch.Schedule)
     }
 
 
@@ -68,6 +69,8 @@ type Msg
     | GotUserFollows (Result Http.Error (Twitch.PaginatedResponse (List Twitch.FollowRelation)))
     | GotStreamerProfiles (Result Http.Error (List Twitch.User))
     | GotUserProfile (Result Http.Error Twitch.User)
+    | GotStreamingSchedule (Result Http.Error (Twitch.PaginatedResponse Twitch.Schedule))
+    | FetchStreamingSchedule String
     | StreamerListMsg StreamerListMsg
 
 
@@ -107,6 +110,11 @@ fetchStreamerProfiles userIDs token =
 fetchUserProfile : String -> Twitch.Token -> Cmd Msg
 fetchUserProfile userID token =
     Cmd.map GotUserProfile (Twitch.getUser userID TwitchConfig.clientId token)
+
+
+fetchStreamingSchedule : String -> Twitch.Token -> Cmd Msg
+fetchStreamingSchedule userID token =
+    Cmd.map GotStreamingSchedule (Twitch.getStreamingSchedule userID Nothing TwitchConfig.clientId token)
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -176,7 +184,15 @@ update msg model =
                     case ( m.signedInUser, m.follows, Data.fromResult response ) of
                         ( Just user, Just follows, Data.Success streamers ) ->
                             -- all good, loading is complete
-                            ( LoggedIn { signedInUser = user, follows = follows, streamers = Present streamers, sidebarStreamerCount = streamerListPageSteps, error = Nothing } navKey
+                            ( LoggedIn
+                                { signedInUser = user
+                                , follows = follows
+                                , streamers = Present streamers
+                                , sidebarStreamerCount = streamerListPageSteps
+                                , error = Nothing
+                                , schedules = LoadingMore []
+                                }
+                                navKey
                             , Cmd.none
                             )
 
@@ -202,6 +218,12 @@ update msg model =
 
                         ( Nothing, _ ) ->
                             Debug.todo "again, a case that should not happen"
+
+                GotStreamingSchedule _ ->
+                    ( model, Cmd.none )
+
+                FetchStreamingSchedule _ ->
+                    ( model, Cmd.none )
 
                 StreamerListMsg _ ->
                     ( model, Cmd.none )
@@ -275,6 +297,17 @@ update msg model =
                         in
                         ( LoggedIn { appData | sidebarStreamerCount = appData.sidebarStreamerCount + howMuchMore } navKey, Cmd.none )
 
+                GotStreamingSchedule response ->
+                    case response of
+                        Err err ->
+                            ( LoggedIn { appData | schedules = RefreshData.map (ErrorWithData err) appData.schedules } navKey, Cmd.none )
+
+                        Ok value ->
+                            ( LoggedIn { appData | schedules = RefreshData.map (\oldSchedules -> Present (oldSchedules ++ [ value.data ])) appData.schedules } navKey, Cmd.none )
+
+                FetchStreamingSchedule userID ->
+                    ( LoggedIn { appData | schedules = RefreshData.map LoadingMore appData.schedules } navKey, fetchStreamingSchedule userID appData.signedInUser.token )
+
         NotLoggedIn _ navKey ->
             case msg of
                 UrlMsg urlMsg ->
@@ -294,6 +327,12 @@ update msg model =
                     ( model, Cmd.none )
 
                 GotUserProfile _ ->
+                    ( model, Cmd.none )
+
+                GotStreamingSchedule _ ->
+                    ( model, Cmd.none )
+
+                FetchStreamingSchedule _ ->
                     ( model, Cmd.none )
 
 
@@ -474,27 +513,29 @@ errorView error =
 
 appView : AppData -> Html Msg
 appView appData =
+    let
+        schedules =
+            RefreshData.mapTo (\_ -> identity) appData.schedules
+    in
     div []
         [ errorView appData.error
         , headerView appData.signedInUser
         , div [ css [ Tw.flex ] ]
             [ streamerListView appData.streamers appData.sidebarStreamerCount (List.length appData.follows > appData.sidebarStreamerCount)
-
-            -- Content placeholder
             , div
                 [ css
                     [ Tw.bg_base_100
                     , Tw.h_screen
                     , Tw.w_full
                     , Tw.ml_60
-                    , Tw.flex
-                    , Tw.items_center
-                    , Tw.justify_center
-                    , Tw.text_5xl
-                    , Tw.font_semibold
+                    , Tw.mt_16
                     ]
                 ]
-                [ text "Content" ]
+                -- Test fetching streaming schedule
+                [ button [ css [ Tw.btn, Tw.btn_primary, Css.hover [ Tw.bg_primary_focus ] ], onClick (FetchStreamingSchedule "<INSERT ID>") ] [ text "Load schedule" ]
+                , div [ css [ Tw.text_white ] ]
+                    (List.map (\s -> p [ css [ Tw.mt_4 ] ] [ text (Debug.toString s) ]) schedules)
+                ]
             ]
         ]
 
