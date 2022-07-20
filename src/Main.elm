@@ -764,8 +764,8 @@ streamerListView streamers follows showCount moreAvailable filterString =
                 )
                 streamers
 
-        filter =
-            div []
+        filterUI =
+            div [ css [ Tw.form_control ] ]
                 [ label
                     [ css [ Tw.label ]
                     ]
@@ -804,8 +804,11 @@ streamerListView streamers follows showCount moreAvailable filterString =
                         )
                             ++ [ hr [] [] ]
 
-                    else
+                    else if String.length query > 0 then
                         [ text "Enter at least 4 characters" ]
+
+                    else
+                        [ text "" ]
 
                 Nothing ->
                     [ text "" ]
@@ -849,7 +852,7 @@ streamerListView streamers follows showCount moreAvailable filterString =
             ]
             [ p [ css [ Tw.text_center ] ] [ text "CHANNELS YOU FOLLOW" ]
             , div [ css [ Tw.mt_2 ] ]
-                [ filter
+                [ filterUI
                 , div
                     []
                     [ filterResultsView, selectedView, restStreamersView, buttons, errorText, spinner ]
