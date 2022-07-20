@@ -2,6 +2,7 @@ module TwitchTest exposing (accessTokenFromUrlTest, decodeCategoryTest, decodeFo
 
 import Expect
 import Json.Decode as Decode
+import RFC3339 exposing (zulu)
 import Test exposing (Test, describe, test)
 import Twitch
 import Url
@@ -197,7 +198,19 @@ decodeSegmentTest =
         (\_ ->
             Expect.equal
                 (Ok
-                    { startTime = "2021-07-01T18:00:00Z"
+                    { startTime =
+                        { date =
+                            { year = 2021
+                            , month = 7
+                            , day = 1
+                            }
+                        , time =
+                            { hours = 18
+                            , minutes = 0
+                            , seconds = 0
+                            }
+                        , offset = zulu
+                        }
                     , endTime = "2021-07-01T19:00:00Z"
                     , title = "TwitchDev Monthly Update // July 1, 2021"
                     , canceledUntil = Nothing
@@ -216,7 +229,19 @@ decodeScheduleTest =
             Expect.equal
                 (Ok
                     { segments =
-                        [ { startTime = "2021-07-01T18:00:00Z"
+                        [ { startTime =
+                                { date =
+                                    { year = 2021
+                                    , month = 7
+                                    , day = 1
+                                    }
+                                , time =
+                                    { hours = 18
+                                    , minutes = 0
+                                    , seconds = 0
+                                    }
+                                , offset = zulu
+                                }
                           , endTime = "2021-07-01T19:00:00Z"
                           , title = "TwitchDev Monthly Update // July 1, 2021"
                           , canceledUntil = Nothing
