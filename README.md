@@ -15,7 +15,7 @@ npx elm-review --ignore-dirs gen
 
 ## Development
 
-Make sure [elm-live](https://github.com/wking-io/elm-live) is installed and you have folowed
+Make sure [elm-live](https://github.com/wking-io/elm-live) is installed and you have followed
 build instructions.
 
 ```
