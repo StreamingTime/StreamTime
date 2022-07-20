@@ -75,7 +75,7 @@ type Msg
     | GotStreamerProfiles (Result Http.Error (List Twitch.User))
     | GotUserProfile (Result Http.Error Twitch.User)
     | GotStreamingSchedule (Result Http.Error (Twitch.PaginatedResponse Twitch.Schedule))
-    | FetchStreamingSchedule String
+    | FetchStreamingSchedules
     | StreamerListMsg StreamerListMsg
 
 
@@ -250,7 +250,7 @@ update msg model =
                 GotStreamingSchedule _ ->
                     ( model, Cmd.none )
 
-                FetchStreamingSchedule _ ->
+                FetchStreamingSchedules ->
                     ( model, Cmd.none )
 
                 StreamerListMsg _ ->
@@ -369,8 +369,10 @@ update msg model =
                         Ok value ->
                             ( LoggedIn { appData | schedules = RefreshData.map (\oldSchedules -> Present (oldSchedules ++ [ value.data ])) appData.schedules } navKey, Cmd.none )
 
-                FetchStreamingSchedule userID ->
-                    ( LoggedIn { appData | schedules = RefreshData.map LoadingMore appData.schedules } navKey, fetchStreamingSchedule userID appData.signedInUser.token )
+                FetchStreamingSchedules ->
+                    ( LoggedIn { appData | schedules = RefreshData.map LoadingMore appData.schedules } navKey
+                    , Cmd.batch (List.map (\streamer -> fetchStreamingSchedule streamer.id appData.signedInUser.token) appData.selectedStreamers)
+                    )
 
         NotLoggedIn _ navKey ->
             case msg of
@@ -399,7 +401,7 @@ update msg model =
                 GotStreamingSchedule _ ->
                     ( model, Cmd.none )
 
-                FetchStreamingSchedule _ ->
+                FetchStreamingSchedules ->
                     ( model, Cmd.none )
 
 
@@ -613,7 +615,7 @@ appView appData =
                     (appData.selectedStreamers
                         |> List.map (\streamer -> text (streamer.displayName ++ " "))
                     )
-                , button [ css [ Tw.btn, Tw.btn_primary, Css.hover [ Tw.bg_primary_focus ] ], onClick (FetchStreamingSchedule "<INSERT ID>") ] [ text "Load schedule" ]
+                , button [ css [ Tw.btn, Tw.btn_primary, Css.hover [ Tw.bg_primary_focus ] ], onClick FetchStreamingSchedules ] [ text "Load schedule" ]
                 , div [ css [ Tw.text_white ] ]
                     (List.map (\s -> p [ css [ Tw.mt_4 ] ] [ text (Debug.toString s) ]) schedules)
                 ]
