@@ -1,4 +1,4 @@
-module LocalStorageTest exposing (..)
+module LocalStorageTest exposing (decodePersistentDataTest, encodeTest)
 
 import Expect
 import Json.Encode as Encode
