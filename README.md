@@ -13,6 +13,17 @@ npx elm-tailwind-modules --dir ./gen --tailwind-config tailwind.config.js
 npx elm-review --ignore-dirs gen
 ```
 
+## Development
+
+Make sure [elm-live](https://github.com/wking-io/elm-live) is installed and you have folowed
+build instructions.
+
+```
+elm-live src/Main.elm -- --output=main.js
+```
+
+Visit `http://localhost:8000`
+
 ## Dependencies
 - [TailwindCSS](https://v2.tailwindcss.com)
 - [elm-tailwind-modules](https://github.com/matheus23/elm-tailwind-modules)
