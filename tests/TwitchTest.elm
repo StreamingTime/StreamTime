@@ -63,7 +63,11 @@ decodeUserTest =
         (\_ ->
             Expect.equal
                 (Result.Ok
-                    { id = "141981764", displayName = "TwitchDev", profileImageUrl = "https://static-cdn.jtvnw.net/jtv_user_pictures/8a6381c7-d0c0-4576-b179-38bd5ce1d6af-profile_image-300x300.png" }
+                    { id = "141981764"
+                    , displayName = "TwitchDev"
+                    , profileImageUrl = "https://static-cdn.jtvnw.net/jtv_user_pictures/8a6381c7-d0c0-4576-b179-38bd5ce1d6af-profile_image-300x300.png"
+                    , loginName = "twitchdev"
+                    }
                 )
                 (Decode.decodeString
                     Twitch.decodeUser
@@ -78,11 +82,18 @@ decodeFollowRelationTest =
         (\_ ->
             Expect.equal
                 (Result.Ok
-                    { fromID = "171003792", fromLogin = "iiisutha067iii", fromName = "IIIsutha067III", toID = "23161357", toName = "LIRIK", followedAt = "2017-08-22T22:55:24Z" }
+                    { fromID = "171003792"
+                    , fromLogin = "iiisutha067iii"
+                    , fromName = "IIIsutha067III"
+                    , toID = "23161357"
+                    , followedAt = "2017-08-22T22:55:24Z"
+                    , toName = "LIRIK"
+                    , toLogin = "lirik"
+                    }
                 )
                 (Decode.decodeString
                     Twitch.decodeFollowRelation
-                    "{\"from_id\": \"171003792\",\"from_login\": \"iiisutha067iii\",\"from_name\": \"IIIsutha067III\",\"to_id\": \"23161357\",\"to_name\": \"LIRIK\",\"followed_at\": \"2017-08-22T22:55:24Z\"      }"
+                    "{\"from_id\": \"171003792\",\"from_login\": \"iiisutha067iii\",\"from_name\": \"IIIsutha067III\",\"to_id\": \"23161357\",\"to_name\": \"LIRIK\",\"followed_at\": \"2017-08-22T22:55:24Z\", \"to_login\": \"lirik\"}"
                 )
         )
 
