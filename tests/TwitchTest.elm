@@ -179,7 +179,7 @@ decodeSegmentTest =
                     , endTime = "2021-07-01T19:00:00Z"
                     , title = "TwitchDev Monthly Update // July 1, 2021"
                     , canceledUntil = Nothing
-                    , category = { name = "Science & Technology" }
+                    , category = Just { name = "Science & Technology" }
                     , isRecurring = False
                     }
                 )
@@ -198,7 +198,7 @@ decodeScheduleTest =
                           , endTime = "2021-07-01T19:00:00Z"
                           , title = "TwitchDev Monthly Update // July 1, 2021"
                           , canceledUntil = Nothing
-                          , category = { name = "Science & Technology" }
+                          , category = Just { name = "Science & Technology" }
                           , isRecurring = False
                           }
                         ]

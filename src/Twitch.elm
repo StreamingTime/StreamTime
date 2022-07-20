@@ -76,7 +76,7 @@ type alias Segment =
     , endTime : String
     , title : String
     , canceledUntil : Maybe String
-    , category : Category
+    , category : Maybe Category
     , isRecurring : Bool
     }
 
@@ -99,7 +99,7 @@ decodeSegment =
         (Decode.field "end_time" Decode.string)
         (Decode.field "title" Decode.string)
         (Decode.maybe (Decode.field "canceled_until" Decode.string))
-        (Decode.field "category" decodeCategory)
+        (Decode.maybe (Decode.field "category" decodeCategory))
         (Decode.field "is_recurring" Decode.bool)
 
 
