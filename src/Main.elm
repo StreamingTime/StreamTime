@@ -890,6 +890,7 @@ streamerView streamer isSelected =
                         [ Tw.rounded_full
                         , Tw.w_10
                         , Tw.h_10
+                        , Css.hover [ Tw.ring, Tw.ring_primary_focus ]
                         ]
                     ]
                     [ img [ src streamer.profileImageUrl ] []
@@ -901,6 +902,7 @@ streamerView streamer isSelected =
             [ Tw.block
             , Tw.p_1
             , Css.hover [ Tw.bg_purple_500 ]
+            , Tw.cursor_pointer
             ]
         , onClick
             (StreamerListMsg (SetStreamerSelection streamer (not isSelected)))
