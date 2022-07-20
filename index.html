@@ -24,6 +24,11 @@
         app.ports.setStorage.subscribe(function (state) {
             localStorage.setItem('data', JSON.stringify(state));
         });
+
+        // Listen for commands from the `removeStorage` port and remove local storage data.
+        app.ports.removeStorage.subscribe(function () {
+            localStorage.removeItem('data');
+        });
     </script>
 </body>
 

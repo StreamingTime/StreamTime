@@ -5,8 +5,8 @@ import Browser.Navigation as Nav
 import Css
 import Css.Global
 import Data
-import Html.Styled exposing (Html, a, button, div, h1, img, p, span, text, toUnstyled)
-import Html.Styled.Attributes exposing (alt, class, css, href, src, style)
+import Html.Styled exposing (Html, a, button, div, h1, img, li, p, span, text, toUnstyled, ul)
+import Html.Styled.Attributes exposing (alt, class, classList, css, href, src, style, tabindex)
 import Html.Styled.Events exposing (onClick)
 import Http
 import Json.Encode as Encode
@@ -68,12 +68,14 @@ type alias SignedInUser =
 type Msg
     = UrlMsg UrlMsg
     | GotValidateTokenResponse (Result Http.Error Twitch.ValidateTokenResponse)
+    | GotRevokeTokenResponse
     | GotUserFollows (Result Http.Error (Twitch.PaginatedResponse (List Twitch.FollowRelation)))
     | GotStreamerProfiles (Result Http.Error (List Twitch.User))
     | GotUserProfile (Result Http.Error Twitch.User)
     | GotStreamingSchedule (Result Http.Error (Twitch.PaginatedResponse Twitch.Schedule))
     | FetchStreamingSchedule String
     | StreamerListMsg StreamerListMsg
+    | Logout
 
 
 type StreamerListMsg
@@ -121,6 +123,11 @@ init flags url navKey =
                     )
 
 
+revokeToken : Twitch.ClientID -> Twitch.Token -> Cmd Msg
+revokeToken clientId token =
+    Cmd.map (\_ -> GotRevokeTokenResponse) (Twitch.revokeToken clientId token)
+
+
 fetchStreamerProfiles : List String -> Twitch.Token -> Cmd Msg
 fetchStreamerProfiles userIDs token =
     Cmd.map GotStreamerProfiles (Twitch.getUsers userIDs TwitchConfig.clientId token)
@@ -166,6 +173,9 @@ update msg model =
                                 navKey
                             , Cmd.batch [ LocalStorage.persistData { token = Twitch.getTokenValue m.token }, fetchUserProfile value.userID m.token ]
                             )
+
+                GotRevokeTokenResponse ->
+                    ( model, Cmd.none )
 
                 GotUserFollows response ->
                     case ( m.signedInUser, response ) of
@@ -247,12 +257,18 @@ update msg model =
                 StreamerListMsg _ ->
                     ( model, Cmd.none )
 
+                Logout ->
+                    ( model, Cmd.none )
+
         LoggedIn appData navKey ->
             case msg of
                 UrlMsg urlMsg ->
                     ( LoggedIn appData navKey, handleUrlMsg urlMsg navKey )
 
                 GotValidateTokenResponse _ ->
+                    ( model, Cmd.none )
+
+                GotRevokeTokenResponse ->
                     ( model, Cmd.none )
 
                 GotUserFollows _ ->
@@ -327,6 +343,9 @@ update msg model =
                 FetchStreamingSchedule userID ->
                     ( LoggedIn { appData | schedules = RefreshData.map LoadingMore appData.schedules } navKey, fetchStreamingSchedule userID appData.signedInUser.token )
 
+                Logout ->
+                    ( NotLoggedIn Nothing navKey, Cmd.batch [ LocalStorage.removeData, revokeToken TwitchConfig.clientId appData.signedInUser.token ] )
+
         NotLoggedIn _ navKey ->
             case msg of
                 UrlMsg urlMsg ->
@@ -334,6 +353,9 @@ update msg model =
 
                 -- this msg should not be relevant for the LoadingScreen model
                 GotValidateTokenResponse _ ->
+                    ( model, Cmd.none )
+
+                GotRevokeTokenResponse ->
                     ( model, Cmd.none )
 
                 GotUserFollows _ ->
@@ -352,6 +374,9 @@ update msg model =
                     ( model, Cmd.none )
 
                 FetchStreamingSchedule _ ->
+                    ( model, Cmd.none )
+
+                Logout ->
                     ( model, Cmd.none )
 
 
@@ -726,7 +751,7 @@ streamerView streamer =
         ]
 
 
-userView : SignedInUser -> Html msg
+userView : SignedInUser -> Html Msg
 userView user =
     let
         imgUrl =
@@ -746,15 +771,60 @@ userView user =
                     user.loginName
 
         avatar =
-            div [ css [ Tw.avatar ] ]
+            div [ css [ Tw.avatar, Css.hover [ Tw.cursor_pointer ] ], tabindex 0 ]
                 [ div [ css [ Tw.rounded_full, Tw.w_10, Tw.h_10 ] ]
                     [ img [ src imgUrl, alt (name ++ " profile image") ] []
                     ]
                 ]
     in
-    div [ css [ Tw.flex, Tw.items_center ] ]
-        [ p [ css [ Tw.mr_2, Tw.font_semibold ] ] [ text name ]
-        , avatar
+    div
+        [ classList
+            -- we have to add dropdown classes manually for the dropdown to work, this seems to be a daisyUI bug
+            [ ( "dropdown", True ), ( "dropdown-end", True ) ]
+        , css [ Tw.dropdown, Tw.dropdown_end ]
+        ]
+        [ avatar
+        , ul
+            [ tabindex 0
+            , css
+                [ Tw.mt_1
+                , Tw.p_2
+                , Tw.shadow
+                , Tw.menu
+                , Tw.bg_dark_600
+                , Tw.rounded_xl
+                , Tw.w_36
+                ]
+            , class "dropdown-content"
+            ]
+            [ li []
+                [ p [ css [ Tw.text_center, Tw.font_semibold ] ] [ text name ] ]
+            , li
+                [ css
+                    [ Tw.border_t_2
+                    , Tw.border_dark_700
+                    , Tw.mt_2
+                    ]
+                ]
+                [ button
+                    [ css
+                        [ Tw.btn
+                        , Tw.btn_ghost
+                        , Tw.border_0
+                        , Css.hover [ Tw.bg_transparent ]
+                        ]
+                    , onClick Logout
+                    ]
+                    [ p
+                        [ css
+                            [ Tw.font_bold
+                            , Tw.text_red_500
+                            ]
+                        ]
+                        [ text "Logout" ]
+                    ]
+                ]
+            ]
         ]
 
 

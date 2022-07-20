@@ -1,4 +1,4 @@
-module Twitch exposing (Category, ClientID(..), FollowRelation, PaginatedResponse, Schedule, Segment, Token(..), User, ValidateTokenResponse, accessTokenFromUrl, decodeCategory, decodeFollowRelation, decodeListHead, decodePaginated, decodeSchedule, decodeSegment, decodeUser, decodeValidateTokenResponse, getStreamingSchedule, getTokenValue, getUser, getUserFollows, getUsers, loginFlowUrl, validateToken)
+module Twitch exposing (Category, ClientID(..), FollowRelation, PaginatedResponse, Schedule, Segment, Token(..), User, ValidateTokenResponse, accessTokenFromUrl, decodeCategory, decodeFollowRelation, decodeListHead, decodePaginated, decodeSchedule, decodeSegment, decodeUser, decodeValidateTokenResponse, getStreamingSchedule, getTokenValue, getUser, getUserFollows, getUsers, loginFlowUrl, revokeToken, toFormData, validateToken)
 
 import Http
 import Json.Decode as Decode
@@ -35,6 +35,25 @@ getTokenValue (Token value) =
 apiUrlBuilder : List String -> List Url.Builder.QueryParameter -> String
 apiUrlBuilder =
     Url.Builder.crossOrigin "https://api.twitch.tv/helix"
+
+
+
+-- revoke a users token
+
+
+revokeToken : ClientID -> Token -> Cmd (Result Http.Error ())
+revokeToken (ClientID clientId) (Token token) =
+    let
+        data =
+            toFormData
+                [ ( "client_id", clientId )
+                , ( "token", token )
+                ]
+
+        body =
+            Http.stringBody "application/x-www-form-urlencoded" data
+    in
+    postRequest "https://id.twitch.tv/oauth2/revoke" body
 
 
 
@@ -286,6 +305,23 @@ oAuthRequest url decoder (Token token) =
 
 
 
+{- create an HTTP.request with method post, ignore response body -}
+
+
+postRequest : String -> Http.Body -> Cmd (Result Http.Error ())
+postRequest url body =
+    Http.request
+        { method = "POST"
+        , headers = []
+        , url = url
+        , body = body
+        , expect = Http.expectWhatever identity
+        , timeout = Nothing
+        , tracker = Nothing
+        }
+
+
+
 {- create an HTTP.request with Bearer token and client id header -}
 
 
@@ -370,3 +406,9 @@ toKeyValue item =
 
         _ ->
             Nothing
+
+
+toFormData : List ( String, String ) -> String
+toFormData =
+    List.map (\( k, v ) -> Url.percentEncode k ++ "=" ++ Url.percentEncode v)
+        >> String.join "&"
