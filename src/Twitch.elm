@@ -3,6 +3,7 @@ module Twitch exposing (Category, ClientID(..), FollowRelation, PaginatedRespons
 import Http
 import Json.Decode as Decode
 import Maybe exposing (andThen)
+import RFC3339 exposing (decodeTimestamp)
 import Url
 import Url.Builder
 
@@ -96,10 +97,10 @@ type alias Schedule =
 
 
 type alias Segment =
-    { startTime : String
-    , endTime : String
+    { startTime : RFC3339.DateTime
+    , endTime : RFC3339.DateTime
     , title : String
-    , canceledUntil : Maybe String
+    , canceledUntil : Maybe RFC3339.DateTime
     , category : Maybe Category
     , isRecurring : Bool
     }
@@ -119,10 +120,10 @@ decodeCategory =
 decodeSegment : Decode.Decoder Segment
 decodeSegment =
     Decode.map6 Segment
-        (Decode.field "start_time" Decode.string)
-        (Decode.field "end_time" Decode.string)
+        (Decode.field "start_time" decodeTimestamp)
+        (Decode.field "end_time" decodeTimestamp)
         (Decode.field "title" Decode.string)
-        (Decode.maybe (Decode.field "canceled_until" Decode.string))
+        (Decode.maybe (Decode.field "canceled_until" decodeTimestamp))
         (Decode.maybe (Decode.field "category" decodeCategory))
         (Decode.field "is_recurring" Decode.bool)
 
