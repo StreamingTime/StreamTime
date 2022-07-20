@@ -1,4 +1,4 @@
-module TwitchTest exposing (accessTokenFromUrlTest, decodeFollowRelation, decodeListHeadTest, decodePaginatedTest, decodeUserTest, decodeValidateTokenResponseTest)
+module TwitchTest exposing (accessTokenFromUrlTest, decodeFollowRelationTest, decodeListHeadTest, decodePaginatedTest, decodeUserTest, decodeValidateTokenResponseTest)
 
 import Expect
 import Json.Decode as Decode
@@ -72,8 +72,8 @@ decodeUserTest =
         )
 
 
-decodeFollowRelation : Test
-decodeFollowRelation =
+decodeFollowRelationTest : Test
+decodeFollowRelationTest =
     test "decode follow relation"
         (\_ ->
             Expect.equal
