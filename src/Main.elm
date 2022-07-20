@@ -665,7 +665,7 @@ filterFollowsByLogin name =
             f.toName
                 |> String.toLower
                 |> String.contains
-                    name
+                    (String.toLower name)
         )
 
 
