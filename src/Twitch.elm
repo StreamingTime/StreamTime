@@ -239,20 +239,6 @@ getUsers userIDs =
     bearerRequest u (Decode.field "data" (Decode.list decodeUser))
 
 
-getUsersByLogin : List String -> ClientID -> Token -> Cmd (Result Http.Error (List User))
-getUsersByLogin userIDs =
-    let
-        u =
-            apiUrlBuilder
-                [ "users" ]
-                (List.map
-                    (Url.Builder.string "login")
-                    userIDs
-                )
-    in
-    bearerRequest u (Decode.field "data" (Decode.list decodeUser))
-
-
 
 {- https://dev.twitch.tv/docs/api/reference#get-users -}
 
