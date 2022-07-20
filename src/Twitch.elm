@@ -169,18 +169,20 @@ type alias FollowRelation =
     , fromName : String
     , toID : String
     , toName : String
+    , toLogin : String
     , followedAt : String
     }
 
 
 decodeFollowRelation : Decode.Decoder FollowRelation
 decodeFollowRelation =
-    Decode.map6 FollowRelation
+    Decode.map7 FollowRelation
         (Decode.field "from_id" Decode.string)
         (Decode.field "from_login" Decode.string)
         (Decode.field "from_name" Decode.string)
         (Decode.field "to_id" Decode.string)
         (Decode.field "to_name" Decode.string)
+        (Decode.field "to_login" Decode.string)
         (Decode.field "followed_at" Decode.string)
 
 
@@ -225,15 +227,17 @@ type alias User =
     { id : String
     , displayName : String
     , profileImageUrl : String
+    , loginName : String
     }
 
 
 decodeUser : Decode.Decoder User
 decodeUser =
-    Decode.map3 User
+    Decode.map4 User
         (Decode.field "id" Decode.string)
         (Decode.field "display_name" Decode.string)
         (Decode.field "profile_image_url" Decode.string)
+        (Decode.field "login" Decode.string)
 
 
 

@@ -4,9 +4,9 @@ import Browser exposing (Document)
 import Browser.Navigation as Nav
 import Css
 import Css.Global
-import Html.Styled exposing (Html, a, button, div, h1, img, li, p, span, text, toUnstyled, ul)
-import Html.Styled.Attributes exposing (alt, class, classList, css, href, src, style, tabindex)
-import Html.Styled.Events exposing (onClick)
+import Html.Styled exposing (Html, a, button, div, h1, hr, img, input, label, li, p, span, text, toUnstyled, ul)
+import Html.Styled.Attributes exposing (alt, class, classList, css, href, placeholder, src, style, tabindex, type_)
+import Html.Styled.Events exposing (onClick, onInput)
 import Http
 import Json.Encode as Encode
 import LocalStorage
@@ -15,7 +15,7 @@ import Tailwind.Utilities as Tw
 import Twitch
 import TwitchConfig
 import Url
-import Utils
+import Utils exposing (filterFollowsByLogin, missingProfileLogins, streamersWithSelection)
 
 
 loginRedirectUrl : String
@@ -36,6 +36,8 @@ type alias AppData =
     -- a list of follow relation metadata originating from our user
     , follows : List Twitch.FollowRelation
     , sidebarStreamerCount : Int
+    , streamerFilterName : Maybe String
+    , selectedStreamers : List Twitch.User
     , error : Maybe String
     , schedules : RefreshData Http.Error (List Twitch.Schedule)
     }
@@ -69,10 +71,11 @@ type Msg
     | GotValidateTokenResponse (Result Http.Error Twitch.ValidateTokenResponse)
     | GotRevokeTokenResponse
     | GotUserFollows (Result Http.Error (Twitch.PaginatedResponse (List Twitch.FollowRelation)))
+    | GotStreamerProfilesForSidebar (Result Http.Error (List Twitch.User))
     | GotStreamerProfiles (Result Http.Error (List Twitch.User))
     | GotUserProfile (Result Http.Error Twitch.User)
     | GotStreamingSchedule (Result Http.Error (Twitch.PaginatedResponse Twitch.Schedule))
-    | FetchStreamingSchedule String
+    | FetchStreamingSchedules
     | StreamerListMsg StreamerListMsg
     | Logout
 
@@ -80,6 +83,8 @@ type Msg
 type StreamerListMsg
     = ShowMore
     | ShowLess
+    | Filter String
+    | SetStreamerSelection Twitch.User Bool
 
 
 type UrlMsg
@@ -125,6 +130,11 @@ init flags url navKey =
 revokeToken : Twitch.ClientID -> Twitch.Token -> Cmd Msg
 revokeToken clientId token =
     Cmd.map (\_ -> GotRevokeTokenResponse) (Twitch.revokeToken clientId token)
+
+
+fetchStreamerProfilesForSidebar : List String -> Twitch.Token -> Cmd Msg
+fetchStreamerProfilesForSidebar userIDs token =
+    Cmd.map GotStreamerProfilesForSidebar (Twitch.getUsers userIDs TwitchConfig.clientId token)
 
 
 fetchStreamerProfiles : List String -> Twitch.Token -> Cmd Msg
@@ -202,13 +212,13 @@ update msg model =
                                 -- after all follows are fetched, fetch the first streamer profiles
                                 Nothing ->
                                     ( LoadingScreen { m | follows = Just oldAndNewValues } navKey
-                                    , fetchStreamerProfiles (List.map .toID (List.take streamerListPageSteps oldAndNewValues)) user.token
+                                    , fetchStreamerProfilesForSidebar (List.map .toID (List.take streamerListPageSteps oldAndNewValues)) user.token
                                     )
 
                         ( Nothing, Ok _ ) ->
                             Debug.todo "this case should not happen"
 
-                GotStreamerProfiles response ->
+                GotStreamerProfilesForSidebar response ->
                     case ( m.signedInUser, m.follows, response ) of
                         ( Just user, Just follows, Ok streamers ) ->
                             -- all good, loading is complete
@@ -216,8 +226,12 @@ update msg model =
                                 { signedInUser = user
                                 , follows = follows
                                 , streamers = Present streamers
+
+                                -- TOOD: sidebarStreamerCount should depend on the number of streamers loaded
                                 , sidebarStreamerCount = streamerListPageSteps
+                                , selectedStreamers = []
                                 , error = Nothing
+                                , streamerFilterName = Nothing
                                 , schedules = LoadingMore []
                                 }
                                 navKey
@@ -250,10 +264,13 @@ update msg model =
                 GotStreamingSchedule _ ->
                     ( model, Cmd.none )
 
-                FetchStreamingSchedule _ ->
+                FetchStreamingSchedules ->
                     ( model, Cmd.none )
 
                 StreamerListMsg _ ->
+                    ( model, Cmd.none )
+
+                GotStreamerProfiles _ ->
                     ( model, Cmd.none )
 
                 Logout ->
@@ -276,7 +293,7 @@ update msg model =
                 GotUserProfile _ ->
                     ( model, Cmd.none )
 
-                GotStreamerProfiles response ->
+                GotStreamerProfilesForSidebar response ->
                     case response of
                         Ok newProfiles ->
                             ( LoggedIn
@@ -318,7 +335,7 @@ update msg model =
                                     |> List.map .toID
                         in
                         ( LoggedIn { appData | streamers = RefreshData.map RefreshData.LoadingMore appData.streamers } navKey
-                        , fetchStreamerProfiles nextIDs appData.signedInUser.token
+                        , fetchStreamerProfilesForSidebar nextIDs appData.signedInUser.token
                         )
 
                     else
@@ -331,6 +348,39 @@ update msg model =
                         in
                         ( LoggedIn { appData | sidebarStreamerCount = appData.sidebarStreamerCount + howMuchMore } navKey, Cmd.none )
 
+                StreamerListMsg (Filter name) ->
+                    let
+                        -- filter follows by name and find out which profiles are missing
+                        searchResultsWithoutProfile =
+                            appData.follows
+                                |> filterFollowsByLogin name
+                                |> (\f -> missingProfileLogins f (RefreshData.mapTo (\_ v -> v) appData.streamers))
+                    in
+                    ( LoggedIn { appData | streamerFilterName = Just name } navKey
+                    , if String.length name >= 4 && List.length searchResultsWithoutProfile > 0 then
+                        fetchStreamerProfiles searchResultsWithoutProfile appData.signedInUser.token
+
+                      else
+                        Cmd.none
+                    )
+
+                StreamerListMsg (SetStreamerSelection streamer newSelectionState) ->
+                    let
+                        newList =
+                            if newSelectionState then
+                                appData.selectedStreamers ++ [ streamer ]
+
+                            else
+                                List.filter ((/=) streamer) appData.selectedStreamers
+                    in
+                    ( LoggedIn { appData | selectedStreamers = newList } navKey, Cmd.none )
+
+                GotStreamerProfiles (Ok newProfiles) ->
+                    ( LoggedIn { appData | streamers = RefreshData.map (\oldProfiles -> Present (oldProfiles ++ newProfiles)) appData.streamers } navKey, Cmd.none )
+
+                GotStreamerProfiles (Err err) ->
+                    ( LoggedIn { appData | streamers = RefreshData.map (ErrorWithData err) appData.streamers } navKey, Cmd.none )
+
                 GotStreamingSchedule response ->
                     case response of
                         Err err ->
@@ -339,8 +389,10 @@ update msg model =
                         Ok value ->
                             ( LoggedIn { appData | schedules = RefreshData.map (\oldSchedules -> Present (oldSchedules ++ [ value.data ])) appData.schedules } navKey, Cmd.none )
 
-                FetchStreamingSchedule userID ->
-                    ( LoggedIn { appData | schedules = RefreshData.map LoadingMore appData.schedules } navKey, fetchStreamingSchedule userID appData.signedInUser.token )
+                FetchStreamingSchedules ->
+                    ( LoggedIn { appData | schedules = RefreshData.map LoadingMore appData.schedules } navKey
+                    , Cmd.batch (List.map (\streamer -> fetchStreamingSchedule streamer.id appData.signedInUser.token) appData.selectedStreamers)
+                    )
 
                 Logout ->
                     ( NotLoggedIn Nothing navKey, Cmd.batch [ LocalStorage.removeData, revokeToken TwitchConfig.clientId appData.signedInUser.token ] )
@@ -360,7 +412,7 @@ update msg model =
                 GotUserFollows _ ->
                     ( model, Cmd.none )
 
-                GotStreamerProfiles _ ->
+                GotStreamerProfilesForSidebar _ ->
                     ( model, Cmd.none )
 
                 StreamerListMsg _ ->
@@ -369,10 +421,13 @@ update msg model =
                 GotUserProfile _ ->
                     ( model, Cmd.none )
 
+                GotStreamerProfiles _ ->
+                    ( model, Cmd.none )
+
                 GotStreamingSchedule _ ->
                     ( model, Cmd.none )
 
-                FetchStreamingSchedule _ ->
+                FetchStreamingSchedules ->
                     ( model, Cmd.none )
 
                 Logout ->
@@ -564,7 +619,16 @@ appView appData =
         [ errorView appData.error
         , headerView appData.signedInUser
         , div [ css [ Tw.flex ] ]
-            [ streamerListView appData.streamers appData.sidebarStreamerCount (List.length appData.follows > appData.sidebarStreamerCount)
+            [ streamerListView
+                (RefreshData.map
+                    (\streamers -> Present (streamersWithSelection appData.selectedStreamers streamers))
+                    appData.streamers
+                )
+                appData.follows
+                appData.sidebarStreamerCount
+                appData.streamerFilterName
+
+            -- Content placeholder
             , div
                 [ css
                     [ Tw.bg_base_100
@@ -575,7 +639,11 @@ appView appData =
                     ]
                 ]
                 -- Test fetching streaming schedule
-                [ button [ css [ Tw.btn, Tw.btn_primary, Css.hover [ Tw.bg_primary_focus ] ], onClick (FetchStreamingSchedule "<INSERT ID>") ] [ text "Load schedule" ]
+                [ div []
+                    (appData.selectedStreamers
+                        |> List.map (\streamer -> text (streamer.displayName ++ " "))
+                    )
+                , button [ css [ Tw.btn, Tw.btn_primary, Css.hover [ Tw.bg_primary_focus ] ], onClick FetchStreamingSchedules ] [ text "Load schedule" ]
                 , div [ css [ Tw.text_white ] ]
                     (List.map (\s -> p [ css [ Tw.mt_4 ] ] [ text (Debug.toString s) ]) schedules)
                 ]
@@ -619,17 +687,32 @@ headerView user =
         ]
 
 
-streamerListView : RefreshData Http.Error (List Twitch.User) -> Int -> Bool -> Html Msg
-streamerListView streamers showCount moreAvailable =
+streamerListView : RefreshData Http.Error (List ( Twitch.User, Bool )) -> List Twitch.FollowRelation -> Int -> Maybe String -> Html Msg
+streamerListView streamersData follows showCount filterString =
     let
-        streamerViews =
+        streamers =
+            RefreshData.mapTo (\_ list -> list) streamersData
+
+        selectedStreamers =
             streamers
-                |> RefreshData.mapTo (\_ list -> list)
-                |> List.take showCount
-                |> List.map streamerView
+                |> List.filter (\( _, selected ) -> selected)
+
+        unselectedStreamers =
+            streamers
+                |> List.filter (\( _, selected ) -> not selected)
+
+        restStreamersView =
+            div []
+                (unselectedStreamers
+                    |> List.take showCount
+                    |> List.map (\( streamer, isSelected ) -> streamerView streamer isSelected)
+                )
 
         linkButtonStyle =
             css [ Tw.text_primary, Tw.underline ]
+
+        moreAvailable =
+            List.length unselectedStreamers > showCount || List.length follows > List.length streamers
 
         buttons =
             div
@@ -660,7 +743,7 @@ streamerListView streamers showCount moreAvailable =
                 ]
 
         spinner =
-            if RefreshData.isLoading streamers then
+            if RefreshData.isLoading streamersData then
                 loadingSpinner
                     [ Tw.w_8
                     , Tw.h_8
@@ -681,7 +764,76 @@ streamerListView streamers showCount moreAvailable =
                         Nothing ->
                             text ""
                 )
-                streamers
+                streamersData
+
+        filterUI =
+            div [ css [ Tw.form_control ] ]
+                [ label
+                    [ css [ Tw.label ]
+                    ]
+                    [ span [ css [ Tw.label_text ] ] [ text "Search" ]
+                    ]
+                , input
+                    [ type_ "text"
+                    , placeholder "Channel name"
+                    , css [ Tw.input, Tw.input_ghost, Tw.input_bordered, Tw.input_sm, Tw.m_1 ]
+                    , onInput (\s -> StreamerListMsg (Filter s))
+                    ]
+                    []
+                ]
+
+        filteredList =
+            case filterString of
+                Just query ->
+                    if String.length query >= 4 then
+                        -- this is also computed in update, so we could save us the computation here
+                        (filterFollowsByLogin query follows
+                            |> List.map
+                                (\follow ->
+                                    let
+                                        streamerProfile =
+                                            streamers
+                                                |> List.filter (\( user, _ ) -> user.id == follow.toID)
+                                                |> List.head
+                                    in
+                                    case streamerProfile of
+                                        Just ( isSelected, streamer ) ->
+                                            streamerView isSelected streamer
+
+                                        Nothing ->
+                                            loadingSpinner [ Tw.w_8, Tw.h_8 ]
+                                )
+                        )
+                            ++ [ hr [] [] ]
+
+                    else if String.length query > 0 then
+                        [ text "Enter at least 4 characters" ]
+
+                    else
+                        [ text "" ]
+
+                Nothing ->
+                    [ text "" ]
+
+        filterResultsView =
+            if List.isEmpty filteredList then
+                text ""
+
+            else
+                div []
+                    filteredList
+
+        selectedView =
+            if List.isEmpty selectedStreamers then
+                text ""
+
+            else
+                div []
+                    ((selectedStreamers
+                        |> List.map (\( selected, streamer ) -> streamerView selected streamer)
+                     )
+                        ++ [ hr [] [] ]
+                    )
     in
     div
         [ css
@@ -708,13 +860,17 @@ streamerListView streamers showCount moreAvailable =
             ]
             [ p [ css [ Tw.text_center ] ] [ text "CHANNELS YOU FOLLOW" ]
             , div [ css [ Tw.mt_2 ] ]
-                (List.concat [ streamerViews, [ buttons, errorText, spinner ] ])
+                [ filterUI
+                , div
+                    []
+                    [ filterResultsView, selectedView, restStreamersView, buttons, errorText, spinner ]
+                ]
             ]
         ]
 
 
-streamerView : Twitch.User -> Html Msg
-streamerView streamer =
+streamerView : Twitch.User -> Bool -> Html Msg
+streamerView streamer isSelected =
     let
         avatar =
             div [ css [ Tw.avatar ] ]
@@ -723,19 +879,22 @@ streamerView streamer =
                         [ Tw.rounded_full
                         , Tw.w_10
                         , Tw.h_10
+                        , Css.hover [ Tw.ring, Tw.ring_primary_focus ]
                         ]
                     ]
                     [ img [ src streamer.profileImageUrl ] []
                     ]
                 ]
     in
-    a
+    div
         [ css
             [ Tw.block
             , Tw.p_1
             , Css.hover [ Tw.bg_purple_500 ]
+            , Tw.cursor_pointer
             ]
-        , href ("https://twitch.tv/" ++ streamer.displayName)
+        , onClick
+            (StreamerListMsg (SetStreamerSelection streamer (not isSelected)))
         ]
         [ div
             [ css
@@ -744,8 +903,15 @@ streamerView streamer =
                 , Tw.items_center
                 ]
             ]
-            [ avatar
+            [ a [ href ("https://twitch.tv/" ++ streamer.displayName) ] [ avatar ]
             , div [ css [ Tw.font_medium, Tw.truncate ] ] [ text streamer.displayName ]
+            , text
+                (if isSelected then
+                    "✅"
+
+                 else
+                    ""
+                )
             ]
         ]
 
