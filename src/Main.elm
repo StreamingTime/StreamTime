@@ -5,7 +5,7 @@ import Browser.Navigation as Nav
 import Css
 import Css.Global
 import Data
-import Html.Styled exposing (Html, a, button, div, h1, img, input, label, p, span, text, toUnstyled)
+import Html.Styled exposing (Html, a, button, div, h1, hr, img, input, label, p, span, text, toUnstyled)
 import Html.Styled.Attributes exposing (alt, class, css, href, placeholder, src, style, type_)
 import Html.Styled.Events exposing (onClick, onInput)
 import Http
@@ -701,11 +701,13 @@ streamerListView : RefreshData Http.Error (List ( Twitch.User, Bool )) -> List T
 streamerListView streamers follows showCount moreAvailable filterString =
     let
         restStreamersView =
-            streamers
-                |> RefreshData.mapTo (\_ list -> list)
-                |> List.filter (\( _, selected ) -> not selected)
-                |> List.take showCount
-                |> List.map (\( streamer, isSelected ) -> streamerView streamer isSelected)
+            div []
+                (streamers
+                    |> RefreshData.mapTo (\_ list -> list)
+                    |> List.filter (\( _, selected ) -> not selected)
+                    |> List.take showCount
+                    |> List.map (\( streamer, isSelected ) -> streamerView streamer isSelected)
+                )
 
         linkButtonStyle =
             css [ Tw.text_primary, Tw.underline ]
@@ -772,7 +774,7 @@ streamerListView streamers follows showCount moreAvailable filterString =
                 , input
                     [ type_ "text"
                     , placeholder "Channel name"
-                    , css [ Tw.input, Tw.input_ghost, Tw.input_bordered ]
+                    , css [ Tw.input, Tw.input_ghost, Tw.input_bordered, Tw.input_sm, Tw.m_1 ]
                     , onInput (\s -> StreamerListMsg (Filter s))
                     ]
                     []
@@ -783,7 +785,7 @@ streamerListView streamers follows showCount moreAvailable filterString =
                 Just query ->
                     if String.length query >= 4 then
                         -- this is also computed in update, so we could save us the computation here
-                        filterFollowsByLogin query follows
+                        (filterFollowsByLogin query follows
                             |> List.map
                                 (\follow ->
                                     let
@@ -799,23 +801,27 @@ streamerListView streamers follows showCount moreAvailable filterString =
                                         Nothing ->
                                             loadingSpinner [ Tw.w_8, Tw.h_8 ]
                                 )
+                        )
+                            ++ [ hr [] [] ]
 
                     else
-                        [ text "enter at least 4 characters" ]
+                        [ text "Enter at least 4 characters" ]
 
                 Nothing ->
                     [ text "" ]
 
         filterResultsView =
-            div [ css [ Tw.border, Tw.border_2 ] ]
+            div []
                 filteredList
 
         selectedView =
             div []
-                (streamers
+                ((streamers
                     |> RefreshData.mapTo (\_ list -> list)
                     |> List.filter (\( _, selected ) -> selected)
                     |> List.map (\( selected, streamer ) -> streamerView selected streamer)
+                 )
+                    ++ [ hr [] [] ]
                 )
     in
     div
@@ -846,9 +852,7 @@ streamerListView streamers follows showCount moreAvailable filterString =
                 [ filter
                 , div
                     []
-                    (List.concat
-                        [ [ filterResultsView, selectedView ], restStreamersView, [ buttons, errorText, spinner ] ]
-                    )
+                    [ filterResultsView, selectedView, restStreamersView, buttons, errorText, spinner ]
                 ]
             ]
         ]
