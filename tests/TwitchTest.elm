@@ -194,32 +194,97 @@ decodeCategoryTest =
 
 decodeSegmentTest : Test
 decodeSegmentTest =
-    test "decode segment"
-        (\_ ->
-            Expect.equal
-                (Ok
-                    { startTime =
-                        { date =
-                            { year = 2021
-                            , month = 7
-                            , day = 1
+    describe "decode segment"
+        [ test "without canceled_until"
+            (\_ ->
+                Expect.equal
+                    (Ok
+                        { startTime =
+                            { date =
+                                { year = 2021
+                                , month = 7
+                                , day = 1
+                                }
+                            , time =
+                                { hours = 18
+                                , minutes = 0
+                                , seconds = 0
+                                }
+                            , offset = zulu
                             }
-                        , time =
-                            { hours = 18
-                            , minutes = 0
-                            , seconds = 0
+                        , endTime =
+                            { date =
+                                { year = 2021
+                                , month = 7
+                                , day = 1
+                                }
+                            , time =
+                                { hours = 19
+                                , minutes = 0
+                                , seconds = 0
+                                }
+                            , offset = zulu
                             }
-                        , offset = zulu
+                        , title = "TwitchDev Monthly Update // July 1, 2021"
+                        , canceledUntil = Nothing
+                        , category = Just { name = "Science & Technology" }
+                        , isRecurring = False
                         }
-                    , endTime = "2021-07-01T19:00:00Z"
-                    , title = "TwitchDev Monthly Update // July 1, 2021"
-                    , canceledUntil = Nothing
-                    , category = Just { name = "Science & Technology" }
-                    , isRecurring = False
-                    }
-                )
-                (Decode.decodeString Twitch.decodeSegment "{\"start_time\":\"2021-07-01T18:00:00Z\", \"end_time\":\"2021-07-01T19:00:00Z\", \"title\":\"TwitchDev Monthly Update // July 1, 2021\", \"canceled_until\":null, \"category\":{\"id\":\"509670\", \"name\":\"Science & Technology\"}, \"is_recurring\":false}")
-        )
+                    )
+                    (Decode.decodeString Twitch.decodeSegment "{\"start_time\":\"2021-07-01T18:00:00Z\", \"end_time\":\"2021-07-01T19:00:00Z\", \"title\":\"TwitchDev Monthly Update // July 1, 2021\", \"canceled_until\":null, \"category\":{\"id\":\"509670\", \"name\":\"Science & Technology\"}, \"is_recurring\":false}")
+            )
+        , test "with canceled_until"
+            (\_ ->
+                Expect.equal
+                    (Ok
+                        { startTime =
+                            { date =
+                                { year = 2021
+                                , month = 7
+                                , day = 1
+                                }
+                            , time =
+                                { hours = 18
+                                , minutes = 0
+                                , seconds = 0
+                                }
+                            , offset = zulu
+                            }
+                        , endTime =
+                            { date =
+                                { year = 2021
+                                , month = 7
+                                , day = 1
+                                }
+                            , time =
+                                { hours = 19
+                                , minutes = 0
+                                , seconds = 0
+                                }
+                            , offset = zulu
+                            }
+                        , title = "TwitchDev Monthly Update // July 1, 2021"
+                        , canceledUntil =
+                            Just
+                                { date =
+                                    { year = 2021
+                                    , month = 8
+                                    , day = 1
+                                    }
+                                , time =
+                                    { hours = 19
+                                    , minutes = 0
+                                    , seconds = 0
+                                    }
+                                , offset = zulu
+                                }
+                        , category = Just { name = "Science & Technology" }
+                        , isRecurring = False
+                        }
+                    )
+                    (Decode.decodeString Twitch.decodeSegment "{\"start_time\":\"2021-07-01T18:00:00Z\", \"end_time\":\"2021-07-01T19:00:00Z\", \"title\":\"TwitchDev Monthly Update // July 1, 2021\", \"canceled_until\":null, \"category\":{\"id\":\"509670\", \"name\":\"Science & Technology\"}, \"is_recurring\":false, \"canceled_until\": \"2021-08-01T19:00:00Z\"}")
+            )
+        ]
 
 
 decodeScheduleTest : Test
@@ -242,7 +307,19 @@ decodeScheduleTest =
                                     }
                                 , offset = zulu
                                 }
-                          , endTime = "2021-07-01T19:00:00Z"
+                          , endTime =
+                                { date =
+                                    { year = 2021
+                                    , month = 7
+                                    , day = 1
+                                    }
+                                , time =
+                                    { hours = 19
+                                    , minutes = 0
+                                    , seconds = 0
+                                    }
+                                , offset = zulu
+                                }
                           , title = "TwitchDev Monthly Update // July 1, 2021"
                           , canceledUntil = Nothing
                           , category = Just { name = "Science & Technology" }
