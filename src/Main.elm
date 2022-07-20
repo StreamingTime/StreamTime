@@ -779,6 +779,7 @@ userView user =
     in
     div
         [ classList
+            -- we have to add dropdown classes manually for the dropdown to work, this seems to be a daisyUI bug
             [ ( "dropdown", True ), ( "dropdown-end", True ) ]
         , css [ Tw.dropdown, Tw.dropdown_end ]
         ]
