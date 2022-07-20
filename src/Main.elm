@@ -132,9 +132,14 @@ revokeToken clientId token =
     Cmd.map (\_ -> GotRevokeTokenResponse) (Twitch.revokeToken clientId token)
 
 
+fetchStreamerProfilesForSidebar : List String -> Twitch.Token -> Cmd Msg
+fetchStreamerProfilesForSidebar userIDs token =
+    Cmd.map GotStreamerProfilesForSidebar (Twitch.getUsers userIDs TwitchConfig.clientId token)
+
+
 fetchStreamerProfiles : List String -> Twitch.Token -> Cmd Msg
 fetchStreamerProfiles userIDs token =
-    Cmd.map GotStreamerProfilesForSidebar (Twitch.getUsers userIDs TwitchConfig.clientId token)
+    Cmd.map GotStreamerProfiles (Twitch.getUsers userIDs TwitchConfig.clientId token)
 
 
 fetchUserProfile : String -> Twitch.Token -> Cmd Msg
@@ -207,7 +212,7 @@ update msg model =
                                 -- after all follows are fetched, fetch the first streamer profiles
                                 Nothing ->
                                     ( LoadingScreen { m | follows = Just oldAndNewValues } navKey
-                                    , fetchStreamerProfiles (List.map .toID (List.take streamerListPageSteps oldAndNewValues)) user.token
+                                    , fetchStreamerProfilesForSidebar (List.map .toID (List.take streamerListPageSteps oldAndNewValues)) user.token
                                     )
 
                         ( Nothing, Ok _ ) ->
@@ -330,7 +335,7 @@ update msg model =
                                     |> List.map .toID
                         in
                         ( LoggedIn { appData | streamers = RefreshData.map RefreshData.LoadingMore appData.streamers } navKey
-                        , fetchStreamerProfiles nextIDs appData.signedInUser.token
+                        , fetchStreamerProfilesForSidebar nextIDs appData.signedInUser.token
                         )
 
                     else
@@ -346,14 +351,14 @@ update msg model =
                 StreamerListMsg (Filter name) ->
                     let
                         -- filter follows by name and find out which profiles are missing
-                        searchResultswithoutProfile =
+                        searchResultsWithoutProfile =
                             appData.follows
                                 |> filterFollowsByLogin name
                                 |> (\f -> missingProfileLogins f (RefreshData.mapTo (\_ v -> v) appData.streamers))
                     in
                     ( LoggedIn { appData | streamerFilterName = Just name } navKey
-                    , if String.length name >= 4 && List.length searchResultswithoutProfile > 0 then
-                        Cmd.map GotStreamerProfiles (Twitch.getUsers searchResultswithoutProfile TwitchConfig.clientId appData.signedInUser.token)
+                    , if String.length name >= 4 && List.length searchResultsWithoutProfile > 0 then
+                        fetchStreamerProfiles searchResultsWithoutProfile appData.signedInUser.token
 
                       else
                         Cmd.none
