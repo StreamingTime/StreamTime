@@ -1,4 +1,4 @@
-module Twitch exposing (ClientID(..), FollowRelation, PaginatedResponse, Token(..), User, ValidateTokenResponse, accessTokenFromUrl, decodeFollowRelation, decodeListHead, decodePaginated, decodeUser, decodeValidateTokenResponse, getUser, getUserFollows, getUsers, getUsersByLogin, loginFlowUrl, validateToken)
+module Twitch exposing (Category, ClientID(..), FollowRelation, PaginatedResponse, Schedule, Segment, Token(..), User, ValidateTokenResponse, accessTokenFromUrl, decodeCategory, decodeFollowRelation, decodeListHead, decodePaginated, decodeSchedule, decodeSegment, decodeUser, decodeValidateTokenResponse, getStreamingSchedule, getTokenValue, getUser, getUserFollows, getUsers, loginFlowUrl, validateToken)
 
 import Http
 import Json.Decode as Decode
@@ -21,6 +21,11 @@ type Token
 
 type ClientID
     = ClientID String
+
+
+getTokenValue : Token -> String
+getTokenValue (Token value) =
+    value
 
 
 
@@ -54,6 +59,85 @@ decodeValidateTokenResponse =
         (Decode.field "client_id" Decode.string)
         (Decode.field "login" Decode.string)
         (Decode.field "user_id" Decode.string)
+
+
+
+-- get channel stream schedule
+
+
+type alias Schedule =
+    { segments : List Segment
+    , broadcasterId : String
+    , broadcasterName : String
+    }
+
+
+
+{- Scheduled broadcasts are defined as “stream segments” in the API. -}
+
+
+type alias Segment =
+    { startTime : String
+    , endTime : String
+    , title : String
+    , canceledUntil : Maybe String
+    , category : Maybe Category
+    , isRecurring : Bool
+    }
+
+
+type alias Category =
+    { name : String
+    }
+
+
+decodeCategory : Decode.Decoder Category
+decodeCategory =
+    Decode.map Category
+        (Decode.field "name" Decode.string)
+
+
+decodeSegment : Decode.Decoder Segment
+decodeSegment =
+    Decode.map6 Segment
+        (Decode.field "start_time" Decode.string)
+        (Decode.field "end_time" Decode.string)
+        (Decode.field "title" Decode.string)
+        (Decode.maybe (Decode.field "canceled_until" Decode.string))
+        (Decode.maybe (Decode.field "category" decodeCategory))
+        (Decode.field "is_recurring" Decode.bool)
+
+
+decodeSchedule : Decode.Decoder Schedule
+decodeSchedule =
+    Decode.map3 Schedule
+        (Decode.field "segments" (Decode.list decodeSegment))
+        (Decode.field "broadcaster_id" Decode.string)
+        (Decode.field "broadcaster_name" Decode.string)
+
+
+
+{- https://dev.twitch.tv/docs/api/reference#get-channel-stream-schedule -}
+
+
+getStreamingSchedule : String -> Maybe String -> ClientID -> Token -> Cmd (Result Http.Error (PaginatedResponse Schedule))
+getStreamingSchedule userID cursor =
+    let
+        params =
+            [ Url.Builder.string "broadcaster_id" userID ]
+
+        u =
+            apiUrlBuilder [ "schedule" ]
+                (case cursor of
+                    Just c ->
+                        -- pagination
+                        Url.Builder.string "after" c :: params
+
+                    Nothing ->
+                        params
+                )
+    in
+    bearerRequest u (decodePaginated decodeSchedule)
 
 
 

@@ -9,6 +9,8 @@ import Html.Styled exposing (Html, a, button, div, h1, img, input, label, p, spa
 import Html.Styled.Attributes exposing (alt, class, css, href, placeholder, src, style, type_)
 import Html.Styled.Events exposing (onClick, onInput)
 import Http
+import Json.Encode as Encode
+import LocalStorage
 import RefreshData exposing (RefreshData(..))
 import Tailwind.Utilities as Tw
 import Twitch
@@ -19,7 +21,7 @@ import Utils
 
 loginRedirectUrl : String
 loginRedirectUrl =
-    "http://localhost:8000/src/Main.elm"
+    "http://localhost:8000"
 
 
 type Model
@@ -38,6 +40,7 @@ type alias AppData =
     , streamerFilterName : Maybe String
     , selectedStreamers : List Twitch.User
     , error : Maybe String
+    , schedules : RefreshData Http.Error (List Twitch.Schedule)
     }
 
 
@@ -71,6 +74,8 @@ type Msg
     | GotStreamerProfilesForSidebar (Result Http.Error (List Twitch.User))
     | GotStreamerProfiles (Result Http.Error (List Twitch.User))
     | GotUserProfile (Result Http.Error Twitch.User)
+    | GotStreamingSchedule (Result Http.Error (Twitch.PaginatedResponse Twitch.Schedule))
+    | FetchStreamingSchedule String
     | StreamerListMsg StreamerListMsg
 
 
@@ -86,8 +91,8 @@ type UrlMsg
     | UrlChanged
 
 
-init : Url.Url -> Nav.Key -> ( Model, Cmd Msg )
-init url navKey =
+init : Encode.Value -> Url.Url -> Nav.Key -> ( Model, Cmd Msg )
+init flags url navKey =
     case Twitch.accessTokenFromUrl url of
         Just token ->
             ( LoadingScreen
@@ -97,11 +102,28 @@ init url navKey =
                 , firstStreamers = Nothing
                 }
                 navKey
-            , Cmd.map GotValidateTokenResponse (Twitch.validateToken token)
+            , Cmd.batch [ Cmd.map GotValidateTokenResponse (Twitch.validateToken token), Nav.replaceUrl navKey "/" ]
             )
 
         Nothing ->
-            ( NotLoggedIn Nothing navKey, Cmd.none )
+            case LocalStorage.decodePersistentData flags of
+                Err _ ->
+                    ( NotLoggedIn Nothing navKey, Cmd.none )
+
+                Ok data ->
+                    let
+                        token =
+                            Twitch.Token data.token
+                    in
+                    ( LoadingScreen
+                        { token = token
+                        , follows = Nothing
+                        , signedInUser = Nothing
+                        , firstStreamers = Nothing
+                        }
+                        navKey
+                    , Cmd.batch [ Cmd.map GotValidateTokenResponse (Twitch.validateToken token), Nav.replaceUrl navKey "/" ]
+                    )
 
 
 fetchStreamerProfiles : List String -> Twitch.Token -> Cmd Msg
@@ -112,6 +134,11 @@ fetchStreamerProfiles userIDs token =
 fetchUserProfile : String -> Twitch.Token -> Cmd Msg
 fetchUserProfile userID token =
     Cmd.map GotUserProfile (Twitch.getUser userID TwitchConfig.clientId token)
+
+
+fetchStreamingSchedule : String -> Twitch.Token -> Cmd Msg
+fetchStreamingSchedule userID token =
+    Cmd.map GotStreamingSchedule (Twitch.getStreamingSchedule userID Nothing TwitchConfig.clientId token)
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -142,7 +169,7 @@ update msg model =
                                 , firstStreamers = Nothing
                                 }
                                 navKey
-                            , fetchUserProfile value.userID m.token
+                            , Cmd.batch [ LocalStorage.persistData { token = Twitch.getTokenValue m.token }, fetchUserProfile value.userID m.token ]
                             )
 
                 GotUserFollows response ->
@@ -191,6 +218,7 @@ update msg model =
                                 , selectedStreamers = []
                                 , error = Nothing
                                 , streamerFilterName = Nothing
+                                , schedules = LoadingMore []
                                 }
                                 navKey
                             , Cmd.none
@@ -218,6 +246,12 @@ update msg model =
 
                         ( Nothing, _ ) ->
                             Debug.todo "again, a case that should not happen"
+
+                GotStreamingSchedule _ ->
+                    ( model, Cmd.none )
+
+                FetchStreamingSchedule _ ->
+                    ( model, Cmd.none )
 
                 StreamerListMsg _ ->
                     ( model, Cmd.none )
@@ -327,6 +361,17 @@ update msg model =
                 GotStreamerProfiles (Err err) ->
                     ( LoggedIn { appData | streamers = RefreshData.map (ErrorWithData err) appData.streamers } navKey, Cmd.none )
 
+                GotStreamingSchedule response ->
+                    case response of
+                        Err err ->
+                            ( LoggedIn { appData | schedules = RefreshData.map (ErrorWithData err) appData.schedules } navKey, Cmd.none )
+
+                        Ok value ->
+                            ( LoggedIn { appData | schedules = RefreshData.map (\oldSchedules -> Present (oldSchedules ++ [ value.data ])) appData.schedules } navKey, Cmd.none )
+
+                FetchStreamingSchedule userID ->
+                    ( LoggedIn { appData | schedules = RefreshData.map LoadingMore appData.schedules } navKey, fetchStreamingSchedule userID appData.signedInUser.token )
+
         NotLoggedIn _ navKey ->
             case msg of
                 UrlMsg urlMsg ->
@@ -349,6 +394,12 @@ update msg model =
                     ( model, Cmd.none )
 
                 GotStreamerProfiles _ ->
+                    ( model, Cmd.none )
+
+                GotStreamingSchedule _ ->
+                    ( model, Cmd.none )
+
+                FetchStreamingSchedule _ ->
                     ( model, Cmd.none )
 
 
@@ -529,6 +580,10 @@ errorView error =
 
 appView : AppData -> Html Msg
 appView appData =
+    let
+        schedules =
+            RefreshData.mapTo (\_ -> identity) appData.schedules
+    in
     div []
         [ errorView appData.error
         , headerView appData.signedInUser
@@ -550,16 +605,18 @@ appView appData =
                     , Tw.h_screen
                     , Tw.w_full
                     , Tw.ml_60
-                    , Tw.flex
-                    , Tw.items_center
-                    , Tw.justify_center
-                    , Tw.text_5xl
-                    , Tw.font_semibold
+                    , Tw.mt_16
                     ]
                 ]
-                (appData.selectedStreamers
-                    |> List.map (\streamer -> text (streamer.displayName ++ " "))
-                )
+                -- Test fetching streaming schedule
+                [ div []
+                    (appData.selectedStreamers
+                        |> List.map (\streamer -> text (streamer.displayName ++ " "))
+                    )
+                , button [ css [ Tw.btn, Tw.btn_primary, Css.hover [ Tw.bg_primary_focus ] ], onClick (FetchStreamingSchedule "<INSERT ID>") ] [ text "Load schedule" ]
+                , div [ css [ Tw.text_white ] ]
+                    (List.map (\s -> p [ css [ Tw.mt_4 ] ] [ text (Debug.toString s) ]) schedules)
+                ]
             ]
         ]
 
@@ -879,10 +936,10 @@ streamerListPageSteps =
     10
 
 
-main : Program () Model Msg
+main : Program Encode.Value Model Msg
 main =
     Browser.application
-        { init = \_ url navKey -> init url navKey
+        { init = init
         , view = view
         , update = update
         , subscriptions = \_ -> Sub.none
