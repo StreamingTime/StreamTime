@@ -94,7 +94,7 @@ init flags url navKey =
                 , firstStreamers = Nothing
                 }
                 navKey
-            , Cmd.map GotValidateTokenResponse (Twitch.validateToken token)
+            , Cmd.batch [ Cmd.map GotValidateTokenResponse (Twitch.validateToken token), Nav.replaceUrl navKey "/" ]
             )
 
         Nothing ->
@@ -114,7 +114,7 @@ init flags url navKey =
                         , firstStreamers = Nothing
                         }
                         navKey
-                    , Cmd.map GotValidateTokenResponse (Twitch.validateToken token)
+                    , Cmd.batch [ Cmd.map GotValidateTokenResponse (Twitch.validateToken token), Nav.replaceUrl navKey "/" ]
                     )
 
 
