@@ -1,5 +1,6 @@
-module Utils exposing (concatMaybeList, filterFollowsByLogin, missingProfileLogins, streamersWithSelection)
+module Utils exposing (concatMaybeList, filterFollowsByLogin, missingProfileLogins, streamersWithSelection, errorToString)
 
+import Http
 import Twitch
 
 
@@ -55,3 +56,29 @@ streamersWithSelection : List Twitch.User -> List Twitch.User -> List ( Twitch.U
 streamersWithSelection selected users =
     users
         |> List.map (\u -> ( u, List.any ((==) u) selected ))
+
+
+errorToString : Http.Error -> String
+errorToString error =
+    let
+        networkProblem =
+            "Failed to connect to the server. Is your internet ok?"
+
+        generalProblem =
+            "There was a problem :("
+    in
+    case error of
+        Http.Timeout ->
+            networkProblem
+
+        Http.NetworkError ->
+            networkProblem
+
+        Http.BadUrl _ ->
+            generalProblem
+
+        Http.BadBody _ ->
+            generalProblem
+
+        Http.BadStatus _ ->
+            generalProblem
