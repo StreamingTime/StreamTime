@@ -1,4 +1,4 @@
-module TwitchTest exposing (accessTokenFromUrlTest, decodeFollowRelation, decodeListHeadTest, decodePaginatedTest, decodeUserTest, decodeValidateTokenResponseTest)
+module TwitchTest exposing (accessTokenFromUrlTest, decodeCategoryTest, decodeFollowRelationTest, decodeListHeadTest, decodePaginatedTest, decodeScheduleTest, decodeSegmentTest, decodeUserTest, decodeValidateTokenResponseTest)
 
 import Expect
 import Json.Decode as Decode
@@ -72,8 +72,8 @@ decodeUserTest =
         )
 
 
-decodeFollowRelation : Test
-decodeFollowRelation =
+decodeFollowRelationTest : Test
+decodeFollowRelationTest =
     test "decode follow relation"
         (\_ ->
             Expect.equal
@@ -157,3 +157,54 @@ decodeListHeadTest =
                     )
             )
         ]
+
+
+decodeCategoryTest : Test
+decodeCategoryTest =
+    test "decode category"
+        (\_ ->
+            Expect.equal
+                (Ok { name = "Science & Technology" })
+                (Decode.decodeString Twitch.decodeCategory "{ \"id\": \"509670\", \"name\": \"Science & Technology\"}")
+        )
+
+
+decodeSegmentTest : Test
+decodeSegmentTest =
+    test "decode segment"
+        (\_ ->
+            Expect.equal
+                (Ok
+                    { startTime = "2021-07-01T18:00:00Z"
+                    , endTime = "2021-07-01T19:00:00Z"
+                    , title = "TwitchDev Monthly Update // July 1, 2021"
+                    , canceledUntil = Nothing
+                    , category = Just { name = "Science & Technology" }
+                    , isRecurring = False
+                    }
+                )
+                (Decode.decodeString Twitch.decodeSegment "{\"start_time\":\"2021-07-01T18:00:00Z\", \"end_time\":\"2021-07-01T19:00:00Z\", \"title\":\"TwitchDev Monthly Update // July 1, 2021\", \"canceled_until\":null, \"category\":{\"id\":\"509670\", \"name\":\"Science & Technology\"}, \"is_recurring\":false}")
+        )
+
+
+decodeScheduleTest : Test
+decodeScheduleTest =
+    test "decode schedule"
+        (\_ ->
+            Expect.equal
+                (Ok
+                    { segments =
+                        [ { startTime = "2021-07-01T18:00:00Z"
+                          , endTime = "2021-07-01T19:00:00Z"
+                          , title = "TwitchDev Monthly Update // July 1, 2021"
+                          , canceledUntil = Nothing
+                          , category = Just { name = "Science & Technology" }
+                          , isRecurring = False
+                          }
+                        ]
+                    , broadcasterId = "141981764"
+                    , broadcasterName = "TwitchDev"
+                    }
+                )
+                (Decode.decodeString Twitch.decodeSchedule "{\"segments\":[{\"start_time\":\"2021-07-01T18:00:00Z\",\"end_time\":\"2021-07-01T19:00:00Z\",\"title\":\"TwitchDev Monthly Update // July 1, 2021\",\"canceled_until\":null,\"category\":{\"id\":\"509670\",\"name\":\"Science & Technology\"},\"is_recurring\":false}],\"broadcaster_id\":\"141981764\",\"broadcaster_name\":\"TwitchDev\"}")
+        )
