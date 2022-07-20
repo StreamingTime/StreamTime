@@ -1,4 +1,4 @@
-module TwitchTest exposing (accessTokenFromUrlTest, decodeCategoryTest, decodeFollowRelationTest, decodeListHeadTest, decodePaginatedTest, decodeScheduleTest, decodeSegmentTest, decodeUserTest, decodeValidateTokenResponseTest)
+module TwitchTest exposing (accessTokenFromUrlTest, decodeCategoryTest, decodeFollowRelationTest, decodeListHeadTest, decodePaginatedTest, decodeScheduleTest, decodeSegmentTest, decodeUserTest, decodeValidateTokenResponseTest, toFormDataTest)
 
 import Expect
 import Json.Decode as Decode
@@ -53,6 +53,28 @@ accessTokenFromUrlTest =
 
                     Nothing ->
                         Expect.fail "test string could not be parsed to url"
+            )
+        ]
+
+
+toFormDataTest : Test
+toFormDataTest =
+    describe "to form data"
+        [ test "form data is present"
+            (\_ ->
+                let
+                    testList =
+                        [ ( "client_id", "123" ), ( "token", "xyz" ) ]
+                in
+                Expect.equal
+                    "client_id=123&token=xyz"
+                    (Twitch.toFormData testList)
+            )
+        , test "form data is empty"
+            (\_ ->
+                Expect.equal
+                    ""
+                    (Twitch.toFormData [])
             )
         ]
 
