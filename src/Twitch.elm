@@ -1,4 +1,4 @@
-module Twitch exposing (ClientID(..), FollowRelation, PaginatedResponse, Schedule, Token(..), User, ValidateTokenResponse, accessTokenFromUrl, decodeFollowRelation, decodeListHead, decodePaginated, decodeUser, decodeValidateTokenResponse, getStreamingSchedule, getUser, getUserFollows, getUsers, loginFlowUrl, validateToken)
+module Twitch exposing (Category, ClientID(..), FollowRelation, PaginatedResponse, Schedule, Segment, Token(..), User, ValidateTokenResponse, accessTokenFromUrl, decodeCategory, decodeFollowRelation, decodeListHead, decodePaginated, decodeSchedule, decodeSegment, decodeUser, decodeValidateTokenResponse, getStreamingSchedule, getUser, getUserFollows, getUsers, loginFlowUrl, validateToken)
 
 import Http
 import Json.Decode as Decode
