@@ -704,6 +704,10 @@ streamerListView streamersData follows showCount filterString =
         streamers =
             RefreshData.mapTo (\_ list -> list) streamersData
 
+        selectedStreamers =
+            streamers
+                |> List.filter (\( _, selected ) -> selected)
+
         unselectedStreamers =
             streamers
                 |> List.filter (\( _, selected ) -> not selected)
@@ -823,17 +827,24 @@ streamerListView streamersData follows showCount filterString =
                     [ text "" ]
 
         filterResultsView =
-            div []
-                filteredList
+            if List.isEmpty filteredList then
+                text ""
+
+            else
+                div []
+                    filteredList
 
         selectedView =
-            div []
-                ((streamers
-                    |> List.filter (\( _, selected ) -> selected)
-                    |> List.map (\( selected, streamer ) -> streamerView selected streamer)
-                 )
-                    ++ [ hr [] [] ]
-                )
+            if List.isEmpty selectedStreamers then
+                text ""
+
+            else
+                div []
+                    ((selectedStreamers
+                        |> List.map (\( selected, streamer ) -> streamerView selected streamer)
+                     )
+                        ++ [ hr [] [] ]
+                    )
     in
     div
         [ css
