@@ -4,7 +4,6 @@ import Browser exposing (Document)
 import Browser.Navigation as Nav
 import Css
 import Css.Global
-import Data
 import Html.Styled exposing (Html, a, button, div, h1, img, li, p, span, text, toUnstyled, ul)
 import Html.Styled.Attributes exposing (alt, class, classList, css, href, src, style, tabindex)
 import Html.Styled.Events exposing (onClick)
@@ -210,8 +209,8 @@ update msg model =
                             Debug.todo "this case should not happen"
 
                 GotStreamerProfiles response ->
-                    case ( m.signedInUser, m.follows, Data.fromResult response ) of
-                        ( Just user, Just follows, Data.Success streamers ) ->
+                    case ( m.signedInUser, m.follows, response ) of
+                        ( Just user, Just follows, Ok streamers ) ->
                             -- all good, loading is complete
                             ( LoggedIn
                                 { signedInUser = user
@@ -225,7 +224,7 @@ update msg model =
                             , Cmd.none
                             )
 
-                        ( _, _, Data.Failure e ) ->
+                        ( _, _, Err e ) ->
                             ( NotLoggedIn (Just e) navKey, Cmd.none )
 
                         _ ->
