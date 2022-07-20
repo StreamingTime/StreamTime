@@ -597,7 +597,6 @@ appView appData =
                 )
                 appData.follows
                 appData.sidebarStreamerCount
-                (List.length appData.follows > appData.sidebarStreamerCount)
                 appData.streamerFilterName
 
             -- Content placeholder
@@ -699,20 +698,26 @@ streamersWithSelection selected users =
         |> List.map (\u -> ( u, List.any ((==) u) selected ))
 
 
-streamerListView : RefreshData Http.Error (List ( Twitch.User, Bool )) -> List Twitch.FollowRelation -> Int -> Bool -> Maybe String -> Html Msg
-streamerListView streamers follows showCount moreAvailable filterString =
+streamerListView : RefreshData Http.Error (List ( Twitch.User, Bool )) -> List Twitch.FollowRelation -> Int -> Maybe String -> Html Msg
+streamerListView streamers follows showCount filterString =
     let
+        unselectedStreamers =
+            streamers
+                |> RefreshData.mapTo (\_ list -> list)
+                |> List.filter (\( _, selected ) -> not selected)
+
         restStreamersView =
             div []
-                (streamers
-                    |> RefreshData.mapTo (\_ list -> list)
-                    |> List.filter (\( _, selected ) -> not selected)
+                (unselectedStreamers
                     |> List.take showCount
                     |> List.map (\( streamer, isSelected ) -> streamerView streamer isSelected)
                 )
 
         linkButtonStyle =
             css [ Tw.text_primary, Tw.underline ]
+
+        moreAvailable =
+            List.length unselectedStreamers > showCount || List.length follows > List.length (RefreshData.mapTo (\_ list -> list) streamers)
 
         buttons =
             div
