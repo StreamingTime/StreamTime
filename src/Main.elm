@@ -699,11 +699,13 @@ streamersWithSelection selected users =
 
 
 streamerListView : RefreshData Http.Error (List ( Twitch.User, Bool )) -> List Twitch.FollowRelation -> Int -> Maybe String -> Html Msg
-streamerListView streamers follows showCount filterString =
+streamerListView streamersData follows showCount filterString =
     let
+        streamers =
+            RefreshData.mapTo (\_ list -> list) streamersData
+
         unselectedStreamers =
             streamers
-                |> RefreshData.mapTo (\_ list -> list)
                 |> List.filter (\( _, selected ) -> not selected)
 
         restStreamersView =
@@ -717,7 +719,7 @@ streamerListView streamers follows showCount filterString =
             css [ Tw.text_primary, Tw.underline ]
 
         moreAvailable =
-            List.length unselectedStreamers > showCount || List.length follows > List.length (RefreshData.mapTo (\_ list -> list) streamers)
+            List.length unselectedStreamers > showCount || List.length follows > List.length streamers
 
         buttons =
             div
@@ -748,7 +750,7 @@ streamerListView streamers follows showCount filterString =
                 ]
 
         spinner =
-            if RefreshData.isLoading streamers then
+            if RefreshData.isLoading streamersData then
                 loadingSpinner
                     [ Tw.w_8
                     , Tw.h_8
@@ -769,7 +771,7 @@ streamerListView streamers follows showCount filterString =
                         Nothing ->
                             text ""
                 )
-                streamers
+                streamersData
 
         filterUI =
             div [ css [ Tw.form_control ] ]
@@ -797,7 +799,7 @@ streamerListView streamers follows showCount filterString =
                                 (\follow ->
                                     let
                                         streamerProfile =
-                                            RefreshData.mapTo (\_ v -> v) streamers
+                                            streamers
                                                 |> List.filter (\( user, _ ) -> user.id == follow.toID)
                                                 |> List.head
                                     in
@@ -827,7 +829,6 @@ streamerListView streamers follows showCount filterString =
         selectedView =
             div []
                 ((streamers
-                    |> RefreshData.mapTo (\_ list -> list)
                     |> List.filter (\( _, selected ) -> selected)
                     |> List.map (\( selected, streamer ) -> streamerView selected streamer)
                  )
