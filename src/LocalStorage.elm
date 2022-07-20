@@ -1,4 +1,4 @@
-port module LocalStorage exposing (PersistentData, decodePersistentData, encode, persistData)
+port module LocalStorage exposing (PersistentData, decodePersistentData, encode, persistData, removeData)
 
 import Json.Decode as Decode
 import Json.Encode as Encode
@@ -10,6 +10,9 @@ type alias PersistentData =
 
 
 port setStorage : Encode.Value -> Cmd msg
+
+
+port removeStorage : Encode.Value -> Cmd msg
 
 
 encode : PersistentData -> Encode.Value
@@ -33,3 +36,8 @@ persistData data =
 decodePersistentData : Encode.Value -> Result Decode.Error PersistentData
 decodePersistentData data =
     Decode.decodeValue decoder data
+
+
+removeData : Cmd msg
+removeData =
+    removeStorage Encode.null
