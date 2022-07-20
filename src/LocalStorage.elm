@@ -1,8 +1,7 @@
-port module LocalStorage exposing (PersistentData, decodePersistentData, encode, persistToken)
+port module LocalStorage exposing (PersistentData, decodePersistentData, encode, persistData)
 
 import Json.Decode as Decode
 import Json.Encode as Encode
-import Twitch
 
 
 type alias PersistentData =
@@ -20,15 +19,15 @@ encode data =
         ]
 
 
-persistToken : Twitch.Token -> Cmd msg
-persistToken (Twitch.Token value) =
-    setStorage (encode { token = value })
-
-
 decoder : Decode.Decoder PersistentData
 decoder =
     Decode.map PersistentData
         (Decode.field "token" Decode.string)
+
+
+persistData : PersistentData -> Cmd msg
+persistData data =
+    setStorage (encode data)
 
 
 decodePersistentData : Encode.Value -> Result Decode.Error PersistentData

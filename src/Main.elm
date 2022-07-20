@@ -156,7 +156,7 @@ update msg model =
                                 , firstStreamers = Nothing
                                 }
                                 navKey
-                            , Cmd.batch [ LocalStorage.persistToken m.token, fetchUserProfile value.userID m.token ]
+                            , Cmd.batch [ LocalStorage.persistData { token = Twitch.getTokenValue m.token }, fetchUserProfile value.userID m.token ]
                             )
 
                 GotUserFollows response ->
