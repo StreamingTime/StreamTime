@@ -1,4 +1,4 @@
-module Twitch exposing (ClientID(..), FollowRelation, PaginatedResponse, Token(..), User, ValidateTokenResponse, accessTokenFromUrl, decodeFollowRelation, decodeListHead, decodePaginated, decodeUser, decodeValidateTokenResponse, getUser, getUserFollows, getUsers, loginFlowUrl, validateToken)
+module Twitch exposing (ClientID(..), FollowRelation, PaginatedResponse, Token(..), User, ValidateTokenResponse, accessTokenFromUrl, decodeFollowRelation, decodeListHead, decodePaginated, decodeUser, decodeValidateTokenResponse, getTokenValue, getUser, getUserFollows, getUsers, loginFlowUrl, validateToken)
 
 import Http
 import Json.Decode as Decode
@@ -21,6 +21,11 @@ type Token
 
 type ClientID
     = ClientID String
+
+
+getTokenValue : Token -> String
+getTokenValue (Token value) =
+    value
 
 
 
