@@ -28,6 +28,7 @@ type FormatItem
     | Hours
     | Minutes
     | Seconds
+    | Offset
     | Text String
 
 
@@ -71,6 +72,25 @@ monthToInt month =
             12
 
 
+offsetToString : Time.Zone -> String
+offsetToString zone =
+    let
+        operator =
+            if hours > 0 then
+                "+"
+
+            else
+                "-"
+
+        hours =
+            Time.toHour zone (Time.millisToPosix 0)
+
+        minutes =
+            Time.toMinute zone (Time.millisToPosix 0)
+    in
+    operator ++ zeroPadInt 2 hours ++ ":" ++ zeroPadInt 2 minutes
+
+
 formatItemToString : FormatItem -> Time.Zone -> Time.Posix -> String
 formatItemToString thing zone posix =
     case thing of
@@ -91,6 +111,9 @@ formatItemToString thing zone posix =
 
         Seconds ->
             zeroPadInt 2 (Time.toSecond zone posix)
+
+        Offset ->
+            offsetToString zone
 
         Text text ->
             text
@@ -128,6 +151,7 @@ parseFormatItem =
             , map (\_ -> Year) (token "%YYYY")
             , map (\_ -> Month) (token "%MM")
             , map (\_ -> Day) (token "%DD")
+            , map (\_ -> Offset) (token "%TZ")
             , map Text readString
             ]
 
