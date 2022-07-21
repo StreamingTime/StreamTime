@@ -1,10 +1,10 @@
-module RFC3339 exposing (Date, DateTime, Offset, OffsetDirection(..), Time, dateParser, dateTimeParser, decodeTimestamp, offsetDirectionParser, offsetParser, paddedIntParser, timeParser, zOffsetParser, zulu)
+module RFC3339 exposing (Date, DateTime, Offset, OffsetDirection(..), Time, dateParser, dateTimeParser, decodeTimestamp, format, offsetDirectionParser, offsetParser, paddedIntParser, timeParser, zOffsetParser, zeroPadInt, zulu)
 
 {-| This module defines types parsers for a subset of RFC3339.
 -}
 
 import Json.Decode as Decode
-import Parser exposing ((|.), (|=), Parser, int, map, oneOf, succeed, symbol)
+import Parser exposing ((|.), (|=), Parser, Step(..), andThen, chompUntilEndOr, getChompedString, int, loop, map, oneOf, problem, succeed, symbol, token)
 
 
 {-| decode a RFC3339 Json string
@@ -166,3 +166,105 @@ paddedIntParser =
         , succeed identity
             |= int
         ]
+
+
+
+-- formatting
+
+
+zeroPadInt : Int -> Int -> String
+zeroPadInt digits i =
+    let
+        pad d num =
+            if String.length num < d then
+                "0" ++ pad (d - 1) num
+
+            else
+                num
+    in
+    pad digits (String.fromInt i)
+
+
+type FormatItem
+    = Year
+    | Month
+    | Day
+    | Text String
+
+
+formatItemToString : FormatItem -> Date -> String
+formatItemToString thing { year, month, day } =
+    case thing of
+        Year ->
+            zeroPadInt 2 year
+
+        Month ->
+            zeroPadInt 2 month
+
+        Day ->
+            zeroPadInt 2 day
+
+        Text text ->
+            text
+
+
+formatItemsToSring : List FormatItem -> Date -> String
+formatItemsToSring things date =
+    things
+        |> List.map (\thing -> formatItemToString thing date)
+        |> String.concat
+
+
+readString : Parser String
+readString =
+    succeed identity
+        |. chompUntilEndOr "%"
+        |> getChompedString
+        |> andThen
+            (\s ->
+                if s /= "" then
+                    succeed s
+
+                else
+                    problem "ende"
+            )
+
+
+parseFormatItem : Parser FormatItem
+parseFormatItem =
+    succeed identity
+        |= oneOf
+            [ map (\_ -> Year) (token "%YYYY")
+            , map (\_ -> Month) (token "%MM")
+            , map (\_ -> Day) (token "%DD")
+            , map Text readString
+            ]
+
+
+parseFormatItems : Parser (List FormatItem)
+parseFormatItems =
+    loop [] parseFormatString
+
+
+{-| read a format string into a list of FormatItems
+-}
+parseFormatString : List FormatItem -> Parser (Step (List FormatItem) (List FormatItem))
+parseFormatString revStmts =
+    -- https://package.elm-lang.org/packages/elm/parser/latest/Parser#loop
+    oneOf
+        [ succeed
+            (\stmt ->
+                Loop (stmt :: revStmts)
+            )
+            |= parseFormatItem
+        , succeed ()
+            |> map (\_ -> Done (List.reverse revStmts))
+        ]
+
+
+{-| Format a Date using the given format string
+-}
+format : String -> Date -> Result (List Parser.DeadEnd) String
+format formatString date =
+    Parser.run parseFormatItems formatString
+        |> Result.map (\items -> formatItemsToSring items date)

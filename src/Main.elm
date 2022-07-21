@@ -11,6 +11,7 @@ import Http
 import Json.Encode as Encode
 import LocalStorage
 import RefreshData exposing (RefreshData(..))
+import ScheduleSegment exposing (scheduleSegmentView)
 import Tailwind.Utilities as Tw
 import Twitch
 import TwitchConfig
@@ -645,7 +646,13 @@ appView appData =
                     )
                 , button [ css [ Tw.btn, Tw.btn_primary, Css.hover [ Tw.bg_primary_focus ] ], onClick FetchStreamingSchedules ] [ text "Load schedule" ]
                 , div [ css [ Tw.text_white ] ]
-                    (List.map (\s -> p [ css [ Tw.mt_4 ] ] [ text (Debug.toString s) ]) schedules)
+                    [ div []
+                        (schedules
+                            |> List.concatMap .segments
+                            |> List.map scheduleSegmentView
+                            |> List.map (\segView -> div [ css [ Tw.m_4 ] ] [ segView ])
+                        )
+                    ]
                 ]
             ]
         ]

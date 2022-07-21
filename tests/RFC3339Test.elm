@@ -1,9 +1,9 @@
-module RFC3339Test exposing (dateParserTest, dateTimeParserTest, decodeTimestampTest, offsetDirectionParserTest, offsetParserTest, paddedIntParserTest, timeParserTest, zOffsetParserTest)
+module RFC3339Test exposing (dateParserTest, dateTimeParserTest, decodeTimestampTest, formatTest, offsetDirectionParserTest, offsetParserTest, paddedIntParserTest, timeParserTest, zOffsetParserTest, zeroPadIntTest)
 
 import Expect
 import Json.Decode as Decode
 import Parser
-import RFC3339 exposing (OffsetDirection(..), dateParser, dateTimeParser, decodeTimestamp, offsetDirectionParser, offsetParser, paddedIntParser, timeParser, zOffsetParser, zulu)
+import RFC3339 exposing (OffsetDirection(..), dateParser, dateTimeParser, decodeTimestamp, format, offsetDirectionParser, offsetParser, paddedIntParser, timeParser, zOffsetParser, zeroPadInt, zulu)
 import Test exposing (Test, describe, test)
 
 
@@ -319,3 +319,33 @@ decodeTimestampTest =
                 |> Decode.decodeString (Decode.field "time" decodeTimestamp)
                 |> Expect.equal expected
         )
+
+
+formatTest : Test
+formatTest =
+    test "format date"
+        (\_ ->
+            format "%DD.%MM.%YYYY" { day = 1, month = 2, year = 1234 }
+                |> Expect.equal (Ok "01.02.1234")
+        )
+
+
+zeroPadIntTest : Test
+zeroPadIntTest =
+    describe "0 pad ints"
+        [ test "pad once"
+            (\_ ->
+                zeroPadInt 2 1
+                    |> Expect.equal "01"
+            )
+        , test "pad to three digits"
+            (\_ ->
+                zeroPadInt 3 1
+                    |> Expect.equal "001"
+            )
+        , test "no padding needed"
+            (\_ ->
+                zeroPadInt 4 1234
+                    |> Expect.equal "1234"
+            )
+        ]
