@@ -1,10 +1,11 @@
-module RFC3339Test exposing (dateParserTest, dateTimeParserTest, decodeTimestampTest, formatTest, offsetDirectionParserTest, offsetParserTest, paddedIntParserTest, timeParserTest, zOffsetParserTest, zeroPadIntTest)
+module RFC3339Test exposing (dateParserTest, dateTimeParserTest, decodeTimestampTest, offsetDirectionParserTest, offsetParserTest, paddedIntParserTest, timeParserTest, toPosixTest, zOffsetParserTest)
 
 import Expect
 import Json.Decode as Decode
 import Parser
-import RFC3339 exposing (OffsetDirection(..), dateParser, dateTimeParser, decodeTimestamp, format, offsetDirectionParser, offsetParser, paddedIntParser, timeParser, zOffsetParser, zeroPadInt, zulu)
+import RFC3339 exposing (OffsetDirection(..), dateParser, dateTimeParser, decodeTimestamp, offsetDirectionParser, offsetParser, paddedIntParser, timeParser, zOffsetParser, zulu)
 import Test exposing (Test, describe, test)
+import Time
 
 
 dateParserTest : Test
@@ -321,36 +322,41 @@ decodeTimestampTest =
         )
 
 
-formatTest : Test
-formatTest =
-    test "format date"
-        (\_ ->
-            format "%DD.%MM.%YYYY"
-                { date =
-                    { day = 1, month = 2, year = 1234 }
-                , time = { hours = 0, minutes = 0, seconds = 0 }
-                , offset = zulu
-                }
-                |> Expect.equal (Ok "01.02.1234")
-        )
-
-
-zeroPadIntTest : Test
-zeroPadIntTest =
-    describe "0 pad ints"
-        [ test "pad once"
+toPosixTest : Test
+toPosixTest =
+    describe "convert DateTime to posix"
+        [ test "funny number"
             (\_ ->
-                zeroPadInt 2 1
-                    |> Expect.equal "01"
+                RFC3339.toPosix
+                    { date =
+                        { day = 18
+                        , month = 3
+                        , year = 2005
+                        }
+                    , time =
+                        { hours = 1
+                        , minutes = 58
+                        , seconds = 31
+                        }
+                    , offset = zulu
+                    }
+                    |> Expect.equal (Just (Time.millisToPosix 1111111111000))
             )
-        , test "pad to three digits"
+        , test "another funny number"
             (\_ ->
-                zeroPadInt 3 1
-                    |> Expect.equal "001"
-            )
-        , test "no padding needed"
-            (\_ ->
-                zeroPadInt 4 1234
-                    |> Expect.equal "1234"
+                RFC3339.toPosix
+                    { date =
+                        { day = 18
+                        , month = 5
+                        , year = 2033
+                        }
+                    , time =
+                        { hours = 3
+                        , minutes = 33
+                        , seconds = 20
+                        }
+                    , offset = zulu
+                    }
+                    |> Expect.equal (Just (Time.millisToPosix 2000000000000))
             )
         ]

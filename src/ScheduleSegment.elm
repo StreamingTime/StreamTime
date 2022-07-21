@@ -1,14 +1,16 @@
 module ScheduleSegment exposing (scheduleSegmentView)
 
+import FormatTime
 import Html.Styled exposing (Html, div, p, span, text)
 import Html.Styled.Attributes exposing (css)
 import RFC3339
 import Tailwind.Utilities as Tw
+import Time
 import Twitch
 
 
-scheduleSegmentView : Twitch.Segment -> Html msg
-scheduleSegmentView { title, startTime, category } =
+scheduleSegmentView : Time.Zone -> Twitch.Segment -> Html msg
+scheduleSegmentView zone { title, startTime, endTime, category } =
     let
         categoryView =
             case category of
@@ -18,8 +20,17 @@ scheduleSegmentView { title, startTime, category } =
                 Nothing ->
                     text ""
 
-        date =
-            case RFC3339.format "%DD.%MM.%YYYY" startTime.date of
+        date format dt =
+            let
+                posix =
+                    case RFC3339.toPosix dt of
+                        Just p ->
+                            p
+
+                        Nothing ->
+                            Time.millisToPosix 0
+            in
+            case FormatTime.format format zone posix of
                 Ok s ->
                     s
 
@@ -30,7 +41,8 @@ scheduleSegmentView { title, startTime, category } =
         [ p [] [ text title ]
         , categoryView
         , p []
-            [ span [] [ text date ]
-            , span [] [ text " • " ]
+            [ span [] [ text (date "%DD.%MM.%YYYY %hh:%mm " startTime) ]
+            , span [] [ text " - " ]
+            , span [] [ text (date "%DD.%MM.%YYYY %hh:%mm" endTime) ]
             ]
         ]

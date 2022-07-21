@@ -681,7 +681,7 @@ appView appData =
                     , div []
                         (schedules
                             |> List.concatMap .segments
-                            |> List.map scheduleSegmentView
+                            |> List.map (scheduleSegmentView appData.timeZone)
                             |> List.map (\segView -> div [ css [ Tw.m_4 ] ] [ segView ])
                         )
                     ]

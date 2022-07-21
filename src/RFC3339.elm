@@ -1,10 +1,13 @@
-module RFC3339 exposing (Date, DateTime, Offset, OffsetDirection(..), Time, dateParser, dateTimeParser, decodeTimestamp, format, offsetDirectionParser, offsetParser, paddedIntParser, timeParser, zOffsetParser, zeroPadInt, zulu)
+module RFC3339 exposing (Date, DateTime, Offset, OffsetDirection(..), Time, dateParser, dateTimeParser, decodeTimestamp, offsetDirectionParser, offsetParser, paddedIntParser, timeParser, toPosix, zOffsetParser, zulu)
 
 {-| This module defines types parsers for a subset of RFC3339.
 -}
 
+import Array
+import Basics exposing (remainderBy)
 import Json.Decode as Decode
-import Parser exposing ((|.), (|=), Parser, Step(..), andThen, chompUntilEndOr, getChompedString, int, loop, map, oneOf, problem, succeed, symbol, token)
+import Parser exposing ((|.), (|=), Parser, int, map, oneOf, succeed, symbol)
+import Time
 
 
 {-| decode a RFC3339 Json string
@@ -77,6 +80,41 @@ type alias DateTime =
     , time : Time
     , offset : Offset
     }
+
+
+{-| Convert DateTime to Time.Posix. Ported from the C example at <https://de.wikipedia.org/wiki/Unixzeit>
+-}
+toPosix : DateTime -> Maybe Time.Posix
+toPosix { date, time } =
+    case Array.get (date.month - 1) (Array.fromList [ 0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334 ]) of
+        Just daysSinceYearBegin ->
+            let
+                leapyears =
+                    ((date.year - 1) - 1968)
+                        // 4
+                        - ((date.year - 1) - 1900)
+                        // 100
+                        + ((date.year - 1) - 1600)
+                        // 400
+
+                daysSince1970Base =
+                    (date.year - 1970) * 365 + leapyears + daysSinceYearBegin + date.day - 1
+
+                daysSince1970 =
+                    if (date.month > 2) && (remainderBy date.year 4 == 0 && (remainderBy date.year 100 /= 0 || (remainderBy date.year 400 == 0))) then
+                        daysSince1970Base + 1
+
+                    else
+                        daysSince1970Base
+
+                seconds =
+                    time.seconds + 60 * (time.minutes + 60 * (time.hours + 24 * daysSince1970))
+            in
+            -- Time.Posix uses milliseconds
+            Just (Time.millisToPosix (seconds * 1000))
+
+        Nothing ->
+            Nothing
 
 
 
@@ -166,120 +204,3 @@ paddedIntParser =
         , succeed identity
             |= int
         ]
-
-
-
--- formatting
-
-
-zeroPadInt : Int -> Int -> String
-zeroPadInt digits i =
-    let
-        pad d num =
-            if String.length num < d then
-                "0" ++ pad (d - 1) num
-
-            else
-                num
-    in
-    pad digits (String.fromInt i)
-
-
-type FormatItem
-    = Year
-    | Month
-    | Day
-    | Hours
-    | Minutes
-    | Seconds
-    | Text String
-
-
-formatItemToString : FormatItem -> DateTime -> String
-formatItemToString thing { date, time } =
-    case thing of
-        Year ->
-            zeroPadInt 2 date.year
-
-        Month ->
-            zeroPadInt 2 date.month
-
-        Day ->
-            zeroPadInt 2 date.day
-
-        Hours ->
-            zeroPadInt 2 time.hours
-
-        Minutes ->
-            zeroPadInt 2 time.minutes
-
-        Seconds ->
-            zeroPadInt 2 time.seconds
-
-        Text text ->
-            text
-
-
-formatItemsToSring : List FormatItem -> DateTime -> String
-formatItemsToSring things dateTime =
-    things
-        |> List.map (\thing -> formatItemToString thing dateTime)
-        |> String.concat
-
-
-readString : Parser String
-readString =
-    succeed identity
-        |. chompUntilEndOr "%"
-        |> getChompedString
-        |> andThen
-            (\s ->
-                if s /= "" then
-                    succeed s
-
-                else
-                    problem "ende"
-            )
-
-
-parseFormatItem : Parser FormatItem
-parseFormatItem =
-    succeed identity
-        |= oneOf
-            [ map (\_ -> Hours) (token "%hh")
-            , map (\_ -> Minutes) (token "%mm")
-            , map (\_ -> Seconds) (token "%ss")
-            , map (\_ -> Year) (token "%YYYY")
-            , map (\_ -> Month) (token "%MM")
-            , map (\_ -> Day) (token "%DD")
-            , map Text readString
-            ]
-
-
-parseFormatItems : Parser (List FormatItem)
-parseFormatItems =
-    loop [] parseFormatString
-
-
-{-| read a format string into a list of FormatItems
--}
-parseFormatString : List FormatItem -> Parser (Step (List FormatItem) (List FormatItem))
-parseFormatString revStmts =
-    -- https://package.elm-lang.org/packages/elm/parser/latest/Parser#loop
-    oneOf
-        [ succeed
-            (\stmt ->
-                Loop (stmt :: revStmts)
-            )
-            |= parseFormatItem
-        , succeed ()
-            |> map (\_ -> Done (List.reverse revStmts))
-        ]
-
-
-{-| Format a DateTime using the given format string
--}
-format : String -> DateTime -> Result (List Parser.DeadEnd) String
-format formatString date =
-    Parser.run parseFormatItems formatString
-        |> Result.map (\items -> formatItemsToSring items date)
