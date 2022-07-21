@@ -15,34 +15,52 @@ scheduleSegmentView zone { title, startTime, endTime, category } =
         categoryView =
             case category of
                 Just c ->
-                    p [] [ text c.name ]
+                    p [ css [ Tw.text_primary ] ] [ text c.name ]
 
                 Nothing ->
                     text ""
 
-        date format dt =
-            let
-                posix =
-                    case RFC3339.toPosix dt of
-                        Just p ->
-                            p
+        asPosix dt =
+            case RFC3339.toPosix dt of
+                Just p ->
+                    p
 
-                        Nothing ->
-                            Time.millisToPosix 0
-            in
-            case FormatTime.format format zone posix of
+                Nothing ->
+                    Time.millisToPosix 0
+
+        date format dt =
+            case FormatTime.format format zone (asPosix dt) of
                 Ok s ->
                     s
 
                 Err _ ->
                     "Failed to parse date"
+
+        titleView =
+            div []
+                [ if String.isEmpty title then
+                    p [ css [ Tw.italic ] ] [ text "Untitled stream" ]
+
+                  else
+                    p [] [ text title ]
+                ]
+
+        endTimeFormat =
+            if Time.toDay zone (asPosix startTime) == Time.toDay zone (asPosix endTime) then
+                "%hh:%mm GMT%TZ"
+
+            else
+                "%DD.%MM.%YYYY %hh:%mm GMT%TZ"
+
+        datesView =
+            p []
+                [ span [] [ text (date "%DD.%MM.%YYYY %hh:%mm" startTime) ]
+                , span [] [ text " - " ]
+                , span [] [ text (date endTimeFormat endTime) ]
+                ]
     in
-    div [ css [ Tw.rounded, Tw.bg_gray_600 ] ]
-        [ p [] [ text title ]
+    div [ css [ Tw.rounded, Tw.bg_base_300 ] ]
+        [ titleView
         , categoryView
-        , p []
-            [ span [] [ text (date "%DD.%MM.%YYYY %hh:%mm " startTime) ]
-            , span [] [ text " - " ]
-            , span [] [ text (date "%DD.%MM.%YYYY %hh:%mm" endTime) ]
-            ]
+        , datesView
         ]
