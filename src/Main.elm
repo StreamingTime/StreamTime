@@ -13,6 +13,8 @@ import LocalStorage
 import RefreshData exposing (RefreshData(..))
 import ScheduleSegment exposing (scheduleSegmentView)
 import Tailwind.Utilities as Tw
+import Task
+import Time
 import Twitch
 import TwitchConfig
 import Url
@@ -41,6 +43,7 @@ type alias AppData =
     , selectedStreamers : List Twitch.User
     , error : Maybe String
     , schedules : RefreshData Http.Error (List Twitch.Schedule)
+    , timeZone : Time.Zone
     }
 
 
@@ -55,6 +58,7 @@ type alias LoadingData =
 
     -- the first n streamers to display in the streamer list
     , firstStreamers : Maybe (List Twitch.User)
+    , timeZone : Maybe Time.Zone
     }
 
 
@@ -79,6 +83,7 @@ type Msg
     | FetchStreamingSchedules
     | StreamerListMsg StreamerListMsg
     | Logout
+    | GotTimeZone Time.Zone
 
 
 type StreamerListMsg
@@ -102,6 +107,7 @@ init flags url navKey =
                 , follows = Nothing
                 , signedInUser = Nothing
                 , firstStreamers = Nothing
+                , timeZone = Nothing
                 }
                 navKey
             , Cmd.batch [ Cmd.map GotValidateTokenResponse (Twitch.validateToken token), Nav.replaceUrl navKey "/" ]
@@ -122,6 +128,7 @@ init flags url navKey =
                         , follows = Nothing
                         , signedInUser = Nothing
                         , firstStreamers = Nothing
+                        , timeZone = Nothing
                         }
                         navKey
                     , Cmd.batch [ Cmd.map GotValidateTokenResponse (Twitch.validateToken token), Nav.replaceUrl navKey "/" ]
@@ -153,6 +160,11 @@ fetchStreamingSchedule userID token =
     Cmd.map GotStreamingSchedule (Twitch.getStreamingSchedule userID Nothing TwitchConfig.clientId token)
 
 
+getTimeZone : Cmd Msg
+getTimeZone =
+    Task.perform GotTimeZone Time.here
+
+
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case model of
@@ -179,9 +191,10 @@ update msg model =
                                         }
                                 , follows = Nothing
                                 , firstStreamers = Nothing
+                                , timeZone = Nothing
                                 }
                                 navKey
-                            , Cmd.batch [ LocalStorage.persistData { token = Twitch.getTokenValue m.token }, fetchUserProfile value.userID m.token ]
+                            , getTimeZone
                             )
 
                 GotRevokeTokenResponse ->
@@ -234,6 +247,7 @@ update msg model =
                                 , error = Nothing
                                 , streamerFilterName = Nothing
                                 , schedules = LoadingMore []
+                                , timeZone = Maybe.withDefault Time.utc m.timeZone
                                 }
                                 navKey
                             , Cmd.none
@@ -261,6 +275,17 @@ update msg model =
 
                         ( Nothing, _ ) ->
                             Debug.todo "again, a case that should not happen"
+
+                GotTimeZone zone ->
+                    ( LoadingScreen { m | timeZone = Just zone }
+                        navKey
+                    , case m.signedInUser of
+                        Just user ->
+                            Cmd.batch [ LocalStorage.persistData { token = Twitch.getTokenValue m.token }, fetchUserProfile user.userID m.token ]
+
+                        Nothing ->
+                            Debug.todo "error"
+                    )
 
                 GotStreamingSchedule _ ->
                     ( model, Cmd.none )
@@ -398,6 +423,9 @@ update msg model =
                 Logout ->
                     ( NotLoggedIn Nothing navKey, Cmd.batch [ LocalStorage.removeData, revokeToken TwitchConfig.clientId appData.signedInUser.token ] )
 
+                GotTimeZone _ ->
+                    ( model, Cmd.none )
+
         NotLoggedIn _ navKey ->
             case msg of
                 UrlMsg urlMsg ->
@@ -432,6 +460,9 @@ update msg model =
                     ( model, Cmd.none )
 
                 Logout ->
+                    ( model, Cmd.none )
+
+                GotTimeZone _ ->
                     ( model, Cmd.none )
 
 
@@ -646,7 +677,8 @@ appView appData =
                     )
                 , button [ css [ Tw.btn, Tw.btn_primary, Css.hover [ Tw.bg_primary_focus ] ], onClick FetchStreamingSchedules ] [ text "Load schedule" ]
                 , div [ css [ Tw.text_white ] ]
-                    [ div []
+                    [ text (Debug.toString appData.timeZone)
+                    , div []
                         (schedules
                             |> List.concatMap .segments
                             |> List.map scheduleSegmentView

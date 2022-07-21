@@ -189,29 +189,41 @@ type FormatItem
     = Year
     | Month
     | Day
+    | Hours
+    | Minutes
+    | Seconds
     | Text String
 
 
-formatItemToString : FormatItem -> Date -> String
-formatItemToString thing { year, month, day } =
+formatItemToString : FormatItem -> DateTime -> String
+formatItemToString thing { date, time } =
     case thing of
         Year ->
-            zeroPadInt 2 year
+            zeroPadInt 2 date.year
 
         Month ->
-            zeroPadInt 2 month
+            zeroPadInt 2 date.month
 
         Day ->
-            zeroPadInt 2 day
+            zeroPadInt 2 date.day
+
+        Hours ->
+            zeroPadInt 2 time.hours
+
+        Minutes ->
+            zeroPadInt 2 time.minutes
+
+        Seconds ->
+            zeroPadInt 2 time.seconds
 
         Text text ->
             text
 
 
-formatItemsToSring : List FormatItem -> Date -> String
-formatItemsToSring things date =
+formatItemsToSring : List FormatItem -> DateTime -> String
+formatItemsToSring things dateTime =
     things
-        |> List.map (\thing -> formatItemToString thing date)
+        |> List.map (\thing -> formatItemToString thing dateTime)
         |> String.concat
 
 
@@ -234,7 +246,10 @@ parseFormatItem : Parser FormatItem
 parseFormatItem =
     succeed identity
         |= oneOf
-            [ map (\_ -> Year) (token "%YYYY")
+            [ map (\_ -> Hours) (token "%hh")
+            , map (\_ -> Minutes) (token "%mm")
+            , map (\_ -> Seconds) (token "%ss")
+            , map (\_ -> Year) (token "%YYYY")
             , map (\_ -> Month) (token "%MM")
             , map (\_ -> Day) (token "%DD")
             , map Text readString
@@ -262,9 +277,9 @@ parseFormatString revStmts =
         ]
 
 
-{-| Format a Date using the given format string
+{-| Format a DateTime using the given format string
 -}
-format : String -> Date -> Result (List Parser.DeadEnd) String
+format : String -> DateTime -> Result (List Parser.DeadEnd) String
 format formatString date =
     Parser.run parseFormatItems formatString
         |> Result.map (\items -> formatItemsToSring items date)

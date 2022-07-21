@@ -325,7 +325,12 @@ formatTest : Test
 formatTest =
     test "format date"
         (\_ ->
-            format "%DD.%MM.%YYYY" { day = 1, month = 2, year = 1234 }
+            format "%DD.%MM.%YYYY"
+                { date =
+                    { day = 1, month = 2, year = 1234 }
+                , time = { hours = 0, minutes = 0, seconds = 0 }
+                , offset = zulu
+                }
                 |> Expect.equal (Ok "01.02.1234")
         )
 
