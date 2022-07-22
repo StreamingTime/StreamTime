@@ -677,8 +677,7 @@ appView appData =
                     )
                 , button [ css [ Tw.btn, Tw.btn_primary, Css.hover [ Tw.bg_primary_focus ] ], onClick FetchStreamingSchedules ] [ text "Load schedule" ]
                 , div [ css [ Tw.text_white ] ]
-                    [ text (Debug.toString appData.timeZone)
-                    , div []
+                    [ div []
                         (schedules
                             |> List.concatMap .segments
                             |> List.map (scheduleSegmentView appData.timeZone)
