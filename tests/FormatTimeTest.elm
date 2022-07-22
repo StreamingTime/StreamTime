@@ -27,7 +27,7 @@ formatTest =
                     }
             of
                 Just posix ->
-                    format "%DD.%MM.%YYYY" Time.utc (Debug.log "" posix)
+                    format "%DD.%MM.%YYYY" Time.utc posix
                         |> Expect.equal (Ok "18.03.2005")
 
                 Nothing ->
