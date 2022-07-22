@@ -1,7 +1,7 @@
 module ScheduleSegment exposing (scheduleSegmentView)
 
 import FormatTime
-import Html.Styled exposing (Html, button, div, img, p, span, text)
+import Html.Styled exposing (Html, div, img, p, span, text)
 import Html.Styled.Attributes exposing (alt, attribute, class, css, height, src, width)
 import Icons
 import RFC3339
@@ -60,7 +60,7 @@ scheduleSegmentView zone { title, startTime, endTime, category, isRecurring } =
                     , class "tooltip"
                     , css [ Tw.tooltip, Tw.tooltip_primary, Tw.ml_1 ]
                     ]
-                    [ button []
+                    [ div []
                         [ Icons.repeat
                             16
                             16
