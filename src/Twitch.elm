@@ -1,4 +1,4 @@
-module Twitch exposing (Category, ClientID(..), FollowRelation, PaginatedResponse, Schedule, Segment, Token(..), User, ValidateTokenResponse, accessTokenFromUrl, decodeCategory, decodeFollowRelation, decodeListHead, decodePaginated, decodeSchedule, decodeSegment, decodeUser, decodeValidateTokenResponse, getStreamingSchedule, getTokenValue, getUser, getUserFollows, getUsers, loginFlowUrl, revokeToken, toFormData, validateToken)
+module Twitch exposing (Category, ClientID(..), FollowRelation, PaginatedResponse, Schedule, Segment, Token(..), User, ValidateTokenResponse, accessTokenFromUrl, boxArtUrl, decodeCategory, decodeFollowRelation, decodeListHead, decodePaginated, decodeSchedule, decodeSegment, decodeUser, decodeValidateTokenResponse, getStreamingSchedule, getTokenValue, getUser, getUserFollows, getUsers, loginFlowUrl, revokeToken, toFormData, validateToken)
 
 import Http
 import Json.Decode as Decode
@@ -108,13 +108,20 @@ type alias Segment =
 
 type alias Category =
     { name : String
+    , id : String
     }
 
 
 decodeCategory : Decode.Decoder Category
 decodeCategory =
-    Decode.map Category
+    Decode.map2 Category
         (Decode.field "name" Decode.string)
+        (Decode.field "id" Decode.string)
+
+
+boxArtUrl : Category -> Int -> Int -> String
+boxArtUrl { id } width height =
+    "https://static-cdn.jtvnw.net/ttv-boxart/" ++ id ++ "-" ++ String.fromInt width ++ "x" ++ String.fromInt height ++ ".jpg"
 
 
 decodeSegment : Decode.Decoder Segment

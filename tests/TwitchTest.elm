@@ -198,7 +198,7 @@ decodeCategoryTest =
     test "decode category"
         (\_ ->
             Expect.equal
-                (Ok { name = "Science & Technology" })
+                (Ok { name = "Science & Technology", id = "509670"})
                 (Decode.decodeString Twitch.decodeCategory "{ \"id\": \"509670\", \"name\": \"Science & Technology\"}")
         )
 
@@ -238,7 +238,7 @@ decodeSegmentTest =
                             }
                         , title = "TwitchDev Monthly Update // July 1, 2021"
                         , canceledUntil = Nothing
-                        , category = Just { name = "Science & Technology" }
+                        , category = Just { name = "Science & Technology", id = "509670" }
                         , isRecurring = False
                         }
                     )
@@ -289,7 +289,7 @@ decodeSegmentTest =
                                     }
                                 , offset = zulu
                                 }
-                        , category = Just { name = "Science & Technology" }
+                        , category = Just { name = "Science & Technology", id = "509670"  }
                         , isRecurring = False
                         }
                     )
@@ -333,7 +333,7 @@ decodeScheduleTest =
                                 }
                           , title = "TwitchDev Monthly Update // July 1, 2021"
                           , canceledUntil = Nothing
-                          , category = Just { name = "Science & Technology" }
+                          , category = Just { name = "Science & Technology", id = "509670" }
                           , isRecurring = False
                           }
                         ]

@@ -1,8 +1,8 @@
 module ScheduleSegment exposing (scheduleSegmentView)
 
 import FormatTime
-import Html.Styled exposing (Html, button, div, p, span, text)
-import Html.Styled.Attributes exposing (attribute, class, css)
+import Html.Styled exposing (Html, button, div, img, p, span, text)
+import Html.Styled.Attributes exposing (alt, attribute, class, css, height, src, width)
 import Icons
 import RFC3339
 import Tailwind.Utilities as Tw
@@ -40,7 +40,7 @@ scheduleSegmentView zone { title, startTime, endTime, category, isRecurring } =
         titleView =
             div []
                 [ if String.isEmpty title then
-                    p [ css [ Tw.italic ] ] [ text "Untitled stream" ]
+                    div [ css [ Tw.italic ] ] [ text "Untitled stream" ]
 
                   else
                     p [] [ text title ]
@@ -71,15 +71,36 @@ scheduleSegmentView zone { title, startTime, endTime, category, isRecurring } =
                 text ""
 
         datesView =
-            div [ css [ Tw.inline ] ]
+            div []
                 [ span [] [ text (date "%DD.%MM.%YYYY %hh:%mm" startTime) ]
                 , span [] [ text " - " ]
-                , span [] [ text (date endTimeFormat endTime) ]
+                , span []
+                    [ text (date endTimeFormat endTime) ]
+                , isRecurringView
                 ]
+
+        categoryImageView =
+            case category of
+                Just c ->
+                    img
+                        [ css [ Tw.rounded_r ]
+                        , width 57
+                        , height 76
+                        , src (Twitch.boxArtUrl c 144 192)
+                        , alt c.name
+                        ]
+                        []
+
+                Nothing ->
+                    text ""
     in
-    div [ css [ Tw.rounded, Tw.bg_base_300 ] ]
-        [ titleView
-        , categoryView
-        , datesView
-        , isRecurringView
+    div
+        [ css [ Tw.rounded, Tw.bg_base_300, Tw.flex, Tw.justify_between ]
+        ]
+        [ div [ css [ Tw.flex, Tw.justify_center, Tw.flex_col ] ]
+            [ titleView
+            , categoryView
+            , datesView
+            ]
+        , categoryImageView
         ]
