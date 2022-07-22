@@ -11,12 +11,21 @@ import Twitch
 
 
 scheduleSegmentView : Time.Zone -> Twitch.Segment -> Html msg
-scheduleSegmentView zone { title, startTime, endTime, category, isRecurring } =
+scheduleSegmentView zone { title, startTime, endTime, category, isRecurring, canceledUntil } =
     let
+        strikeIfCanceled =
+            case canceledUntil of
+                Just _ ->
+                    css [ Tw.line_through ]
+
+                Nothing ->
+                    css []
+
         categoryView =
             case category of
                 Just c ->
-                    p [ css [ Tw.text_primary ] ] [ text c.name ]
+                    p [ css [ Tw.text_primary ], strikeIfCanceled ]
+                        [ text c.name ]
 
                 Nothing ->
                     text ""
@@ -38,7 +47,7 @@ scheduleSegmentView zone { title, startTime, endTime, category, isRecurring } =
                     "Failed to parse date"
 
         titleView =
-            div []
+            div [ strikeIfCanceled ]
                 [ if String.isEmpty title then
                     div [ css [ Tw.italic ] ] [ text "Untitled stream" ]
 
@@ -71,7 +80,7 @@ scheduleSegmentView zone { title, startTime, endTime, category, isRecurring } =
                 text ""
 
         datesView =
-            div []
+            div [ strikeIfCanceled ]
                 [ span [] [ text (date "%DD.%MM.%YYYY %hh:%mm" startTime) ]
                 , span [] [ text " - " ]
                 , span []
@@ -93,13 +102,29 @@ scheduleSegmentView zone { title, startTime, endTime, category, isRecurring } =
 
                 Nothing ->
                     text ""
+
+        canceledInfoView =
+            case canceledUntil of
+                Just untilDate ->
+                    div
+                        [ attribute "data-tip" ("Canceled until " ++ date "%DD.%MM.%YYYY %hh:%mm" untilDate)
+                        , class "tooltip"
+                        , css [ Tw.m_1, Tw.tooltip, Tw.tooltip_primary ]
+                        ]
+                        [ Icons.warning 16 16 ]
+
+                Nothing ->
+                    text ""
     in
     div
         [ css [ Tw.rounded, Tw.bg_base_300, Tw.flex, Tw.justify_between ]
         ]
         [ div [ css [ Tw.flex, Tw.justify_center, Tw.flex_col ] ]
             [ titleView
-            , categoryView
+            , div [ css [ Tw.flex ] ]
+                [ canceledInfoView
+                , categoryView
+                ]
             , datesView
             ]
         , categoryImageView

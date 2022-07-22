@@ -32,4 +32,5 @@ Visit `http://localhost:8000`
 ## Assets
 - login_background.jpg (https://unsplash.com/photos/2mQSmmge7t8)
 - Google Material Icons ([License](https://github.com/google/material-design-icons#license))
-  - [repeat](https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsoutlined/repeat/default/48px.svg) 
+  - [repeat](https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsoutlined/repeat/default/48px.svg)
+  - [warning](https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsrounded/warning/default/48px.svg)
