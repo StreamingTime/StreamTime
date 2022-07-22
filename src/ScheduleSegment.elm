@@ -1,8 +1,9 @@
 module ScheduleSegment exposing (scheduleSegmentView)
 
 import FormatTime
-import Html.Styled exposing (Html, div, p, span, text)
-import Html.Styled.Attributes exposing (css)
+import Html.Styled exposing (Html, button, div, p, span, text)
+import Html.Styled.Attributes exposing (attribute, class, css)
+import Icons
 import RFC3339
 import Tailwind.Utilities as Tw
 import Time
@@ -10,7 +11,7 @@ import Twitch
 
 
 scheduleSegmentView : Time.Zone -> Twitch.Segment -> Html msg
-scheduleSegmentView zone { title, startTime, endTime, category } =
+scheduleSegmentView zone { title, startTime, endTime, category, isRecurring } =
     let
         categoryView =
             case category of
@@ -52,8 +53,25 @@ scheduleSegmentView zone { title, startTime, endTime, category } =
             else
                 "%DD.%MM.%YYYY %hh:%mm GMT%TZ"
 
+        isRecurringView =
+            if isRecurring then
+                div
+                    [ attribute "data-tip" "Repeats every week"
+                    , class "tooltip"
+                    , css [ Tw.tooltip, Tw.tooltip_primary, Tw.ml_1 ]
+                    ]
+                    [ button []
+                        [ Icons.repeat
+                            16
+                            16
+                        ]
+                    ]
+
+            else
+                text ""
+
         datesView =
-            p []
+            div [ css [ Tw.inline ] ]
                 [ span [] [ text (date "%DD.%MM.%YYYY %hh:%mm" startTime) ]
                 , span [] [ text " - " ]
                 , span [] [ text (date endTimeFormat endTime) ]
@@ -63,4 +81,5 @@ scheduleSegmentView zone { title, startTime, endTime, category } =
         [ titleView
         , categoryView
         , datesView
+        , isRecurringView
         ]
