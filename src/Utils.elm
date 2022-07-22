@@ -1,4 +1,4 @@
-module Utils exposing (concatMaybeList, filterFollowsByLogin, missingProfileLogins, streamersWithSelection, errorToString)
+module Utils exposing (concatMaybeList, errorToString, filterFollowsByLogin, missingProfileLogins, streamersWithSelection)
 
 import Http
 import Twitch
