@@ -86,8 +86,8 @@ type alias DateTime =
 -}
 toPosix : DateTime -> Maybe Time.Posix
 toPosix { date, time } =
-    case Array.get (date.month - 1) (Array.fromList [ 0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334 ]) of
-        Just daysSinceYearBegin ->
+    Maybe.map
+        (\daysSinceYearBegin ->
             let
                 leapyears =
                     ((date.year - 1) - 1968)
@@ -111,10 +111,12 @@ toPosix { date, time } =
                     time.seconds + 60 * (time.minutes + 60 * (time.hours + 24 * daysSince1970))
             in
             -- Time.Posix uses milliseconds
-            Just (Time.millisToPosix (seconds * 1000))
-
-        Nothing ->
-            Nothing
+            Time.millisToPosix (seconds * 1000)
+        )
+        (Array.get
+            (date.month - 1)
+            (Array.fromList [ 0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334 ])
+        )
 
 
 
