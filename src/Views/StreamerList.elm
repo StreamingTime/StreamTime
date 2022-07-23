@@ -1,4 +1,4 @@
-module StreamerList exposing (..)
+module Views.StreamerList exposing (..)
 
 import Components exposing (loadingSpinner)
 import Css
