@@ -669,6 +669,7 @@ headerView user =
             , Tw.fixed
             , Tw.h_16
             , Tw.w_full
+            , Tw.z_10
             ]
         ]
         [ div
