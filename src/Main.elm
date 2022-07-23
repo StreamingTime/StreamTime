@@ -621,8 +621,8 @@ appView appData =
         , div [ css [ Tw.flex ] ]
             [ Html.Styled.map (\msg -> StreamerListMsg msg)
                 (streamerListView
-                    (RefreshData.map
-                        (\streamers -> Present (streamersWithSelection appData.selectedStreamers streamers))
+                    (RefreshData.mapValue
+                        (streamersWithSelection appData.selectedStreamers)
                         appData.streamers
                     )
                     appData.follows
