@@ -1,4 +1,4 @@
-module Views.StreamerList exposing (..)
+module Views.StreamerList exposing (StreamerListMsg(..), streamerListPageSteps, streamerListView)
 
 import Components exposing (loadingSpinner)
 import Css

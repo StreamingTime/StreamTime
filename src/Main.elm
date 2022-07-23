@@ -11,12 +11,12 @@ import Http
 import Json.Encode as Encode
 import LocalStorage
 import RefreshData exposing (RefreshData(..))
-import StreamerList exposing (StreamerListMsg(..), streamerListPageSteps, streamerListView)
 import Tailwind.Utilities as Tw
 import Twitch
 import TwitchConfig
 import Url
 import Utils exposing (errorToString, filterFollowsByLogin, missingProfileLogins, streamersWithSelection)
+import Views.StreamerList exposing (StreamerListMsg(..), streamerListPageSteps, streamerListView)
 
 
 loginRedirectUrl : String
