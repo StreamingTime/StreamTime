@@ -1,10 +1,13 @@
-module RFC3339 exposing (Date, DateTime, Offset, OffsetDirection(..), Time, dateParser, dateTimeParser, decodeTimestamp, offsetDirectionParser, offsetParser, paddedIntParser, timeParser, zOffsetParser, zulu)
+module RFC3339 exposing (Date, DateTime, Offset, OffsetDirection(..), Time, dateParser, dateTimeParser, decodeTimestamp, offsetDirectionParser, offsetParser, paddedIntParser, timeParser, toPosix, zOffsetParser, zulu)
 
 {-| This module defines types parsers for a subset of RFC3339.
 -}
 
+import Array
+import Basics exposing (remainderBy)
 import Json.Decode as Decode
 import Parser exposing ((|.), (|=), Parser, int, map, oneOf, succeed, symbol)
+import Time
 
 
 {-| decode a RFC3339 Json string
@@ -77,6 +80,43 @@ type alias DateTime =
     , time : Time
     , offset : Offset
     }
+
+
+{-| Convert DateTime to Time.Posix. Ported from the C example at <https://de.wikipedia.org/wiki/Unixzeit>
+-}
+toPosix : DateTime -> Maybe Time.Posix
+toPosix { date, time } =
+    Maybe.map
+        (\daysSinceYearBegin ->
+            let
+                leapyears =
+                    ((date.year - 1) - 1968)
+                        // 4
+                        - ((date.year - 1) - 1900)
+                        // 100
+                        + ((date.year - 1) - 1600)
+                        // 400
+
+                daysSince1970Base =
+                    (date.year - 1970) * 365 + leapyears + daysSinceYearBegin + date.day - 1
+
+                daysSince1970 =
+                    if (date.month > 2) && (remainderBy date.year 4 == 0 && (remainderBy date.year 100 /= 0 || (remainderBy date.year 400 == 0))) then
+                        daysSince1970Base + 1
+
+                    else
+                        daysSince1970Base
+
+                seconds =
+                    time.seconds + 60 * (time.minutes + 60 * (time.hours + 24 * daysSince1970))
+            in
+            -- Time.Posix uses milliseconds
+            Time.millisToPosix (seconds * 1000)
+        )
+        (Array.get
+            (date.month - 1)
+            (Array.fromList [ 0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334 ])
+        )
 
 
 

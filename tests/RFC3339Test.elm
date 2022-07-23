@@ -1,10 +1,11 @@
-module RFC3339Test exposing (dateParserTest, dateTimeParserTest, decodeTimestampTest, offsetDirectionParserTest, offsetParserTest, paddedIntParserTest, timeParserTest, zOffsetParserTest)
+module RFC3339Test exposing (dateParserTest, dateTimeParserTest, decodeTimestampTest, offsetDirectionParserTest, offsetParserTest, paddedIntParserTest, timeParserTest, toPosixTest, zOffsetParserTest)
 
 import Expect
 import Json.Decode as Decode
 import Parser
 import RFC3339 exposing (OffsetDirection(..), dateParser, dateTimeParser, decodeTimestamp, offsetDirectionParser, offsetParser, paddedIntParser, timeParser, zOffsetParser, zulu)
 import Test exposing (Test, describe, test)
+import Time
 
 
 dateParserTest : Test
@@ -319,3 +320,43 @@ decodeTimestampTest =
                 |> Decode.decodeString (Decode.field "time" decodeTimestamp)
                 |> Expect.equal expected
         )
+
+
+toPosixTest : Test
+toPosixTest =
+    describe "convert DateTime to posix"
+        [ test "funny number"
+            (\_ ->
+                RFC3339.toPosix
+                    { date =
+                        { day = 18
+                        , month = 3
+                        , year = 2005
+                        }
+                    , time =
+                        { hours = 1
+                        , minutes = 58
+                        , seconds = 31
+                        }
+                    , offset = zulu
+                    }
+                    |> Expect.equal (Just (Time.millisToPosix 1111111111000))
+            )
+        , test "another funny number"
+            (\_ ->
+                RFC3339.toPosix
+                    { date =
+                        { day = 18
+                        , month = 5
+                        , year = 2033
+                        }
+                    , time =
+                        { hours = 3
+                        , minutes = 33
+                        , seconds = 20
+                        }
+                    , offset = zulu
+                    }
+                    |> Expect.equal (Just (Time.millisToPosix 2000000000000))
+            )
+        ]
