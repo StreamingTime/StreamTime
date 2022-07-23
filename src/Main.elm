@@ -11,7 +11,7 @@ import Http
 import Json.Encode as Encode
 import LocalStorage
 import RefreshData exposing (RefreshData(..))
-import ScheduleSegment exposing (scheduleSegmentView)
+import Views.ScheduleSegment exposing (scheduleSegmentView)
 import Tailwind.Utilities as Tw
 import Task
 import Time

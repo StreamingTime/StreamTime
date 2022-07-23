@@ -1,4 +1,4 @@
-module ScheduleSegment exposing (scheduleSegmentView)
+module Views.ScheduleSegment exposing (scheduleSegmentView)
 
 import FormatTime
 import Html.Styled exposing (Html, div, img, p, span, text)
