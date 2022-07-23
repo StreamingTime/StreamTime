@@ -11,7 +11,6 @@ import Http
 import Json.Encode as Encode
 import LocalStorage
 import RefreshData exposing (RefreshData(..))
-import Views.ScheduleSegment exposing (scheduleSegmentView)
 import Tailwind.Utilities as Tw
 import Task
 import Time
@@ -19,6 +18,7 @@ import Twitch
 import TwitchConfig
 import Url
 import Utils exposing (filterFollowsByLogin, missingProfileLogins, streamersWithSelection)
+import Views.ScheduleSegment exposing (scheduleSegmentView)
 
 
 loginRedirectUrl : String
