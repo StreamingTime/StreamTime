@@ -4,9 +4,9 @@ import Browser exposing (Document)
 import Browser.Navigation as Nav
 import Css
 import Css.Global
-import Html.Styled exposing (Html, a, button, div, h1, hr, img, input, label, li, p, span, text, toUnstyled, ul)
-import Html.Styled.Attributes exposing (alt, class, classList, css, href, placeholder, src, style, tabindex, type_)
-import Html.Styled.Events exposing (onClick, onInput)
+import Html.Styled exposing (Html, a, button, div, h1, img, li, p, span, text, toUnstyled, ul)
+import Html.Styled.Attributes exposing (alt, class, classList, css, href, src, style, tabindex)
+import Html.Styled.Events exposing (onClick)
 import Http
 import Json.Encode as Encode
 import LocalStorage
@@ -15,7 +15,8 @@ import Tailwind.Utilities as Tw
 import Twitch
 import TwitchConfig
 import Url
-import Utils exposing (filterFollowsByLogin, missingProfileLogins, streamersWithSelection)
+import Utils exposing (errorToString, filterFollowsByLogin, missingProfileLogins, streamersWithSelection)
+import Views.StreamerList exposing (StreamerListMsg(..), streamerListPageSteps, streamerListView)
 
 
 loginRedirectUrl : String
@@ -78,13 +79,6 @@ type Msg
     | FetchStreamingSchedules
     | StreamerListMsg StreamerListMsg
     | Logout
-
-
-type StreamerListMsg
-    = ShowMore
-    | ShowLess
-    | Filter String
-    | SetStreamerSelection Twitch.User Bool
 
 
 type UrlMsg
@@ -449,32 +443,6 @@ handleUrlMsg msg navKey =
             Cmd.none
 
 
-errorToString : Http.Error -> String
-errorToString error =
-    let
-        networkProblem =
-            "Failed to connect to the server. Is your internet ok?"
-
-        generalProblem =
-            "There was a problem :("
-    in
-    case error of
-        Http.Timeout ->
-            networkProblem
-
-        Http.NetworkError ->
-            networkProblem
-
-        Http.BadUrl _ ->
-            generalProblem
-
-        Http.BadBody _ ->
-            generalProblem
-
-        Http.BadStatus _ ->
-            generalProblem
-
-
 view : Model -> Document Msg
 view model =
     { title = "Twitch schedule"
@@ -619,14 +587,16 @@ appView appData =
         [ errorView appData.error
         , headerView appData.signedInUser
         , div [ css [ Tw.flex ] ]
-            [ streamerListView
-                (RefreshData.map
-                    (\streamers -> Present (streamersWithSelection appData.selectedStreamers streamers))
-                    appData.streamers
+            [ Html.Styled.map (\msg -> StreamerListMsg msg)
+                (streamerListView
+                    (RefreshData.map
+                        (\streamers -> Present (streamersWithSelection appData.selectedStreamers streamers))
+                        appData.streamers
+                    )
+                    appData.follows
+                    appData.sidebarStreamerCount
+                    appData.streamerFilterName
                 )
-                appData.follows
-                appData.sidebarStreamerCount
-                appData.streamerFilterName
 
             -- Content placeholder
             , div
@@ -683,235 +653,6 @@ headerView user =
                 , span [ css [ Tw.text_purple_400 ] ] [ text "Schedule" ]
                 ]
             , userView user
-            ]
-        ]
-
-
-streamerListView : RefreshData Http.Error (List ( Twitch.User, Bool )) -> List Twitch.FollowRelation -> Int -> Maybe String -> Html Msg
-streamerListView streamersData follows showCount filterString =
-    let
-        streamers =
-            RefreshData.mapTo (\_ list -> list) streamersData
-
-        selectedStreamers =
-            streamers
-                |> List.filter (\( _, selected ) -> selected)
-
-        unselectedStreamers =
-            streamers
-                |> List.filter (\( _, selected ) -> not selected)
-
-        restStreamersView =
-            div []
-                (unselectedStreamers
-                    |> List.take showCount
-                    |> List.map (\( streamer, isSelected ) -> streamerView streamer isSelected)
-                )
-
-        linkButtonStyle =
-            css [ Tw.text_primary, Tw.underline ]
-
-        moreAvailable =
-            List.length unselectedStreamers > showCount || List.length follows > List.length streamers
-
-        buttons =
-            div
-                [ css
-                    ([ Tw.mt_2
-                     , Tw.mx_2
-                     , Tw.flex
-                     , Tw.justify_between
-                     ]
-                        ++ (if not moreAvailable then
-                                [ Tw.flex_row_reverse ]
-
-                            else
-                                []
-                           )
-                    )
-                ]
-                [ if moreAvailable then
-                    button [ linkButtonStyle, onClick (StreamerListMsg ShowMore) ] [ text "Show more" ]
-
-                  else
-                    text ""
-                , if showCount > streamerListPageSteps then
-                    button [ linkButtonStyle, onClick (StreamerListMsg ShowLess) ] [ text "Show less" ]
-
-                  else
-                    text ""
-                ]
-
-        spinner =
-            if RefreshData.isLoading streamersData then
-                loadingSpinner
-                    [ Tw.w_8
-                    , Tw.h_8
-                    , Tw.mt_2
-                    , Tw.mx_2
-                    ]
-
-            else
-                text ""
-
-        errorText =
-            RefreshData.mapTo
-                (\err _ ->
-                    case err of
-                        Just error ->
-                            div [ css [ Tw.mt_2, Tw.mx_2 ] ] [ text (errorToString error) ]
-
-                        Nothing ->
-                            text ""
-                )
-                streamersData
-
-        filterUI =
-            div [ css [ Tw.form_control ] ]
-                [ label
-                    [ css [ Tw.label ]
-                    ]
-                    [ span [ css [ Tw.label_text ] ] [ text "Search" ]
-                    ]
-                , input
-                    [ type_ "text"
-                    , placeholder "Channel name"
-                    , css [ Tw.input, Tw.input_ghost, Tw.input_bordered, Tw.input_sm, Tw.m_1 ]
-                    , onInput (\s -> StreamerListMsg (Filter s))
-                    ]
-                    []
-                ]
-
-        filteredList =
-            case filterString of
-                Just query ->
-                    if String.length query >= 4 then
-                        -- this is also computed in update, so we could save us the computation here
-                        (filterFollowsByLogin query follows
-                            |> List.map
-                                (\follow ->
-                                    let
-                                        streamerProfile =
-                                            streamers
-                                                |> List.filter (\( user, _ ) -> user.id == follow.toID)
-                                                |> List.head
-                                    in
-                                    case streamerProfile of
-                                        Just ( isSelected, streamer ) ->
-                                            streamerView isSelected streamer
-
-                                        Nothing ->
-                                            loadingSpinner [ Tw.w_8, Tw.h_8 ]
-                                )
-                        )
-                            ++ [ hr [] [] ]
-
-                    else if String.length query > 0 then
-                        [ text "Enter at least 4 characters" ]
-
-                    else
-                        [ text "" ]
-
-                Nothing ->
-                    [ text "" ]
-
-        filterResultsView =
-            if List.isEmpty filteredList then
-                text ""
-
-            else
-                div []
-                    filteredList
-
-        selectedView =
-            if List.isEmpty selectedStreamers then
-                text ""
-
-            else
-                div []
-                    ((selectedStreamers
-                        |> List.map (\( selected, streamer ) -> streamerView selected streamer)
-                     )
-                        ++ [ hr [] [] ]
-                    )
-    in
-    div
-        [ css
-            [ Tw.bg_base_200
-            , Tw.fixed
-            , Tw.top_16
-            , Tw.bottom_0
-            , Tw.w_60
-            , Tw.overflow_y_auto
-
-            -- hide scrollbar in firefox browsers
-            , Css.property "scrollbar-width" "none"
-
-            -- hide scrollbar in chrome, edge, opera and other browsers
-            , Css.pseudoClass ":-webkit-scrollbar" [ Css.width (Css.px 0) ]
-            ]
-        ]
-        [ div
-            [ css
-                [ Tw.my_2
-                , Tw.text_sm
-                , Tw.font_medium
-                ]
-            ]
-            [ p [ css [ Tw.text_center ] ] [ text "CHANNELS YOU FOLLOW" ]
-            , div [ css [ Tw.mt_2 ] ]
-                [ filterUI
-                , div
-                    []
-                    [ filterResultsView, selectedView, restStreamersView, buttons, errorText, spinner ]
-                ]
-            ]
-        ]
-
-
-streamerView : Twitch.User -> Bool -> Html Msg
-streamerView streamer isSelected =
-    let
-        avatar =
-            div [ css [ Tw.avatar ] ]
-                [ div
-                    [ css
-                        [ Tw.rounded_full
-                        , Tw.w_10
-                        , Tw.h_10
-                        , Css.hover [ Tw.ring, Tw.ring_primary_focus ]
-                        ]
-                    ]
-                    [ img [ src streamer.profileImageUrl ] []
-                    ]
-                ]
-    in
-    div
-        [ css
-            [ Tw.block
-            , Tw.p_1
-            , Css.hover [ Tw.bg_purple_500 ]
-            , Tw.cursor_pointer
-            ]
-        , onClick
-            (StreamerListMsg (SetStreamerSelection streamer (not isSelected)))
-        ]
-        [ div
-            [ css
-                [ Tw.flex
-                , Tw.space_x_2
-                , Tw.items_center
-                ]
-            ]
-            [ a [ href ("https://twitch.tv/" ++ streamer.displayName) ] [ avatar ]
-            , div [ css [ Tw.font_medium, Tw.truncate ] ] [ text streamer.displayName ]
-            , text
-                (if isSelected then
-                    "✅"
-
-                 else
-                    ""
-                )
             ]
         ]
 
@@ -991,11 +732,6 @@ userView user =
                 ]
             ]
         ]
-
-
-streamerListPageSteps : Int
-streamerListPageSteps =
-    10
 
 
 main : Program Encode.Value Model Msg
