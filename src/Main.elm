@@ -634,7 +634,6 @@ appView appData =
             , div
                 [ css
                     [ Tw.bg_base_100
-                    , Tw.h_screen
                     , Tw.w_full
                     , Tw.ml_60
                     , Tw.mt_16
