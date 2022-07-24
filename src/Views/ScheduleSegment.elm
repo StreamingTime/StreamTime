@@ -71,8 +71,7 @@ scheduleSegmentView zone { title, startTime, endTime, category, isRecurring, can
                     ]
                     [ div []
                         [ Icons.repeat
-                            16
-                            16
+                            [ Tw.icon_neutral, Tw.icon_m ]
                         ]
                     ]
 
@@ -111,7 +110,7 @@ scheduleSegmentView zone { title, startTime, endTime, category, isRecurring, can
                         , class "tooltip"
                         , css [ Tw.m_1, Tw.tooltip, Tw.tooltip_primary ]
                         ]
-                        [ Icons.warning 16 16 ]
+                        [ Icons.warning [ Tw.icon_warning, Tw.icon_m ] ]
 
                 Nothing ->
                     text ""
