@@ -18,7 +18,11 @@ module.exports = {
             }
         },
     },
-    plugins: [require("daisyui")],
+    plugins: [
+        require("daisyui"),
+
+        require("./tailwind_icons")
+    ],
     variants: [],
     daisyui: {
         themes: [
