@@ -62,7 +62,7 @@ errorToString : Http.Error -> String
 errorToString error =
     let
         networkProblem =
-            "Failed to connect to the server. Is your internet ok?"
+            "Failed to connect to the server."
 
         generalProblem =
             "There was a problem :("

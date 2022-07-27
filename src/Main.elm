@@ -2,6 +2,7 @@ module Main exposing (main)
 
 import Browser exposing (Document)
 import Browser.Navigation as Nav
+import Components exposing (errorView)
 import Css
 import Css.Global
 import Html.Styled exposing (Html, a, button, div, h1, img, li, p, span, text, toUnstyled, ul)
@@ -42,7 +43,6 @@ type alias AppData =
     , sidebarStreamerCount : Int
     , streamerFilterName : Maybe String
     , selectedStreamers : List Twitch.User
-    , error : Maybe String
     , schedules : RefreshData Http.Error (List Twitch.Schedule)
     , timeZone : Time.Zone
     }
@@ -238,7 +238,6 @@ update msg model =
                                 -- TOOD: sidebarStreamerCount should depend on the number of streamers loaded
                                 , sidebarStreamerCount = streamerListPageSteps
                                 , selectedStreamers = []
-                                , error = Nothing
                                 , streamerFilterName = Nothing
                                 , schedules = LoadingMore []
                                 , timeZone = Maybe.withDefault Time.utc m.timeZone
@@ -546,13 +545,7 @@ loginView err =
                     ]
                 , case err of
                     Just e ->
-                        p
-                            [ css
-                                [ Tw.mt_8
-                                , Tw.text_red_500
-                                ]
-                            ]
-                            [ text (errorToString e) ]
+                        errorView (errorToString e)
 
                     Nothing ->
                         text ""
@@ -596,19 +589,6 @@ loadingSpinner styles =
         []
 
 
-errorView : Maybe String -> Html Msg
-errorView error =
-    case error of
-        Just errMsg ->
-            div [ css [ Tw.modal ], class "modal-open" ]
-                [ div [ css [ Tw.modal_box, Tw.alert, Tw.alert_error ] ]
-                    [ text errMsg ]
-                ]
-
-        Nothing ->
-            text ""
-
-
 appView : AppData -> Html Msg
 appView appData =
     let
@@ -616,8 +596,7 @@ appView appData =
             RefreshData.mapTo (\_ -> identity) appData.schedules
     in
     div []
-        [ errorView appData.error
-        , headerView appData.signedInUser
+        [ headerView appData.signedInUser
         , div [ css [ Tw.flex ] ]
             [ Html.Styled.map (\msg -> StreamerListMsg msg)
                 (streamerListView
