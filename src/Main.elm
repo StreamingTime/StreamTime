@@ -85,6 +85,7 @@ type Msg
     | StreamerListMsg StreamerListMsg
     | Logout
     | GotTimeZone Time.Zone
+    | HourlyValidation
 
 
 type UrlMsg
@@ -296,12 +297,18 @@ update msg model =
                 Logout ->
                     ( model, Cmd.none )
 
+                HourlyValidation ->
+                    ( model, Cmd.none )
+
         LoggedIn appData navKey ->
             case msg of
                 UrlMsg urlMsg ->
                     ( LoggedIn appData navKey, handleUrlMsg urlMsg navKey )
 
-                GotValidateTokenResponse _ ->
+                GotValidateTokenResponse (Err err) ->
+                    ( NotLoggedIn (Just err) navKey, Cmd.none )
+
+                GotValidateTokenResponse (Ok _) ->
                     ( model, Cmd.none )
 
                 GotRevokeTokenResponse ->
@@ -417,6 +424,9 @@ update msg model =
                 Logout ->
                     ( NotLoggedIn Nothing navKey, Cmd.batch [ LocalStorage.removeData, revokeToken TwitchConfig.clientId appData.signedInUser.token ] )
 
+                HourlyValidation ->
+                    ( model, Cmd.map GotValidateTokenResponse (Twitch.validateToken appData.signedInUser.token) )
+
                 GotTimeZone _ ->
                     ( model, Cmd.none )
 
@@ -457,6 +467,9 @@ update msg model =
                     ( model, Cmd.none )
 
                 GotTimeZone _ ->
+                    ( model, Cmd.none )
+
+                HourlyValidation ->
                     ( model, Cmd.none )
 
 
@@ -778,7 +791,7 @@ main =
         { init = init
         , view = view
         , update = update
-        , subscriptions = \_ -> Sub.none
+        , subscriptions = \_ -> Time.every (60 * 60 * 1000) (\_ -> HourlyValidation)
         , onUrlRequest = \urlRequest -> UrlMsg (LinkClicked urlRequest)
         , onUrlChange = \_ -> UrlMsg UrlChanged
         }
