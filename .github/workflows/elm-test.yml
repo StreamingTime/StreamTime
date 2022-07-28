@@ -1,0 +1,21 @@
+on: push
+name: Elm test
+jobs:
+  elm_format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - run: yarn --frozen-lockfile
+
+      - name: Add elm and elm-test to path
+        run: yarn bin >> $GITHUB_PATH
+
+      - name: Run tests
+        run: elm-test --report junit > report.xml
+
+      - name: Test report
+        uses: mikepenz/action-junit-report@v3
+        if: always()
+        with:
+          report_paths: "report.xml"
