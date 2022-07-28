@@ -4,7 +4,7 @@ import Browser exposing (Document)
 import Browser.Navigation as Nav
 import Css
 import Css.Global
-import Html.Styled exposing (Html, a, button, div, h1, img, li, p, span, text, toUnstyled, ul)
+import Html.Styled as Html exposing (Html, a, button, div, h1, img, li, p, span, text, toUnstyled, ul)
 import Html.Styled.Attributes exposing (alt, class, classList, css, href, src, style, tabindex)
 import Html.Styled.Events exposing (onClick)
 import Http
@@ -619,7 +619,7 @@ appView appData =
         [ errorView appData.error
         , headerView appData.signedInUser
         , div [ css [ Tw.flex ] ]
-            [ Html.Styled.map (\msg -> StreamerListMsg msg)
+            [ Html.map (\msg -> StreamerListMsg msg)
                 (streamerListView
                     (RefreshData.mapValue
                         (streamersWithSelection appData.selectedStreamers)
