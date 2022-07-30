@@ -28,7 +28,22 @@ loadingSpinner styles =
 
 errorView : String -> Html msg
 errorView errMsg =
-    div [ css [ Tw.alert, Tw.alert_error, Tw.text_center ] ]
-        [ div [] [ Icons.warning [ Tw.w_8, Tw.m_1, Tw.icon_error ] ]
-        , div [] [ text errMsg ]
+    div
+        [ css
+            [ Tw.alert
+            , Tw.alert_error
+            , Tw.flex
+            , Tw.justify_center
+            ]
+        ]
+        [ div
+            [ css
+                [ Tw.flex
+                , Tw.items_center
+                , Tw.space_x_4
+                ]
+            ]
+            [ div [] [ Icons.warning [ Tw.w_8, Tw.icon_error ] ]
+            , div [] [ text errMsg ]
+            ]
         ]
