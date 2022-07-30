@@ -1,8 +1,9 @@
-module Components exposing (loadingSpinner)
+module Components exposing (errorView, loadingSpinner)
 
 import Css
-import Html.Styled exposing (Html, div)
+import Html.Styled exposing (Html, div, text)
 import Html.Styled.Attributes exposing (css, style)
+import Icons
 import Tailwind.Utilities as Tw
 
 
@@ -23,3 +24,26 @@ loadingSpinner styles =
         , style "border-top-color" "transparent"
         ]
         []
+
+
+errorView : String -> Html msg
+errorView errMsg =
+    div
+        [ css
+            [ Tw.alert
+            , Tw.alert_error
+            , Tw.flex
+            , Tw.justify_center
+            ]
+        ]
+        [ div
+            [ css
+                [ Tw.flex
+                , Tw.items_center
+                , Tw.space_x_4
+                ]
+            ]
+            [ div [] [ Icons.warning [ Tw.w_8, Tw.icon_error ] ]
+            , div [] [ text errMsg ]
+            ]
+        ]

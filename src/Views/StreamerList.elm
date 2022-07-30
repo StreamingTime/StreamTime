@@ -1,6 +1,6 @@
 module Views.StreamerList exposing (StreamerListMsg(..), streamerListPageSteps, streamerListView)
 
-import Components exposing (loadingSpinner)
+import Components exposing (errorView, loadingSpinner)
 import Css
 import Html.Styled exposing (Html, a, button, div, hr, img, input, label, p, span, text)
 import Html.Styled.Attributes exposing (css, href, placeholder, src, type_)
@@ -96,7 +96,8 @@ streamerListView streamersData follows showCount filterString =
                 (\err _ ->
                     case err of
                         Just error ->
-                            div [ css [ Tw.mt_2, Tw.mx_2 ] ] [ text (errorToString error) ]
+                            div [ css [ Tw.mt_2, Tw.p_2 ] ]
+                                [ errorView (errorToString error) ]
 
                         Nothing ->
                             text ""
