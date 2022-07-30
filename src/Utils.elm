@@ -80,5 +80,8 @@ errorToString error =
         Http.BadBody _ ->
             generalProblem
 
+        Http.BadStatus 401 ->
+            "Invalid access token"
+
         Http.BadStatus _ ->
             generalProblem
