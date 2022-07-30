@@ -1,4 +1,4 @@
-module Utils exposing (concatMaybeList, errorToString, filterFollowsByLogin, missingProfileLogins, streamersWithSelection)
+module Utils exposing (concatMaybeList, errorToString, filterFollowsByLogin, findUserByID, missingProfileLogins, streamersWithSelection)
 
 import Http
 import Twitch
@@ -85,3 +85,10 @@ errorToString error =
 
         Http.BadStatus _ ->
             generalProblem
+
+
+findUserByID : String -> List Twitch.User -> Maybe Twitch.User
+findUserByID userID users =
+    users
+        |> List.filter (\user -> user.id == userID)
+        |> List.head

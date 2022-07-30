@@ -18,7 +18,7 @@ import Time
 import Twitch
 import TwitchConfig
 import Url
-import Utils exposing (errorToString, filterFollowsByLogin, missingProfileLogins, streamersWithSelection)
+import Utils exposing (errorToString, filterFollowsByLogin, findUserByID, missingProfileLogins, streamersWithSelection)
 import Views.ScheduleSegment exposing (scheduleSegmentView)
 import Views.StreamerList exposing (StreamerListMsg(..), streamerListPageSteps, streamerListView)
 
@@ -641,8 +641,17 @@ appView appData =
                 , div [ css [ Tw.text_white ] ]
                     [ div []
                         (schedules
-                            |> List.concatMap .segments
-                            |> List.map (scheduleSegmentView appData.timeZone)
+                            |> List.map (\schedule -> ( schedule.broadcasterId, schedule.segments ))
+                            |> List.filterMap
+                                (\( userID, segments ) ->
+                                    case findUserByID userID (RefreshData.mapTo (\_ v -> v) appData.streamers) of
+                                        Just user ->
+                                            Just (List.map (scheduleSegmentView appData.timeZone user) segments)
+
+                                        Nothing ->
+                                            Nothing
+                                )
+                            |> List.concat
                             |> List.map (\segView -> div [ css [ Tw.m_4 ] ] [ segView ])
                         )
                     ]
