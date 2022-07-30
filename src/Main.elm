@@ -545,7 +545,8 @@ loginView err =
                     ]
                 , case err of
                     Just e ->
-                        errorView (errorToString e)
+                        div [ css [ Tw.mt_8 ] ]
+                            [ errorView (errorToString e) ]
 
                     Nothing ->
                         text ""
