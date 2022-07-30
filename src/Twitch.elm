@@ -4,6 +4,7 @@ import Http
 import Json.Decode as Decode
 import Maybe exposing (andThen)
 import RFC3339 exposing (decodeTimestamp)
+import Task
 import Url
 import Url.Builder
 
@@ -147,11 +148,12 @@ decodeSchedule =
 {- https://dev.twitch.tv/docs/api/reference#get-channel-stream-schedule -}
 
 
-getStreamingSchedule : String -> Maybe String -> ClientID -> Token -> Cmd (Result Http.Error (PaginatedResponse Schedule))
-getStreamingSchedule userID cursor =
+getStreamingSchedule : String -> Maybe String -> ClientID -> Token -> Task.Task Http.Error (PaginatedResponse Schedule)
+getStreamingSchedule userID cursor (ClientID clientID) (Token token) =
     let
         params =
-            [ Url.Builder.string "broadcaster_id" userID ]
+            [ Url.Builder.string "broadcaster_id" userID
+            ]
 
         u =
             apiUrlBuilder [ "schedule" ]
@@ -164,7 +166,45 @@ getStreamingSchedule userID cursor =
                         params
                 )
     in
-    bearerRequest u (decodePaginated decodeSchedule)
+    Http.task
+        { method = "GET"
+        , headers =
+            [ Http.header "Authorization" ("Bearer " ++ token)
+            , Http.header "Client-Id" clientID
+            ]
+        , url = u
+        , body = Http.emptyBody
+        , resolver = Http.stringResolver <| handleJsonResponse <| decodePaginated decodeSchedule
+        , timeout = Nothing
+        }
+
+
+
+{- https://korban.net/posts/elm/2019-02-15-combining-http-requests-with-task-in-elm/ -}
+
+
+handleJsonResponse : Decode.Decoder a -> Http.Response String -> Result Http.Error a
+handleJsonResponse decoder response =
+    case response of
+        Http.BadUrl_ url ->
+            Err (Http.BadUrl url)
+
+        Http.Timeout_ ->
+            Err Http.Timeout
+
+        Http.BadStatus_ { statusCode } _ ->
+            Err (Http.BadStatus statusCode)
+
+        Http.NetworkError_ ->
+            Err Http.NetworkError
+
+        Http.GoodStatus_ _ body ->
+            case Decode.decodeString decoder body of
+                Err _ ->
+                    Err (Http.BadBody body)
+
+                Ok result ->
+                    Ok result
 
 
 

@@ -10,6 +10,7 @@ import Html.Styled.Events exposing (onClick)
 import Http
 import Json.Encode as Encode
 import LocalStorage
+import RFC3339
 import RefreshData exposing (RefreshData(..))
 import Tailwind.Utilities as Tw
 import Task
@@ -80,7 +81,7 @@ type Msg
     | GotStreamerProfilesForSidebar (Result Http.Error (List Twitch.User))
     | GotStreamerProfiles (Result Http.Error (List Twitch.User))
     | GotUserProfile (Result Http.Error Twitch.User)
-    | GotStreamingSchedule (Result Http.Error (Twitch.PaginatedResponse Twitch.Schedule))
+    | GotStreamingSchedule (Result Http.Error Twitch.Schedule)
     | FetchStreamingSchedules
     | StreamerListMsg StreamerListMsg
     | Logout
@@ -149,9 +150,37 @@ fetchUserProfile userID token =
     Cmd.map GotUserProfile (Twitch.getUser userID TwitchConfig.clientId token)
 
 
-fetchStreamingSchedule : String -> Twitch.Token -> Cmd Msg
-fetchStreamingSchedule userID token =
-    Cmd.map GotStreamingSchedule (Twitch.getStreamingSchedule userID Nothing TwitchConfig.clientId token)
+fetchStreamingSchedule : String -> Time.Posix -> Twitch.Token -> Cmd Msg
+fetchStreamingSchedule userID endTime token =
+    let
+        beforeEndTime =
+            -- TODO: time error handling
+            List.filter (\segment -> Time.posixToMillis (Maybe.withDefault (Time.millisToPosix 0) (RFC3339.toPosix segment.startTime)) <= Time.posixToMillis endTime)
+
+        -- Fetch the next page until a) we got all segments that start before endTime or b) there are no pages left
+        -- scheduleAcc is used to accumulate schedule entries
+        fetchMore : Maybe String -> Twitch.Schedule -> Task.Task Http.Error Twitch.Schedule
+        fetchMore currentCursor scheduleAcc =
+            Task.andThen
+                (\result ->
+                    case result.cursor of
+                        Just _ ->
+                            if List.length (beforeEndTime result.data.segments) < List.length result.data.segments then
+                                Task.succeed { scheduleAcc | segments = scheduleAcc.segments ++ beforeEndTime result.data.segments }
+
+                            else
+                                fetchMore result.cursor { scheduleAcc | segments = scheduleAcc.segments ++ result.data.segments }
+
+                        Nothing ->
+                            Task.succeed scheduleAcc
+                )
+                (Twitch.getStreamingSchedule userID currentCursor TwitchConfig.clientId token)
+
+        fetchFirstPage : Task.Task Http.Error (Twitch.PaginatedResponse Twitch.Schedule)
+        fetchFirstPage =
+            Twitch.getStreamingSchedule userID Nothing TwitchConfig.clientId token
+    in
+    Task.attempt GotStreamingSchedule (Task.andThen (\response -> fetchMore response.cursor response.data) fetchFirstPage)
 
 
 getTimeZone : Cmd Msg
@@ -407,11 +436,12 @@ update msg model =
                             ( LoggedIn { appData | schedules = RefreshData.map (ErrorWithData err) appData.schedules } navKey, Cmd.none )
 
                         Ok value ->
-                            ( LoggedIn { appData | schedules = RefreshData.map (\oldSchedules -> Present (oldSchedules ++ [ value.data ])) appData.schedules } navKey, Cmd.none )
+                            ( LoggedIn { appData | schedules = RefreshData.map (\oldSchedules -> Present (oldSchedules ++ [ value ])) appData.schedules } navKey, Cmd.none )
 
                 FetchStreamingSchedules ->
                     ( LoggedIn { appData | schedules = RefreshData.map LoadingMore appData.schedules } navKey
-                    , Cmd.batch (List.map (\streamer -> fetchStreamingSchedule streamer.id appData.signedInUser.token) appData.selectedStreamers)
+                      -- TODO: use correct end time here
+                    , Cmd.batch (List.map (\streamer -> fetchStreamingSchedule streamer.id (Time.millisToPosix 1659477600000) appData.signedInUser.token) appData.selectedStreamers)
                     )
 
                 Logout ->
