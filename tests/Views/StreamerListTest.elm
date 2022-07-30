@@ -21,7 +21,7 @@ streamerDataStatusTest =
                 streamerListView streamers [] 10 Nothing
                     |> toUnstyled
                     |> Query.fromHtml
-                    |> Query.has [ text "Failed to connect to the server. Is your internet ok?" ]
+                    |> Query.has [ text "Failed to connect to the server." ]
             )
         , test "present"
             (\_ ->
@@ -32,7 +32,7 @@ streamerDataStatusTest =
                 streamerListView streamers [] 10 Nothing
                     |> toUnstyled
                     |> Query.fromHtml
-                    |> Query.hasNot [ text "Failed to connect to the server. Is your internet ok?" ]
+                    |> Query.hasNot [ text "Failed to connect to the server." ]
             )
         , test "loading"
             (\_ ->
@@ -43,6 +43,6 @@ streamerDataStatusTest =
                 streamerListView streamers [] 10 Nothing
                     |> toUnstyled
                     |> Query.fromHtml
-                    |> Query.hasNot [ text "Failed to connect to the server. Is your internet ok?" ]
+                    |> Query.hasNot [ text "Failed to connect to the server." ]
             )
         ]
