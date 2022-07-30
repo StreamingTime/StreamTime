@@ -1,4 +1,4 @@
-module FormatTimeTest exposing (formatTest, zeroPadIntTest)
+module FormatTimeTest exposing (asRFC3339Test, formatTest, zeroPadIntTest)
 
 import Expect
 import FormatTime exposing (format, zeroPadInt)
@@ -52,5 +52,17 @@ zeroPadIntTest =
             (\_ ->
                 zeroPadInt 4 1234
                     |> Expect.equal "1234"
+            )
+        ]
+
+
+asRFC3339Test : Test
+asRFC3339Test =
+    describe "test RFC3339 formatting"
+        [ test "no offset"
+            (\_ ->
+                Time.millisToPosix 0
+                    |> FormatTime.asRFC3339 Time.utc
+                    |> Expect.equal (Ok "1970-01-01T00:00:00+00:00")
             )
         ]

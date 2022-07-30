@@ -150,8 +150,8 @@ fetchUserProfile userID token =
     Cmd.map GotUserProfile (Twitch.getUser userID TwitchConfig.clientId token)
 
 
-fetchStreamingSchedule : String -> Time.Posix -> Twitch.Token -> Cmd Msg
-fetchStreamingSchedule userID endTime token =
+fetchStreamingSchedule : String -> Time.Zone -> Maybe Time.Posix -> Time.Posix -> Twitch.Token -> Cmd Msg
+fetchStreamingSchedule userID timeZone startTime  endTime token =
     let
         beforeEndTime =
             -- TODO: time error handling
@@ -159,7 +159,7 @@ fetchStreamingSchedule userID endTime token =
 
         -- Fetch the next page until a) we got all segments that start before endTime or b) there are no pages left
         -- scheduleAcc is used to accumulate schedule entries
-        fetchMore : Maybe String -> Twitch.Schedule -> Task.Task Http.Error Twitch.Schedule
+        fetchMore : Maybe String  -> Twitch.Schedule -> Task.Task Http.Error Twitch.Schedule
         fetchMore currentCursor scheduleAcc =
             Task.andThen
                 (\result ->
@@ -174,13 +174,29 @@ fetchStreamingSchedule userID endTime token =
                         Nothing ->
                             Task.succeed scheduleAcc
                 )
-                (Twitch.getStreamingSchedule userID currentCursor TwitchConfig.clientId token)
+                (Twitch.getStreamingSchedule userID timeZone (startTime) currentCursor TwitchConfig.clientId token)
 
-        fetchFirstPage : Task.Task Http.Error (Twitch.PaginatedResponse Twitch.Schedule)
-        fetchFirstPage =
-            Twitch.getStreamingSchedule userID Nothing TwitchConfig.clientId token
+        {- fetch the first page (and more if needed) -}
+        startFetching :  Task.Task Http.Error Twitch.Schedule
+        startFetching =
+            Twitch.getStreamingSchedule userID timeZone ( startTime) Nothing TwitchConfig.clientId token
+                |> Task.andThen (\result -> 
+                    case result.cursor of
+                        Just _ ->
+                            if List.length (beforeEndTime result.data.segments) < List.length result.data.segments then
+                                Task.succeed result.data
+
+                            else
+                                fetchMore result.cursor result.data
+
+                        Nothing ->
+                            Task.succeed result.data
+                    )
     in
-    Task.attempt GotStreamingSchedule (Task.andThen (\response -> fetchMore response.cursor response.data) fetchFirstPage)
+    --Task.attempt GotStreamingSchedule (Task.andThen (\currentTime -> Task.andThen (\response -> fetchMore response.cursor currentTime response.data) fetchFirstPage currentTime) Time.now)
+    
+        Task.attempt GotStreamingSchedule startFetching
+        
 
 
 getTimeZone : Cmd Msg
@@ -441,7 +457,7 @@ update msg model =
                 FetchStreamingSchedules ->
                     ( LoggedIn { appData | schedules = RefreshData.map LoadingMore appData.schedules } navKey
                       -- TODO: use correct end time here
-                    , Cmd.batch (List.map (\streamer -> fetchStreamingSchedule streamer.id (Time.millisToPosix 1659477600000) appData.signedInUser.token) appData.selectedStreamers)
+                    , Cmd.batch (List.map (\streamer ->  fetchStreamingSchedule streamer.id appData.timeZone Nothing (Time.millisToPosix 1659477600000) appData.signedInUser.token) appData.selectedStreamers)
                     )
 
                 Logout ->

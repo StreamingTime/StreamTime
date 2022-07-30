@@ -1,10 +1,12 @@
 module Twitch exposing (Category, ClientID(..), FollowRelation, PaginatedResponse, Schedule, Segment, Token(..), User, ValidateTokenResponse, accessTokenFromUrl, boxArtUrl, decodeCategory, decodeFollowRelation, decodeListHead, decodePaginated, decodeSchedule, decodeSegment, decodeUser, decodeValidateTokenResponse, getStreamingSchedule, getTokenValue, getUser, getUserFollows, getUsers, loginFlowUrl, revokeToken, toFormData, validateToken)
 
+import FormatTime
 import Http
 import Json.Decode as Decode
 import Maybe exposing (andThen)
 import RFC3339 exposing (decodeTimestamp)
 import Task
+import Time
 import Url
 import Url.Builder
 
@@ -148,12 +150,29 @@ decodeSchedule =
 {- https://dev.twitch.tv/docs/api/reference#get-channel-stream-schedule -}
 
 
-getStreamingSchedule : String -> Maybe String -> ClientID -> Token -> Task.Task Http.Error (PaginatedResponse Schedule)
-getStreamingSchedule userID cursor (ClientID clientID) (Token token) =
+getStreamingSchedule : String -> Time.Zone -> Maybe Time.Posix -> Maybe String -> ClientID -> Token -> Task.Task Http.Error (PaginatedResponse Schedule)
+getStreamingSchedule userID timeZone startTime cursor (ClientID clientID) (Token token) =
     let
+        startTimeParam =
+            case startTime of
+                Just time ->
+                    case FormatTime.asRFC3339 timeZone time of
+                        Ok formatted ->
+                            [ Url.Builder.string "start_time" formatted ]
+
+                        Err _ ->
+                            Debug.todo "error"
+
+                Nothing ->
+                    []
+
         params =
             [ Url.Builder.string "broadcaster_id" userID
+
+            -- limit page size for testing
+            , Url.Builder.int "first" 2
             ]
+                ++ startTimeParam
 
         u =
             apiUrlBuilder [ "schedule" ]
