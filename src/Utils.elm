@@ -1,8 +1,8 @@
-module Utils exposing (concatMaybeList, errorToString, filterFollowsByLogin, missingProfileLogins, streamersWithSelection)
+module Utils exposing (concatMaybeList, errorToString, filterFollowsByLogin, missingProfileLogins, timeInOneWeek, streamersWithSelection)
 
 import Http
 import Twitch
-
+import Time
 
 
 {- append a list to a Maybe list -}
@@ -82,3 +82,11 @@ errorToString error =
 
         Http.BadStatus _ ->
             generalProblem
+
+timeInOneWeek : Time.Posix -> Time.Posix
+timeInOneWeek time = 
+            time
+                |> Time.posixToMillis
+                -- 60 seconds * 60 minutes * 24 hours * 7 days (in ms)
+                |> (+) ( 60 * 60 * 24 * 7 * 1000)
+                |> Time.millisToPosix
