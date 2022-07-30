@@ -2,11 +2,13 @@
   "devDependencies": {
     "elm-review": "^2.7.3",
     "elm-tailwind-modules": "^0.3.2",
+    "elm-test": "^0.19.1-revision9",
     "postcss": "^8.4.14",
     "tailwindcss": "^2.2.19"
   },
   "dependencies": {
     "daisyui": "^1.25.4",
-    "elm": "^0.19.1-5"
+    "elm": "^0.19.1-5",
+    "elm-format": "^0.8.5"
   }
 }

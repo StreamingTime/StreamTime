@@ -1,0 +1,24 @@
+on: push
+name: Elm test
+jobs:
+  elm_test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - run: yarn --frozen-lockfile
+
+      - name: Add elm, elm-tailwind-modules and elm-test to path
+        run: yarn bin >> $GITHUB_PATH
+
+      - name: Generate tailwind code
+        run: elm-tailwind-modules --dir ./gen --tailwind-config tailwind.config.js
+
+      - name: Run tests
+        run: elm-test --report junit > report.xml
+
+      - name: Test report
+        uses: mikepenz/action-junit-report@v3
+        if: always()
+        with:
+          report_paths: "report.xml"

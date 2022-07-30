@@ -2,10 +2,10 @@ module Main exposing (main)
 
 import Browser exposing (Document)
 import Browser.Navigation as Nav
+import Components exposing (errorView)
 import Css
 import Css.Global
-import Data
-import Html.Styled exposing (Html, a, button, div, h1, img, li, p, span, text, toUnstyled, ul)
+import Html.Styled as Html exposing (Html, a, button, div, h1, img, li, p, span, text, toUnstyled, ul)
 import Html.Styled.Attributes exposing (alt, class, classList, css, href, src, style, tabindex)
 import Html.Styled.Events exposing (onClick)
 import Http
@@ -13,10 +13,14 @@ import Json.Encode as Encode
 import LocalStorage
 import RefreshData exposing (RefreshData(..))
 import Tailwind.Utilities as Tw
+import Task
+import Time
 import Twitch
 import TwitchConfig
 import Url
-import Utils
+import Utils exposing (errorToString, filterFollowsByLogin, missingProfileLogins, streamersWithSelection)
+import Views.ScheduleSegment exposing (scheduleSegmentView)
+import Views.StreamerList exposing (StreamerListMsg(..), streamerListPageSteps, streamerListView)
 
 
 loginRedirectUrl : String
@@ -37,8 +41,10 @@ type alias AppData =
     -- a list of follow relation metadata originating from our user
     , follows : List Twitch.FollowRelation
     , sidebarStreamerCount : Int
-    , error : Maybe String
+    , streamerFilterName : Maybe String
+    , selectedStreamers : List Twitch.User
     , schedules : RefreshData Http.Error (List Twitch.Schedule)
+    , timeZone : Time.Zone
     }
 
 
@@ -53,6 +59,7 @@ type alias LoadingData =
 
     -- the first n streamers to display in the streamer list
     , firstStreamers : Maybe (List Twitch.User)
+    , timeZone : Maybe Time.Zone
     }
 
 
@@ -70,17 +77,15 @@ type Msg
     | GotValidateTokenResponse (Result Http.Error Twitch.ValidateTokenResponse)
     | GotRevokeTokenResponse
     | GotUserFollows (Result Http.Error (Twitch.PaginatedResponse (List Twitch.FollowRelation)))
+    | GotStreamerProfilesForSidebar (Result Http.Error (List Twitch.User))
     | GotStreamerProfiles (Result Http.Error (List Twitch.User))
     | GotUserProfile (Result Http.Error Twitch.User)
     | GotStreamingSchedule (Result Http.Error (Twitch.PaginatedResponse Twitch.Schedule))
-    | FetchStreamingSchedule String
+    | FetchStreamingSchedules
     | StreamerListMsg StreamerListMsg
     | Logout
-
-
-type StreamerListMsg
-    = ShowMore
-    | ShowLess
+    | GotTimeZone Time.Zone
+    | HourlyValidation
 
 
 type UrlMsg
@@ -97,6 +102,7 @@ init flags url navKey =
                 , follows = Nothing
                 , signedInUser = Nothing
                 , firstStreamers = Nothing
+                , timeZone = Nothing
                 }
                 navKey
             , Cmd.batch [ Cmd.map GotValidateTokenResponse (Twitch.validateToken token), Nav.replaceUrl navKey "/" ]
@@ -117,6 +123,7 @@ init flags url navKey =
                         , follows = Nothing
                         , signedInUser = Nothing
                         , firstStreamers = Nothing
+                        , timeZone = Nothing
                         }
                         navKey
                     , Cmd.batch [ Cmd.map GotValidateTokenResponse (Twitch.validateToken token), Nav.replaceUrl navKey "/" ]
@@ -126,6 +133,11 @@ init flags url navKey =
 revokeToken : Twitch.ClientID -> Twitch.Token -> Cmd Msg
 revokeToken clientId token =
     Cmd.map (\_ -> GotRevokeTokenResponse) (Twitch.revokeToken clientId token)
+
+
+fetchStreamerProfilesForSidebar : List String -> Twitch.Token -> Cmd Msg
+fetchStreamerProfilesForSidebar userIDs token =
+    Cmd.map GotStreamerProfilesForSidebar (Twitch.getUsers userIDs TwitchConfig.clientId token)
 
 
 fetchStreamerProfiles : List String -> Twitch.Token -> Cmd Msg
@@ -141,6 +153,11 @@ fetchUserProfile userID token =
 fetchStreamingSchedule : String -> Twitch.Token -> Cmd Msg
 fetchStreamingSchedule userID token =
     Cmd.map GotStreamingSchedule (Twitch.getStreamingSchedule userID Nothing TwitchConfig.clientId token)
+
+
+getTimeZone : Cmd Msg
+getTimeZone =
+    Task.perform GotTimeZone Time.here
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -169,9 +186,10 @@ update msg model =
                                         }
                                 , follows = Nothing
                                 , firstStreamers = Nothing
+                                , timeZone = Nothing
                                 }
                                 navKey
-                            , Cmd.batch [ LocalStorage.persistData { token = Twitch.getTokenValue m.token }, fetchUserProfile value.userID m.token ]
+                            , getTimeZone
                             )
 
                 GotRevokeTokenResponse ->
@@ -203,29 +221,33 @@ update msg model =
                                 -- after all follows are fetched, fetch the first streamer profiles
                                 Nothing ->
                                     ( LoadingScreen { m | follows = Just oldAndNewValues } navKey
-                                    , fetchStreamerProfiles (List.map .toID (List.take streamerListPageSteps oldAndNewValues)) user.token
+                                    , fetchStreamerProfilesForSidebar (List.map .toID (List.take streamerListPageSteps oldAndNewValues)) user.token
                                     )
 
                         ( Nothing, Ok _ ) ->
                             Debug.todo "this case should not happen"
 
-                GotStreamerProfiles response ->
-                    case ( m.signedInUser, m.follows, Data.fromResult response ) of
-                        ( Just user, Just follows, Data.Success streamers ) ->
+                GotStreamerProfilesForSidebar response ->
+                    case ( m.signedInUser, m.follows, response ) of
+                        ( Just user, Just follows, Ok streamers ) ->
                             -- all good, loading is complete
                             ( LoggedIn
                                 { signedInUser = user
                                 , follows = follows
                                 , streamers = Present streamers
+
+                                -- TOOD: sidebarStreamerCount should depend on the number of streamers loaded
                                 , sidebarStreamerCount = streamerListPageSteps
-                                , error = Nothing
+                                , selectedStreamers = []
+                                , streamerFilterName = Nothing
                                 , schedules = LoadingMore []
+                                , timeZone = Maybe.withDefault Time.utc m.timeZone
                                 }
                                 navKey
                             , Cmd.none
                             )
 
-                        ( _, _, Data.Failure e ) ->
+                        ( _, _, Err e ) ->
                             ( NotLoggedIn (Just e) navKey, Cmd.none )
 
                         _ ->
@@ -248,16 +270,33 @@ update msg model =
                         ( Nothing, _ ) ->
                             Debug.todo "again, a case that should not happen"
 
+                GotTimeZone zone ->
+                    ( LoadingScreen { m | timeZone = Just zone }
+                        navKey
+                    , case m.signedInUser of
+                        Just user ->
+                            Cmd.batch [ LocalStorage.persistData { token = Twitch.getTokenValue m.token }, fetchUserProfile user.userID m.token ]
+
+                        Nothing ->
+                            Debug.todo "error"
+                    )
+
                 GotStreamingSchedule _ ->
                     ( model, Cmd.none )
 
-                FetchStreamingSchedule _ ->
+                FetchStreamingSchedules ->
                     ( model, Cmd.none )
 
                 StreamerListMsg _ ->
                     ( model, Cmd.none )
 
+                GotStreamerProfiles _ ->
+                    ( model, Cmd.none )
+
                 Logout ->
+                    ( model, Cmd.none )
+
+                HourlyValidation ->
                     ( model, Cmd.none )
 
         LoggedIn appData navKey ->
@@ -265,7 +304,10 @@ update msg model =
                 UrlMsg urlMsg ->
                     ( LoggedIn appData navKey, handleUrlMsg urlMsg navKey )
 
-                GotValidateTokenResponse _ ->
+                GotValidateTokenResponse (Err err) ->
+                    ( NotLoggedIn (Just err) navKey, Cmd.none )
+
+                GotValidateTokenResponse (Ok _) ->
                     ( model, Cmd.none )
 
                 GotRevokeTokenResponse ->
@@ -277,7 +319,7 @@ update msg model =
                 GotUserProfile _ ->
                     ( model, Cmd.none )
 
-                GotStreamerProfiles response ->
+                GotStreamerProfilesForSidebar response ->
                     case response of
                         Ok newProfiles ->
                             ( LoggedIn
@@ -319,7 +361,7 @@ update msg model =
                                     |> List.map .toID
                         in
                         ( LoggedIn { appData | streamers = RefreshData.map RefreshData.LoadingMore appData.streamers } navKey
-                        , fetchStreamerProfiles nextIDs appData.signedInUser.token
+                        , fetchStreamerProfilesForSidebar nextIDs appData.signedInUser.token
                         )
 
                     else
@@ -332,6 +374,39 @@ update msg model =
                         in
                         ( LoggedIn { appData | sidebarStreamerCount = appData.sidebarStreamerCount + howMuchMore } navKey, Cmd.none )
 
+                StreamerListMsg (Filter name) ->
+                    let
+                        -- filter follows by name and find out which profiles are missing
+                        searchResultsWithoutProfile =
+                            appData.follows
+                                |> filterFollowsByLogin name
+                                |> (\f -> missingProfileLogins f (RefreshData.mapTo (\_ v -> v) appData.streamers))
+                    in
+                    ( LoggedIn { appData | streamerFilterName = Just name } navKey
+                    , if String.length name >= 4 && List.length searchResultsWithoutProfile > 0 then
+                        fetchStreamerProfiles searchResultsWithoutProfile appData.signedInUser.token
+
+                      else
+                        Cmd.none
+                    )
+
+                StreamerListMsg (SetStreamerSelection streamer newSelectionState) ->
+                    let
+                        newList =
+                            if newSelectionState then
+                                appData.selectedStreamers ++ [ streamer ]
+
+                            else
+                                List.filter ((/=) streamer) appData.selectedStreamers
+                    in
+                    ( LoggedIn { appData | selectedStreamers = newList } navKey, Cmd.none )
+
+                GotStreamerProfiles (Ok newProfiles) ->
+                    ( LoggedIn { appData | streamers = RefreshData.map (\oldProfiles -> Present (oldProfiles ++ newProfiles)) appData.streamers } navKey, Cmd.none )
+
+                GotStreamerProfiles (Err err) ->
+                    ( LoggedIn { appData | streamers = RefreshData.map (ErrorWithData err) appData.streamers } navKey, Cmd.none )
+
                 GotStreamingSchedule response ->
                     case response of
                         Err err ->
@@ -340,11 +415,19 @@ update msg model =
                         Ok value ->
                             ( LoggedIn { appData | schedules = RefreshData.map (\oldSchedules -> Present (oldSchedules ++ [ value.data ])) appData.schedules } navKey, Cmd.none )
 
-                FetchStreamingSchedule userID ->
-                    ( LoggedIn { appData | schedules = RefreshData.map LoadingMore appData.schedules } navKey, fetchStreamingSchedule userID appData.signedInUser.token )
+                FetchStreamingSchedules ->
+                    ( LoggedIn { appData | schedules = RefreshData.map LoadingMore appData.schedules } navKey
+                    , Cmd.batch (List.map (\streamer -> fetchStreamingSchedule streamer.id appData.signedInUser.token) appData.selectedStreamers)
+                    )
 
                 Logout ->
                     ( NotLoggedIn Nothing navKey, Cmd.batch [ LocalStorage.removeData, revokeToken TwitchConfig.clientId appData.signedInUser.token ] )
+
+                HourlyValidation ->
+                    ( model, Cmd.map GotValidateTokenResponse (Twitch.validateToken appData.signedInUser.token) )
+
+                GotTimeZone _ ->
+                    ( model, Cmd.none )
 
         NotLoggedIn _ navKey ->
             case msg of
@@ -361,7 +444,7 @@ update msg model =
                 GotUserFollows _ ->
                     ( model, Cmd.none )
 
-                GotStreamerProfiles _ ->
+                GotStreamerProfilesForSidebar _ ->
                     ( model, Cmd.none )
 
                 StreamerListMsg _ ->
@@ -370,13 +453,22 @@ update msg model =
                 GotUserProfile _ ->
                     ( model, Cmd.none )
 
+                GotStreamerProfiles _ ->
+                    ( model, Cmd.none )
+
                 GotStreamingSchedule _ ->
                     ( model, Cmd.none )
 
-                FetchStreamingSchedule _ ->
+                FetchStreamingSchedules ->
                     ( model, Cmd.none )
 
                 Logout ->
+                    ( model, Cmd.none )
+
+                GotTimeZone _ ->
+                    ( model, Cmd.none )
+
+                HourlyValidation ->
                     ( model, Cmd.none )
 
 
@@ -393,32 +485,6 @@ handleUrlMsg msg navKey =
 
         UrlChanged ->
             Cmd.none
-
-
-errorToString : Http.Error -> String
-errorToString error =
-    let
-        networkProblem =
-            "Failed to connect to the server. Is your internet ok?"
-
-        generalProblem =
-            "There was a problem :("
-    in
-    case error of
-        Http.Timeout ->
-            networkProblem
-
-        Http.NetworkError ->
-            networkProblem
-
-        Http.BadUrl _ ->
-            generalProblem
-
-        Http.BadBody _ ->
-            generalProblem
-
-        Http.BadStatus _ ->
-            generalProblem
 
 
 view : Model -> Document Msg
@@ -492,13 +558,8 @@ loginView err =
                     ]
                 , case err of
                     Just e ->
-                        p
-                            [ css
-                                [ Tw.mt_8
-                                , Tw.text_red_500
-                                ]
-                            ]
-                            [ text (errorToString e) ]
+                        div [ css [ Tw.mt_8 ] ]
+                            [ errorView (errorToString e) ]
 
                     Nothing ->
                         text ""
@@ -542,19 +603,6 @@ loadingSpinner styles =
         []
 
 
-errorView : Maybe String -> Html Msg
-errorView error =
-    case error of
-        Just errMsg ->
-            div [ css [ Tw.modal ], class "modal-open" ]
-                [ div [ css [ Tw.modal_box, Tw.alert, Tw.alert_error ] ]
-                    [ text errMsg ]
-                ]
-
-        Nothing ->
-            text ""
-
-
 appView : AppData -> Html Msg
 appView appData =
     let
@@ -562,23 +610,42 @@ appView appData =
             RefreshData.mapTo (\_ -> identity) appData.schedules
     in
     div []
-        [ errorView appData.error
-        , headerView appData.signedInUser
+        [ headerView appData.signedInUser
         , div [ css [ Tw.flex ] ]
-            [ streamerListView appData.streamers appData.sidebarStreamerCount (List.length appData.follows > appData.sidebarStreamerCount)
+            [ Html.map (\msg -> StreamerListMsg msg)
+                (streamerListView
+                    (RefreshData.mapValue
+                        (streamersWithSelection appData.selectedStreamers)
+                        appData.streamers
+                    )
+                    appData.follows
+                    appData.sidebarStreamerCount
+                    appData.streamerFilterName
+                )
+
+            -- Content placeholder
             , div
                 [ css
                     [ Tw.bg_base_100
-                    , Tw.h_screen
                     , Tw.w_full
                     , Tw.ml_60
                     , Tw.mt_16
                     ]
                 ]
                 -- Test fetching streaming schedule
-                [ button [ css [ Tw.btn, Tw.btn_primary, Css.hover [ Tw.bg_primary_focus ] ], onClick (FetchStreamingSchedule "<INSERT ID>") ] [ text "Load schedule" ]
+                [ div []
+                    (appData.selectedStreamers
+                        |> List.map (\streamer -> text (streamer.displayName ++ " "))
+                    )
+                , button [ css [ Tw.btn, Tw.btn_primary, Css.hover [ Tw.bg_primary_focus ] ], onClick FetchStreamingSchedules ] [ text "Load schedule" ]
                 , div [ css [ Tw.text_white ] ]
-                    (List.map (\s -> p [ css [ Tw.mt_4 ] ] [ text (Debug.toString s) ]) schedules)
+                    [ div []
+                        (schedules
+                            |> List.concatMap .segments
+                            |> List.map (scheduleSegmentView appData.timeZone)
+                            |> List.map (\segView -> div [ css [ Tw.m_4 ] ] [ segView ])
+                        )
+                    ]
                 ]
             ]
         ]
@@ -594,6 +661,7 @@ headerView user =
             , Tw.fixed
             , Tw.h_16
             , Tw.w_full
+            , Tw.z_10
             ]
         ]
         [ div
@@ -616,137 +684,6 @@ headerView user =
                 , span [ css [ Tw.text_purple_400 ] ] [ text "Schedule" ]
                 ]
             , userView user
-            ]
-        ]
-
-
-streamerListView : RefreshData Http.Error (List Twitch.User) -> Int -> Bool -> Html Msg
-streamerListView streamers showCount moreAvailable =
-    let
-        streamerViews =
-            streamers
-                |> RefreshData.mapTo (\_ list -> list)
-                |> List.take showCount
-                |> List.map streamerView
-
-        linkButtonStyle =
-            css [ Tw.text_primary, Tw.underline ]
-
-        buttons =
-            div
-                [ css
-                    ([ Tw.mt_2
-                     , Tw.mx_2
-                     , Tw.flex
-                     , Tw.justify_between
-                     ]
-                        ++ (if not moreAvailable then
-                                [ Tw.flex_row_reverse ]
-
-                            else
-                                []
-                           )
-                    )
-                ]
-                [ if moreAvailable then
-                    button [ linkButtonStyle, onClick (StreamerListMsg ShowMore) ] [ text "Show more" ]
-
-                  else
-                    text ""
-                , if showCount > streamerListPageSteps then
-                    button [ linkButtonStyle, onClick (StreamerListMsg ShowLess) ] [ text "Show less" ]
-
-                  else
-                    text ""
-                ]
-
-        spinner =
-            if RefreshData.isLoading streamers then
-                loadingSpinner
-                    [ Tw.w_8
-                    , Tw.h_8
-                    , Tw.mt_2
-                    , Tw.mx_2
-                    ]
-
-            else
-                text ""
-
-        errorText =
-            RefreshData.mapTo
-                (\err _ ->
-                    case err of
-                        Just error ->
-                            div [ css [ Tw.mt_2, Tw.mx_2 ] ] [ text (errorToString error) ]
-
-                        Nothing ->
-                            text ""
-                )
-                streamers
-    in
-    div
-        [ css
-            [ Tw.bg_base_200
-            , Tw.fixed
-            , Tw.top_16
-            , Tw.bottom_0
-            , Tw.w_60
-            , Tw.overflow_y_auto
-
-            -- hide scrollbar in firefox browsers
-            , Css.property "scrollbar-width" "none"
-
-            -- hide scrollbar in chrome, edge, opera and other browsers
-            , Css.pseudoClass ":-webkit-scrollbar" [ Css.width (Css.px 0) ]
-            ]
-        ]
-        [ div
-            [ css
-                [ Tw.my_2
-                , Tw.text_sm
-                , Tw.font_medium
-                ]
-            ]
-            [ p [ css [ Tw.text_center ] ] [ text "CHANNELS YOU FOLLOW" ]
-            , div [ css [ Tw.mt_2 ] ]
-                (List.concat [ streamerViews, [ buttons, errorText, spinner ] ])
-            ]
-        ]
-
-
-streamerView : Twitch.User -> Html Msg
-streamerView streamer =
-    let
-        avatar =
-            div [ css [ Tw.avatar ] ]
-                [ div
-                    [ css
-                        [ Tw.rounded_full
-                        , Tw.w_10
-                        , Tw.h_10
-                        ]
-                    ]
-                    [ img [ src streamer.profileImageUrl ] []
-                    ]
-                ]
-    in
-    a
-        [ css
-            [ Tw.block
-            , Tw.p_1
-            , Css.hover [ Tw.bg_purple_500 ]
-            ]
-        , href ("https://twitch.tv/" ++ streamer.displayName)
-        ]
-        [ div
-            [ css
-                [ Tw.flex
-                , Tw.space_x_2
-                , Tw.items_center
-                ]
-            ]
-            [ avatar
-            , div [ css [ Tw.font_medium, Tw.truncate ] ] [ text streamer.displayName ]
             ]
         ]
 
@@ -828,18 +765,13 @@ userView user =
         ]
 
 
-streamerListPageSteps : Int
-streamerListPageSteps =
-    10
-
-
 main : Program Encode.Value Model Msg
 main =
     Browser.application
         { init = init
         , view = view
         , update = update
-        , subscriptions = \_ -> Sub.none
+        , subscriptions = \_ -> Time.every (60 * 60 * 1000) (\_ -> HourlyValidation)
         , onUrlRequest = \urlRequest -> UrlMsg (LinkClicked urlRequest)
         , onUrlChange = \_ -> UrlMsg UrlChanged
         }

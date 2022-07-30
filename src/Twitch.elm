@@ -1,8 +1,9 @@
-module Twitch exposing (Category, ClientID(..), FollowRelation, PaginatedResponse, Schedule, Segment, Token(..), User, ValidateTokenResponse, accessTokenFromUrl, decodeCategory, decodeFollowRelation, decodeListHead, decodePaginated, decodeSchedule, decodeSegment, decodeUser, decodeValidateTokenResponse, getStreamingSchedule, getTokenValue, getUser, getUserFollows, getUsers, loginFlowUrl, revokeToken, toFormData, validateToken)
+module Twitch exposing (Category, ClientID(..), FollowRelation, PaginatedResponse, Schedule, Segment, Token(..), User, ValidateTokenResponse, accessTokenFromUrl, boxArtUrl, decodeCategory, decodeFollowRelation, decodeListHead, decodePaginated, decodeSchedule, decodeSegment, decodeUser, decodeValidateTokenResponse, getStreamingSchedule, getTokenValue, getUser, getUserFollows, getUsers, loginFlowUrl, revokeToken, toFormData, validateToken)
 
 import Http
 import Json.Decode as Decode
 import Maybe exposing (andThen)
+import RFC3339 exposing (decodeTimestamp)
 import Url
 import Url.Builder
 
@@ -96,10 +97,10 @@ type alias Schedule =
 
 
 type alias Segment =
-    { startTime : String
-    , endTime : String
+    { startTime : RFC3339.DateTime
+    , endTime : RFC3339.DateTime
     , title : String
-    , canceledUntil : Maybe String
+    , canceledUntil : Maybe RFC3339.DateTime
     , category : Maybe Category
     , isRecurring : Bool
     }
@@ -107,22 +108,29 @@ type alias Segment =
 
 type alias Category =
     { name : String
+    , id : String
     }
 
 
 decodeCategory : Decode.Decoder Category
 decodeCategory =
-    Decode.map Category
+    Decode.map2 Category
         (Decode.field "name" Decode.string)
+        (Decode.field "id" Decode.string)
+
+
+boxArtUrl : Category -> Int -> Int -> String
+boxArtUrl { id } width height =
+    "https://static-cdn.jtvnw.net/ttv-boxart/" ++ id ++ "-" ++ String.fromInt width ++ "x" ++ String.fromInt height ++ ".jpg"
 
 
 decodeSegment : Decode.Decoder Segment
 decodeSegment =
     Decode.map6 Segment
-        (Decode.field "start_time" Decode.string)
-        (Decode.field "end_time" Decode.string)
+        (Decode.field "start_time" decodeTimestamp)
+        (Decode.field "end_time" decodeTimestamp)
         (Decode.field "title" Decode.string)
-        (Decode.maybe (Decode.field "canceled_until" Decode.string))
+        (Decode.maybe (Decode.field "canceled_until" decodeTimestamp))
         (Decode.maybe (Decode.field "category" decodeCategory))
         (Decode.field "is_recurring" Decode.bool)
 
@@ -169,18 +177,20 @@ type alias FollowRelation =
     , fromName : String
     , toID : String
     , toName : String
+    , toLogin : String
     , followedAt : String
     }
 
 
 decodeFollowRelation : Decode.Decoder FollowRelation
 decodeFollowRelation =
-    Decode.map6 FollowRelation
+    Decode.map7 FollowRelation
         (Decode.field "from_id" Decode.string)
         (Decode.field "from_login" Decode.string)
         (Decode.field "from_name" Decode.string)
         (Decode.field "to_id" Decode.string)
         (Decode.field "to_name" Decode.string)
+        (Decode.field "to_login" Decode.string)
         (Decode.field "followed_at" Decode.string)
 
 
@@ -225,15 +235,17 @@ type alias User =
     { id : String
     , displayName : String
     , profileImageUrl : String
+    , loginName : String
     }
 
 
 decodeUser : Decode.Decoder User
 decodeUser =
-    Decode.map3 User
+    Decode.map4 User
         (Decode.field "id" Decode.string)
         (Decode.field "display_name" Decode.string)
         (Decode.field "profile_image_url" Decode.string)
+        (Decode.field "login" Decode.string)
 
 
 
