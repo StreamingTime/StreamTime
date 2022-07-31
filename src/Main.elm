@@ -4,6 +4,7 @@ import Browser exposing (Document)
 import Browser.Navigation as Nav
 import Css
 import Css.Global
+import Error exposing (Error(..))
 import Html.Styled as Html exposing (Html, a, button, div, h1, img, li, p, span, text, toUnstyled, ul)
 import Html.Styled.Attributes exposing (alt, class, classList, css, href, src, style, tabindex)
 import Html.Styled.Events exposing (onClick)
@@ -18,7 +19,7 @@ import Time
 import Twitch
 import TwitchConfig
 import Url
-import Utils exposing (errorToString, filterFollowsByLogin, missingProfileLogins, streamersWithSelection)
+import Utils exposing (filterFollowsByLogin, missingProfileLogins, streamersWithSelection)
 import Views.ScheduleSegment exposing (scheduleSegmentView)
 import Views.StreamerList exposing (StreamerListMsg(..), streamerListPageSteps, streamerListView)
 
@@ -44,7 +45,7 @@ type alias AppData =
     , streamerFilterName : Maybe String
     , selectedStreamers : List Twitch.User
     , error : Maybe String
-    , schedules : RefreshData Http.Error (List Twitch.Schedule)
+    , schedules : RefreshData Error (List Twitch.Schedule)
     , timeZone : Time.Zone
     }
 
@@ -81,7 +82,7 @@ type Msg
     | GotStreamerProfilesForSidebar (Result Http.Error (List Twitch.User))
     | GotStreamerProfiles (Result Http.Error (List Twitch.User))
     | GotUserProfile (Result Http.Error Twitch.User)
-    | GotStreamingSchedule (Result Http.Error Twitch.Schedule)
+    | GotStreamingSchedule (Result Error Twitch.Schedule)
     | FetchStreamingSchedules
     | StreamerListMsg StreamerListMsg
     | Logout
@@ -168,7 +169,7 @@ fetchStreamingSchedule userID timeZone token =
 
         -- Fetch the next page until a) we got all segments that start before endTime or b) there are no pages left
         -- scheduleAcc is used to accumulate schedule entries
-        fetchMore : Time.Posix -> Maybe String -> Twitch.Schedule -> Task.Task Http.Error Twitch.Schedule
+        fetchMore : Time.Posix -> Maybe String -> Twitch.Schedule -> Task.Task Error Twitch.Schedule
         fetchMore endTime currentCursor scheduleAcc =
             Task.andThen
                 (\result ->
@@ -186,7 +187,7 @@ fetchStreamingSchedule userID timeZone token =
                 (Twitch.getStreamingSchedule userID timeZone Nothing currentCursor TwitchConfig.clientId token)
 
         {- fetch the first page (and more if needed) -}
-        startFetching : Time.Posix -> Task.Task Http.Error Twitch.Schedule
+        startFetching : Time.Posix -> Task.Task Error Twitch.Schedule
         startFetching endTime =
             Twitch.getStreamingSchedule userID timeZone Nothing Nothing TwitchConfig.clientId token
                 |> Task.andThen
@@ -607,7 +608,7 @@ loginView err =
                                 , Tw.text_red_500
                                 ]
                             ]
-                            [ text (errorToString e) ]
+                            [ text (Error.httpErrorToString e) ]
 
                     Nothing ->
                         text ""
@@ -701,7 +702,17 @@ appView appData =
                     )
                 , button [ css [ Tw.btn, Tw.btn_primary, Css.hover [ Tw.bg_primary_focus ] ], onClick FetchStreamingSchedules ] [ text "Load schedule" ]
                 , div [ css [ Tw.text_white ] ]
-                    [ div []
+                    [ case appData.schedules of
+                        -- 
+                        RefreshData.ErrorWithData (HttpError (Http.BadStatus 404)) _ ->
+                            text ""
+
+                        RefreshData.ErrorWithData error _ ->
+                            errorView (Just (Error.toString error))
+
+                        _ ->
+                            text ""
+                    , div []
                         (schedules
                             |> List.concatMap .segments
                             |> List.map (scheduleSegmentView appData.timeZone)

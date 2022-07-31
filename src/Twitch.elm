@@ -1,5 +1,6 @@
 module Twitch exposing (Category, ClientID(..), FollowRelation, PaginatedResponse, Schedule, Segment, Token(..), User, ValidateTokenResponse, accessTokenFromUrl, boxArtUrl, decodeCategory, decodeFollowRelation, decodeListHead, decodePaginated, decodeSchedule, decodeSegment, decodeUser, decodeValidateTokenResponse, getStreamingSchedule, getTokenValue, getUser, getUserFollows, getUsers, loginFlowUrl, revokeToken, toFormData, validateToken)
 
+import Error exposing (Error(..))
 import FormatTime
 import Http
 import Json.Decode as Decode
@@ -150,50 +151,47 @@ decodeSchedule =
 {- https://dev.twitch.tv/docs/api/reference#get-channel-stream-schedule -}
 
 
-getStreamingSchedule : String -> Time.Zone -> Maybe Time.Posix -> Maybe String -> ClientID -> Token -> Task.Task Http.Error (PaginatedResponse Schedule)
+getStreamingSchedule : String -> Time.Zone -> Maybe Time.Posix -> Maybe String -> ClientID -> Token -> Task.Task Error (PaginatedResponse Schedule)
 getStreamingSchedule userID timeZone startTime cursor (ClientID clientID) (Token token) =
     let
-        startTimeParam =
-            case startTime of
-                Just time ->
-                    case FormatTime.asRFC3339 timeZone time of
-                        Ok formatted ->
-                            [ Url.Builder.string "start_time" formatted ]
-
-                        Err _ ->
-                            Debug.todo "error"
-
-                Nothing ->
-                    []
-
         params =
             [ Url.Builder.string "broadcaster_id" userID
             , Url.Builder.int "first" 25
             ]
-                ++ startTimeParam
+                ++ (case cursor of
+                        Just c ->
+                            [ Url.Builder.string "after" c ]
 
-        u =
+                        Nothing ->
+                            []
+                   )
+
+        requestUrlWithoutParams =
             apiUrlBuilder [ "schedule" ]
-                (case cursor of
-                    Just c ->
-                        -- pagination
-                        Url.Builder.string "after" c :: params
 
-                    Nothing ->
-                        params
-                )
+        request =
+            { method = "GET"
+            , headers =
+                [ Http.header "Authorization" ("Bearer " ++ token)
+                , Http.header "Client-Id" clientID
+                ]
+            , url = requestUrlWithoutParams params
+            , body = Http.emptyBody
+            , resolver = Http.stringResolver <| handleJsonResponse <| decodePaginated decodeSchedule
+            , timeout = Nothing
+            }
     in
-    Http.task
-        { method = "GET"
-        , headers =
-            [ Http.header "Authorization" ("Bearer " ++ token)
-            , Http.header "Client-Id" clientID
-            ]
-        , url = u
-        , body = Http.emptyBody
-        , resolver = Http.stringResolver <| handleJsonResponse <| decodePaginated decodeSchedule
-        , timeout = Nothing
-        }
+    case startTime of
+        Nothing ->
+            Task.mapError HttpError (Http.task request)
+
+        Just time ->
+            case FormatTime.asRFC3339 timeZone time of
+                Ok t ->
+                    Task.mapError HttpError (Http.task { request | url = requestUrlWithoutParams (params ++ [ Url.Builder.string "start_time" t ]) })
+
+                Err _ ->
+                    Task.mapError StringError (Task.fail "failed to format start time")
 
 
 

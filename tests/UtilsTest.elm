@@ -2,7 +2,6 @@ module UtilsTest exposing (concatMaybeListTest, filterFollowsByLoginTest, missin
 
 import Expect
 import FormatTime
-import RFC3339
 import Test exposing (Test, describe, test)
 import Time
 import Twitch
