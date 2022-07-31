@@ -1,4 +1,4 @@
-module TwitchTest exposing (accessTokenFromUrlTest, decodeCategoryTest, decodeFollowRelationTest, decodeListHeadTest, decodePaginatedTest, decodeScheduleTest, decodeSegmentTest, decodeUserTest, decodeValidateTokenResponseTest, toFormDataTest)
+module TwitchTest exposing (accessTokenFromUrlTest, clientIDTest, decodeCategoryTest, decodeFollowRelationTest, decodeListHeadTest, decodePaginatedTest, decodeScheduleTest, decodeSegmentTest, decodeUserTest, decodeValidateTokenResponseTest, toFormDataTest)
 
 import Expect
 import Json.Decode as Decode
@@ -6,6 +6,23 @@ import RFC3339 exposing (zulu)
 import Test exposing (Test, describe, test)
 import Twitch
 import Url
+
+
+
+{- We need this test in order to satisfy elm-review. Otherwise elm-review throws an error,
+   because type constructor ClientID is not used. We use the constructor in the TwitchConfig.elm
+   file, but this file is not tracked by git. This means the constructor is only used locally.
+-}
+
+
+clientIDTest : Test
+clientIDTest =
+    test "test twitch client id"
+        (\_ ->
+            Expect.equal
+                (Twitch.ClientID "xyz")
+                (Twitch.ClientID "xyz")
+        )
 
 
 decodeValidateTokenResponseTest : Test
@@ -198,7 +215,7 @@ decodeCategoryTest =
     test "decode category"
         (\_ ->
             Expect.equal
-                (Ok { name = "Science & Technology", id = "509670"})
+                (Ok { name = "Science & Technology", id = "509670" })
                 (Decode.decodeString Twitch.decodeCategory "{ \"id\": \"509670\", \"name\": \"Science & Technology\"}")
         )
 
@@ -289,7 +306,7 @@ decodeSegmentTest =
                                     }
                                 , offset = zulu
                                 }
-                        , category = Just { name = "Science & Technology", id = "509670"  }
+                        , category = Just { name = "Science & Technology", id = "509670" }
                         , isRecurring = False
                         }
                     )

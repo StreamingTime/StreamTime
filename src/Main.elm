@@ -2,6 +2,7 @@ module Main exposing (main)
 
 import Browser exposing (Document)
 import Browser.Navigation as Nav
+import Components exposing (errorView)
 import Css
 import Css.Global
 import Error exposing (Error(..))
@@ -19,7 +20,8 @@ import Time
 import Twitch
 import TwitchConfig
 import Url
-import Utils exposing (filterFollowsByLogin, missingProfileLogins, streamersWithSelection)
+import Utils exposing ( filterFollowsByLogin, findUserByID, missingProfileLogins, streamersWithSelection)
+
 import Views.ScheduleSegment exposing (scheduleSegmentView)
 import Views.StreamerList exposing (StreamerListMsg(..), streamerListPageSteps, streamerListView)
 
@@ -44,7 +46,6 @@ type alias AppData =
     , sidebarStreamerCount : Int
     , streamerFilterName : Maybe String
     , selectedStreamers : List Twitch.User
-    , error : Maybe String
     , schedules : RefreshData Error (List Twitch.Schedule)
     , timeZone : Time.Zone
     }
@@ -87,6 +88,7 @@ type Msg
     | StreamerListMsg StreamerListMsg
     | Logout
     | GotTimeZone Time.Zone
+    | HourlyValidation
 
 
 type UrlMsg
@@ -294,7 +296,6 @@ update msg model =
                                 -- TOOD: sidebarStreamerCount should depend on the number of streamers loaded
                                 , sidebarStreamerCount = streamerListPageSteps
                                 , selectedStreamers = []
-                                , error = Nothing
                                 , streamerFilterName = Nothing
                                 , schedules = LoadingMore []
                                 , timeZone = Maybe.withDefault Time.utc m.timeZone
@@ -352,12 +353,18 @@ update msg model =
                 Logout ->
                     ( model, Cmd.none )
 
+                HourlyValidation ->
+                    ( model, Cmd.none )
+
         LoggedIn appData navKey ->
             case msg of
                 UrlMsg urlMsg ->
                     ( LoggedIn appData navKey, handleUrlMsg urlMsg navKey )
 
-                GotValidateTokenResponse _ ->
+                GotValidateTokenResponse (Err err) ->
+                    ( NotLoggedIn (Just err) navKey, Cmd.none )
+
+                GotValidateTokenResponse (Ok _) ->
                     ( model, Cmd.none )
 
                 GotRevokeTokenResponse ->
@@ -473,6 +480,9 @@ update msg model =
                 Logout ->
                     ( NotLoggedIn Nothing navKey, Cmd.batch [ LocalStorage.removeData, revokeToken TwitchConfig.clientId appData.signedInUser.token ] )
 
+                HourlyValidation ->
+                    ( model, Cmd.map GotValidateTokenResponse (Twitch.validateToken appData.signedInUser.token) )
+
                 GotTimeZone _ ->
                     ( model, Cmd.none )
 
@@ -513,6 +523,9 @@ update msg model =
                     ( model, Cmd.none )
 
                 GotTimeZone _ ->
+                    ( model, Cmd.none )
+
+                HourlyValidation ->
                     ( model, Cmd.none )
 
 
@@ -602,13 +615,10 @@ loginView err =
                     ]
                 , case err of
                     Just e ->
-                        p
-                            [ css
-                                [ Tw.mt_8
-                                , Tw.text_red_500
-                                ]
-                            ]
-                            [ text (Error.httpErrorToString e) ]
+
+                        div [ css [ Tw.mt_8 ] ]
+                            [ errorView (Error.httpErrorToString e) ]
+
 
                     Nothing ->
                         text ""
@@ -652,19 +662,6 @@ loadingSpinner styles =
         []
 
 
-errorView : Maybe String -> Html Msg
-errorView error =
-    case error of
-        Just errMsg ->
-            div [ css [ Tw.modal ], class "modal-open" ]
-                [ div [ css [ Tw.modal_box, Tw.alert, Tw.alert_error ] ]
-                    [ text errMsg ]
-                ]
-
-        Nothing ->
-            text ""
-
-
 appView : AppData -> Html Msg
 appView appData =
     let
@@ -672,8 +669,7 @@ appView appData =
             RefreshData.mapTo (\_ -> identity) appData.schedules
     in
     div []
-        [ errorView appData.error
-        , headerView appData.signedInUser
+        [ headerView appData.signedInUser
         , div [ css [ Tw.flex ] ]
             [ Html.map (\msg -> StreamerListMsg msg)
                 (streamerListView
@@ -708,14 +704,23 @@ appView appData =
                             text ""
 
                         RefreshData.ErrorWithData error _ ->
-                            errorView (Just (Error.toString error))
+                            errorView ((Error.toString error))
 
                         _ ->
                             text ""
                     , div []
                         (schedules
-                            |> List.concatMap .segments
-                            |> List.map (scheduleSegmentView appData.timeZone)
+                            |> List.map (\schedule -> ( schedule.broadcasterId, schedule.segments ))
+                            |> List.filterMap
+                                (\( userID, segments ) ->
+                                    case findUserByID userID (RefreshData.mapTo (\_ v -> v) appData.streamers) of
+                                        Just user ->
+                                            Just (List.map (scheduleSegmentView appData.timeZone user) segments)
+
+                                        Nothing ->
+                                            Nothing
+                                )
+                            |> List.concat
                             |> List.map (\segView -> div [ css [ Tw.m_4 ] ] [ segView ])
                         )
                     ]
@@ -844,7 +849,7 @@ main =
         { init = init
         , view = view
         , update = update
-        , subscriptions = \_ -> Sub.none
+        , subscriptions = \_ -> Time.every (60 * 60 * 1000) (\_ -> HourlyValidation)
         , onUrlRequest = \urlRequest -> UrlMsg (LinkClicked urlRequest)
         , onUrlChange = \_ -> UrlMsg UrlChanged
         }
