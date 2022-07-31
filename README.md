@@ -1,5 +1,12 @@
 # Abschlussprojekt
 
+## Prerequisites
+
+Follow [this](https://dev.twitch.tv/docs/authentication/register-app) instruction in order to register a Twitch application.
+Set OAuth Redirect URL to `http://localhost:8000` and capture your Client ID.
+
+Create a `TwitchConfig.elm` file with your Client ID in `src/`. We recommend to use `TwitchConfig.elm.example` as a template.
+
 ## Build
 
 ```
