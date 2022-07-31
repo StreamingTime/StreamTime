@@ -10,8 +10,8 @@ import Time
 import Twitch
 
 
-scheduleSegmentView : Time.Zone -> Twitch.Segment -> Html msg
-scheduleSegmentView zone { title, startTime, endTime, category, isRecurring, canceledUntil } =
+scheduleSegmentView : Time.Zone -> Twitch.User -> Twitch.Segment -> Html msg
+scheduleSegmentView zone { displayName, profileImageUrl } { title, startTime, endTime, category, isRecurring, canceledUntil } =
     let
         strikeIfCanceled =
             case canceledUntil of
@@ -114,11 +114,34 @@ scheduleSegmentView zone { title, startTime, endTime, category, isRecurring, can
 
                 Nothing ->
                     text ""
+
+        avatar =
+            div [ css [ Tw.avatar, Tw.flex, Tw.items_center ] ]
+                [ div
+                    [ css
+                        [ Tw.rounded_full
+                        , Tw.w_10
+                        , Tw.h_10
+                        , Tw.m_2
+                        ]
+                    ]
+                    [ img
+                        [ src profileImageUrl
+                        , alt displayName
+                        , css
+                            [ Tw.flex
+                            , Tw.content_center
+                            ]
+                        ]
+                        []
+                    ]
+                ]
     in
     div
         [ css [ Tw.rounded, Tw.bg_base_300, Tw.flex, Tw.justify_between ]
         ]
-        [ div [ css [ Tw.flex, Tw.justify_center, Tw.flex_col ] ]
+        [ avatar
+        , div [ css [ Tw.flex, Tw.justify_center, Tw.flex_col, Tw.flex_grow ] ]
             [ titleView
             , div [ css [ Tw.flex ] ]
                 [ canceledInfoView
