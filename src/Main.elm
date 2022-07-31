@@ -156,8 +156,15 @@ fetchStreamingSchedule userID timeZone token =
         -- get all segments that start before endTime
         beforeEndTime : Time.Posix -> List Twitch.Segment -> List Twitch.Segment
         beforeEndTime endTime =
-            -- TODO: time error handling
-            List.filter (\segment -> Time.posixToMillis (Maybe.withDefault (Time.millisToPosix 0) (RFC3339.toPosix segment.startTime)) <= Time.posixToMillis endTime)
+            List.filter
+                (\segment ->
+                    case RFC3339.toPosix segment.startTime of
+                        Just startTime ->
+                            Time.posixToMillis startTime <= Time.posixToMillis endTime
+
+                        Nothing ->
+                            False
+                )
 
         -- Fetch the next page until a) we got all segments that start before endTime or b) there are no pages left
         -- scheduleAcc is used to accumulate schedule entries
