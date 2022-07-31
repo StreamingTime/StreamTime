@@ -97,9 +97,7 @@ streamerListView streamersData follows showCount filterString =
                 (\err _ ->
                     case err of
                         Just error ->
-
                             div [ css [ Tw.mt_2, Tw.mx_2 ] ] [ errorView (Error.httpErrorToString error) ]
-
 
                         Nothing ->
                             text ""

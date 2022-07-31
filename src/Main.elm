@@ -20,8 +20,7 @@ import Time
 import Twitch
 import TwitchConfig
 import Url
-import Utils exposing ( filterFollowsByLogin, findUserByID, missingProfileLogins, streamersWithSelection)
-
+import Utils exposing (filterFollowsByLogin, findUserByID, missingProfileLogins, streamersWithSelection)
 import Views.ScheduleSegment exposing (scheduleSegmentView)
 import Views.StreamerList exposing (StreamerListMsg(..), streamerListPageSteps, streamerListView)
 
@@ -615,10 +614,8 @@ loginView err =
                     ]
                 , case err of
                     Just e ->
-
                         div [ css [ Tw.mt_8 ] ]
                             [ errorView (Error.httpErrorToString e) ]
-
 
                     Nothing ->
                         text ""
@@ -699,12 +696,12 @@ appView appData =
                 , button [ css [ Tw.btn, Tw.btn_primary, Css.hover [ Tw.bg_primary_focus ] ], onClick FetchStreamingSchedules ] [ text "Load schedule" ]
                 , div [ css [ Tw.text_white ] ]
                     [ case appData.schedules of
-                        -- 
+                        --
                         RefreshData.ErrorWithData (HttpError (Http.BadStatus 404)) _ ->
                             text ""
 
                         RefreshData.ErrorWithData error _ ->
-                            errorView ((Error.toString error))
+                            errorView (Error.toString error)
 
                         _ ->
                             text ""
