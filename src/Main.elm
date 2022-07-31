@@ -178,10 +178,9 @@ fetchStreamingSchedule userID timeZone token =
                                 Task.succeed { scheduleAcc | segments = scheduleAcc.segments ++ beforeEndTime endTime result.data.segments }
 
                             else
-                                fetchMore endTime result.cursor { scheduleAcc | segments = scheduleAcc.segments ++ result.data.segments }
+                                fetchMore endTime result.cursor { scheduleAcc | segments = scheduleAcc.segments ++ beforeEndTime endTime result.data.segments }
 
                         Nothing ->
-                            -- TODO: maybe return only segments within our time frame
                             Task.succeed scheduleAcc
                 )
                 (Twitch.getStreamingSchedule userID timeZone Nothing currentCursor TwitchConfig.clientId token)
@@ -191,18 +190,17 @@ fetchStreamingSchedule userID timeZone token =
         startFetching endTime =
             Twitch.getStreamingSchedule userID timeZone Nothing Nothing TwitchConfig.clientId token
                 |> Task.andThen
-                    (\result ->
-                        case result.cursor of
+                    (\{ cursor, data } ->
+                        case cursor of
                             Just _ ->
-                                if List.length (beforeEndTime endTime result.data.segments) < List.length result.data.segments then
-                                    Task.succeed result.data
+                                if List.length (beforeEndTime endTime data.segments) < List.length data.segments then
+                                    Task.succeed { data | segments = beforeEndTime endTime data.segments }
 
                                 else
-                                    fetchMore endTime result.cursor result.data
+                                    fetchMore endTime cursor data
 
                             Nothing ->
-                                -- TODO: maybe return only segments within our time frame
-                                Task.succeed result.data
+                                Task.succeed data
                     )
     in
     Time.now
