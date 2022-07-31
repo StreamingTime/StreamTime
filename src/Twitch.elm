@@ -168,9 +168,7 @@ getStreamingSchedule userID timeZone startTime cursor (ClientID clientID) (Token
 
         params =
             [ Url.Builder.string "broadcaster_id" userID
-
-            -- limit page size for testing
-            , Url.Builder.int "first" 2
+            , Url.Builder.int "first" 25
             ]
                 ++ startTimeParam
 
