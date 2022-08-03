@@ -710,12 +710,8 @@ appView appData =
                             |> List.map (\schedule -> ( schedule.broadcasterId, schedule.segments ))
                             |> List.filterMap
                                 (\( userID, segments ) ->
-                                    case findUserByID userID (RefreshData.mapTo (\_ v -> v) appData.streamers) of
-                                        Just user ->
-                                            Just (List.map (scheduleSegmentView appData.timeZone user) segments)
-
-                                        Nothing ->
-                                            Nothing
+                                    findUserByID userID (RefreshData.mapTo (\_ v -> v) appData.streamers)
+                                        |> Maybe.andThen (\user -> Just (List.map (scheduleSegmentView appData.timeZone user) segments))
                                 )
                             |> List.concat
                             |> List.map (\segView -> div [ css [ Tw.m_4 ] ] [ segView ])
