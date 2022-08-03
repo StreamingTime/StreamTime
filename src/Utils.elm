@@ -1,6 +1,6 @@
-module Utils exposing (concatMaybeList, errorToString, filterFollowsByLogin, findUserByID, missingProfileLogins, streamersWithSelection)
+module Utils exposing (concatMaybeList, filterFollowsByLogin, findUserByID, missingProfileLogins, streamersWithSelection, timeInOneWeek)
 
-import Http
+import Time
 import Twitch
 
 
@@ -58,33 +58,13 @@ streamersWithSelection selected users =
         |> List.map (\u -> ( u, List.any ((==) u) selected ))
 
 
-errorToString : Http.Error -> String
-errorToString error =
-    let
-        networkProblem =
-            "Failed to connect to the server."
-
-        generalProblem =
-            "There was a problem :("
-    in
-    case error of
-        Http.Timeout ->
-            networkProblem
-
-        Http.NetworkError ->
-            networkProblem
-
-        Http.BadUrl _ ->
-            generalProblem
-
-        Http.BadBody _ ->
-            generalProblem
-
-        Http.BadStatus 401 ->
-            "Invalid access token"
-
-        Http.BadStatus _ ->
-            generalProblem
+timeInOneWeek : Time.Posix -> Time.Posix
+timeInOneWeek time =
+    time
+        |> Time.posixToMillis
+        -- 60 seconds * 60 minutes * 24 hours * 7 days (in ms)
+        |> (+) (60 * 60 * 24 * 7 * 1000)
+        |> Time.millisToPosix
 
 
 findUserByID : String -> List Twitch.User -> Maybe Twitch.User

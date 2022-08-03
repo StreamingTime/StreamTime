@@ -5,12 +5,14 @@ import Browser.Navigation as Nav
 import Components exposing (errorView)
 import Css
 import Css.Global
+import Error exposing (Error(..))
 import Html.Styled as Html exposing (Html, a, button, div, h1, img, li, p, span, text, toUnstyled, ul)
 import Html.Styled.Attributes exposing (alt, class, classList, css, href, src, style, tabindex)
 import Html.Styled.Events exposing (onClick)
 import Http
 import Json.Encode as Encode
 import LocalStorage
+import RFC3339
 import RefreshData exposing (RefreshData(..))
 import Tailwind.Utilities as Tw
 import Task
@@ -18,7 +20,7 @@ import Time
 import Twitch
 import TwitchConfig
 import Url
-import Utils exposing (errorToString, filterFollowsByLogin, findUserByID, missingProfileLogins, streamersWithSelection)
+import Utils exposing (filterFollowsByLogin, findUserByID, missingProfileLogins, streamersWithSelection)
 import Views.ScheduleSegment exposing (scheduleSegmentView)
 import Views.StreamerList exposing (StreamerListMsg(..), streamerListPageSteps, streamerListView)
 
@@ -43,7 +45,7 @@ type alias AppData =
     , sidebarStreamerCount : Int
     , streamerFilterName : Maybe String
     , selectedStreamers : List Twitch.User
-    , schedules : RefreshData Http.Error (List Twitch.Schedule)
+    , schedules : RefreshData Error (List Twitch.Schedule)
     , timeZone : Time.Zone
     }
 
@@ -80,7 +82,7 @@ type Msg
     | GotStreamerProfilesForSidebar (Result Http.Error (List Twitch.User))
     | GotStreamerProfiles (Result Http.Error (List Twitch.User))
     | GotUserProfile (Result Http.Error Twitch.User)
-    | GotStreamingSchedule (Result Http.Error (Twitch.PaginatedResponse Twitch.Schedule))
+    | GotStreamingSchedule (Result Error Twitch.Schedule)
     | FetchStreamingSchedules
     | StreamerListMsg StreamerListMsg
     | Logout
@@ -150,9 +152,63 @@ fetchUserProfile userID token =
     Cmd.map GotUserProfile (Twitch.getUser userID TwitchConfig.clientId token)
 
 
-fetchStreamingSchedule : String -> Twitch.Token -> Cmd Msg
-fetchStreamingSchedule userID token =
-    Cmd.map GotStreamingSchedule (Twitch.getStreamingSchedule userID Nothing TwitchConfig.clientId token)
+fetchStreamingSchedule : String -> Time.Zone -> Twitch.Token -> Cmd Msg
+fetchStreamingSchedule userID timeZone token =
+    let
+        -- get all segments that start before endTime
+        beforeEndTime : Time.Posix -> List Twitch.Segment -> List Twitch.Segment
+        beforeEndTime endTime =
+            List.filter
+                (\segment ->
+                    case RFC3339.toPosix segment.startTime of
+                        Just startTime ->
+                            Time.posixToMillis startTime <= Time.posixToMillis endTime
+
+                        Nothing ->
+                            False
+                )
+
+        -- Fetch the next page until a) we got all segments that start before endTime or b) there are no pages left
+        -- scheduleAcc is used to accumulate schedule entries
+        fetchMore : Time.Posix -> Maybe String -> Twitch.Schedule -> Task.Task Error Twitch.Schedule
+        fetchMore endTime currentCursor scheduleAcc =
+            Task.andThen
+                (\result ->
+                    case result.cursor of
+                        Just _ ->
+                            if List.length (beforeEndTime endTime result.data.segments) < List.length result.data.segments then
+                                Task.succeed { scheduleAcc | segments = scheduleAcc.segments ++ beforeEndTime endTime result.data.segments }
+
+                            else
+                                fetchMore endTime result.cursor { scheduleAcc | segments = scheduleAcc.segments ++ beforeEndTime endTime result.data.segments }
+
+                        Nothing ->
+                            Task.succeed scheduleAcc
+                )
+                (Twitch.getStreamingSchedule userID timeZone Nothing currentCursor TwitchConfig.clientId token)
+
+        {- fetch the first page (and more if needed) -}
+        startFetching : Time.Posix -> Task.Task Error Twitch.Schedule
+        startFetching endTime =
+            Twitch.getStreamingSchedule userID timeZone Nothing Nothing TwitchConfig.clientId token
+                |> Task.andThen
+                    (\{ cursor, data } ->
+                        case cursor of
+                            Just _ ->
+                                if List.length (beforeEndTime endTime data.segments) < List.length data.segments then
+                                    Task.succeed { data | segments = beforeEndTime endTime data.segments }
+
+                                else
+                                    fetchMore endTime cursor data
+
+                            Nothing ->
+                                Task.succeed data
+                    )
+    in
+    Time.now
+        |> Task.andThen (\now -> startFetching (Utils.timeInOneWeek now))
+        |> Task.attempt
+            GotStreamingSchedule
 
 
 getTimeZone : Cmd Msg
@@ -413,11 +469,11 @@ update msg model =
                             ( LoggedIn { appData | schedules = RefreshData.map (ErrorWithData err) appData.schedules } navKey, Cmd.none )
 
                         Ok value ->
-                            ( LoggedIn { appData | schedules = RefreshData.map (\oldSchedules -> Present (oldSchedules ++ [ value.data ])) appData.schedules } navKey, Cmd.none )
+                            ( LoggedIn { appData | schedules = RefreshData.map (\oldSchedules -> Present (oldSchedules ++ [ value ])) appData.schedules } navKey, Cmd.none )
 
                 FetchStreamingSchedules ->
                     ( LoggedIn { appData | schedules = RefreshData.map LoadingMore appData.schedules } navKey
-                    , Cmd.batch (List.map (\streamer -> fetchStreamingSchedule streamer.id appData.signedInUser.token) appData.selectedStreamers)
+                    , Cmd.batch (List.map (\streamer -> fetchStreamingSchedule streamer.id appData.timeZone appData.signedInUser.token) appData.selectedStreamers)
                     )
 
                 Logout ->
@@ -559,7 +615,7 @@ loginView err =
                 , case err of
                     Just e ->
                         div [ css [ Tw.mt_8 ] ]
-                            [ errorView (errorToString e) ]
+                            [ errorView (Error.httpErrorToString e) ]
 
                     Nothing ->
                         text ""
@@ -639,17 +695,23 @@ appView appData =
                     )
                 , button [ css [ Tw.btn, Tw.btn_primary, Css.hover [ Tw.bg_primary_focus ] ], onClick FetchStreamingSchedules ] [ text "Load schedule" ]
                 , div [ css [ Tw.text_white ] ]
-                    [ div []
+                    [ case appData.schedules of
+                        --
+                        RefreshData.ErrorWithData (HttpError (Http.BadStatus 404)) _ ->
+                            text ""
+
+                        RefreshData.ErrorWithData error _ ->
+                            errorView (Error.toString error)
+
+                        _ ->
+                            text ""
+                    , div []
                         (schedules
                             |> List.map (\schedule -> ( schedule.broadcasterId, schedule.segments ))
                             |> List.filterMap
                                 (\( userID, segments ) ->
-                                    case findUserByID userID (RefreshData.mapTo (\_ v -> v) appData.streamers) of
-                                        Just user ->
-                                            Just (List.map (scheduleSegmentView appData.timeZone user) segments)
-
-                                        Nothing ->
-                                            Nothing
+                                    findUserByID userID (RefreshData.mapTo (\_ v -> v) appData.streamers)
+                                        |> Maybe.map (\user -> List.map (scheduleSegmentView appData.timeZone user) segments)
                                 )
                             |> List.concat
                             |> List.map (\segView -> div [ css [ Tw.m_4 ] ] [ segView ])

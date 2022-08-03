@@ -1,4 +1,4 @@
-module FormatTime exposing (format, zeroPadInt)
+module FormatTime exposing (asRFC3339, format, zeroPadInt)
 
 import Parser exposing ((|.), (|=), Parser, Step(..), andThen, chompUntilEndOr, getChompedString, loop, map, oneOf, problem, succeed, token)
 import Time
@@ -76,7 +76,7 @@ offsetToString : Time.Zone -> String
 offsetToString zone =
     let
         operator =
-            if hours > 0 then
+            if hours >= 0 && minutes >= 0 then
                 "+"
 
             else
@@ -183,3 +183,8 @@ format : String -> Time.Zone -> Time.Posix -> Result (List Parser.DeadEnd) Strin
 format formatString zone posix =
     Parser.run parseFormatItems formatString
         |> Result.map (\items -> formatItemsToSring items zone posix)
+
+
+asRFC3339 : Time.Zone -> Time.Posix -> Result (List Parser.DeadEnd) String
+asRFC3339 =
+    format "%YYYY-%MM-%DDT%hh:%mm:%ss%TZ"

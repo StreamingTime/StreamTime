@@ -1,9 +1,13 @@
 module Twitch exposing (Category, ClientID(..), FollowRelation, PaginatedResponse, Schedule, Segment, Token(..), User, ValidateTokenResponse, accessTokenFromUrl, boxArtUrl, decodeCategory, decodeFollowRelation, decodeListHead, decodePaginated, decodeSchedule, decodeSegment, decodeUser, decodeValidateTokenResponse, getStreamingSchedule, getTokenValue, getUser, getUserFollows, getUsers, loginFlowUrl, revokeToken, toFormData, validateToken)
 
+import Error exposing (Error(..))
+import FormatTime
 import Http
 import Json.Decode as Decode
 import Maybe exposing (andThen)
 import RFC3339 exposing (decodeTimestamp)
+import Task
+import Time
 import Url
 import Url.Builder
 
@@ -147,24 +151,75 @@ decodeSchedule =
 {- https://dev.twitch.tv/docs/api/reference#get-channel-stream-schedule -}
 
 
-getStreamingSchedule : String -> Maybe String -> ClientID -> Token -> Cmd (Result Http.Error (PaginatedResponse Schedule))
-getStreamingSchedule userID cursor =
+getStreamingSchedule : String -> Time.Zone -> Maybe Time.Posix -> Maybe String -> ClientID -> Token -> Task.Task Error (PaginatedResponse Schedule)
+getStreamingSchedule userID timeZone startTime cursor (ClientID clientID) (Token token) =
     let
         params =
-            [ Url.Builder.string "broadcaster_id" userID ]
+            [ Url.Builder.string "broadcaster_id" userID
+            , Url.Builder.int "first" 25
+            ]
+                ++ (case cursor of
+                        Just c ->
+                            [ Url.Builder.string "after" c ]
 
-        u =
+                        Nothing ->
+                            []
+                   )
+
+        requestUrlWithoutParams =
             apiUrlBuilder [ "schedule" ]
-                (case cursor of
-                    Just c ->
-                        -- pagination
-                        Url.Builder.string "after" c :: params
 
-                    Nothing ->
-                        params
-                )
+        request =
+            { method = "GET"
+            , headers =
+                [ Http.header "Authorization" ("Bearer " ++ token)
+                , Http.header "Client-Id" clientID
+                ]
+            , url = requestUrlWithoutParams params
+            , body = Http.emptyBody
+            , resolver = Http.stringResolver <| handleJsonResponse <| decodePaginated decodeSchedule
+            , timeout = Nothing
+            }
     in
-    bearerRequest u (decodePaginated decodeSchedule)
+    case startTime of
+        Nothing ->
+            Task.mapError HttpError (Http.task request)
+
+        Just time ->
+            case FormatTime.asRFC3339 timeZone time of
+                Ok t ->
+                    Task.mapError HttpError (Http.task { request | url = requestUrlWithoutParams (params ++ [ Url.Builder.string "start_time" t ]) })
+
+                Err _ ->
+                    Task.mapError StringError (Task.fail "failed to format start time")
+
+
+
+{- https://korban.net/posts/elm/2019-02-15-combining-http-requests-with-task-in-elm/ -}
+
+
+handleJsonResponse : Decode.Decoder a -> Http.Response String -> Result Http.Error a
+handleJsonResponse decoder response =
+    case response of
+        Http.BadUrl_ url ->
+            Err (Http.BadUrl url)
+
+        Http.Timeout_ ->
+            Err Http.Timeout
+
+        Http.BadStatus_ { statusCode } _ ->
+            Err (Http.BadStatus statusCode)
+
+        Http.NetworkError_ ->
+            Err Http.NetworkError
+
+        Http.GoodStatus_ _ body ->
+            case Decode.decodeString decoder body of
+                Err _ ->
+                    Err (Http.BadBody body)
+
+                Ok result ->
+                    Ok result
 
 
 

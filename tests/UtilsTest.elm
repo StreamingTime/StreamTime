@@ -1,7 +1,9 @@
-module UtilsTest exposing (concatMaybeListTest, filterFollowsByLoginTest, missingProfileLoginsTest, streamersWithSelectionTest)
+module UtilsTest exposing (concatMaybeListTest, filterFollowsByLoginTest, missingProfileLoginsTest, streamersWithSelectionTest, timeInOneWeekTest)
 
 import Expect
+import FormatTime
 import Test exposing (Test, describe, test)
+import Time
 import Twitch
 import Utils exposing (concatMaybeList, filterFollowsByLogin, missingProfileLogins, streamersWithSelection)
 
@@ -128,4 +130,15 @@ streamersWithSelectionTest =
             streamersWithSelection selected streamers
                 |> List.map (\( user, isSelected ) -> ( user.loginName, isSelected ))
                 |> Expect.equal [ ( "foo", True ), ( "bar", True ), ( "notSelected", False ) ]
+        )
+
+
+timeInOneWeekTest : Test
+timeInOneWeekTest =
+    test "calculate time in one week"
+        (\_ ->
+            Time.millisToPosix 2000000000000
+                |> Utils.timeInOneWeek
+                |> FormatTime.asRFC3339 Time.utc
+                |> Expect.equal (Ok "2033-05-25T03:33:20+00:00")
         )
