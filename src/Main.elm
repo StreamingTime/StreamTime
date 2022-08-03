@@ -711,7 +711,7 @@ appView appData =
                             |> List.filterMap
                                 (\( userID, segments ) ->
                                     findUserByID userID (RefreshData.mapTo (\_ v -> v) appData.streamers)
-                                        |> Maybe.andThen (\user -> Just (List.map (scheduleSegmentView appData.timeZone user) segments))
+                                        |> Maybe.map (\user -> List.map (scheduleSegmentView appData.timeZone user) segments)
                                 )
                             |> List.concat
                             |> List.map (\segView -> div [ css [ Tw.m_4 ] ] [ segView ])
