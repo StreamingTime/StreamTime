@@ -5,6 +5,7 @@ import FormatTime
 import Html.Styled exposing (Html, div, text)
 import Html.Styled.Attributes exposing (css, style)
 import Http
+import List.Extra
 import RFC3339
 import RefreshData exposing (RefreshData)
 import Tailwind.Utilities as Tw
@@ -115,13 +116,11 @@ dayViews timeZone time streamers schedules =
                             , Tw.w_full
                             ]
                         ]
-                        (case ( streamers, schedules ) of
-                            ( RefreshData.Present x, RefreshData.Present y ) ->
-                                schedulesViews timeZone (Time.Extra.timeInDays time offsetDays) x y
-
-                            -- TODO: handle other valid possibilities
-                            ( _, _ ) ->
-                                []
+                        (schedulesViews
+                            timeZone
+                            (Time.Extra.timeInDays time offsetDays)
+                            (RefreshData.mapTo (\_ -> identity) streamers)
+                            (RefreshData.mapTo (\_ -> identity) schedules)
                         )
                     ]
                     :: views (offsetDays + 1)
@@ -145,16 +144,16 @@ schedulesViews timeZone time streamers schedules =
     in
     schedules
         |> List.map (\schedule -> ( schedule.broadcasterId, schedule.segments ))
-        |> List.filterMap
-            (\( userID, segments ) ->
+        |> List.Extra.filterIndexedMap
+            (\index ( userID, segments ) ->
                 findUserByID userID streamers
                     |> Maybe.map
                         (\user ->
                             List.concat
                                 [ filterSegments segments
-                                    |> List.indexedMap (\index _ -> scheduleTimeSegment (index + 1))
+                                    |> List.map (\_ -> scheduleTimeSegment (index + 1))
                                 , filterSegments segments
-                                    |> List.indexedMap (\index -> scheduleContentSegment timeZone user (index + 1))
+                                    |> List.map (scheduleContentSegment timeZone user (index + 1))
                                 ]
                         )
             )
