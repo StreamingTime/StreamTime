@@ -21,6 +21,7 @@ import Twitch
 import TwitchConfig
 import Url
 import Utils exposing (filterFollowsByLogin, findUserByID, missingProfileLogins, streamersWithSelection)
+import Views.Calendar exposing (calendarView)
 import Views.ScheduleSegment exposing (scheduleSegmentView)
 import Views.StreamerList exposing (StreamerListMsg(..), streamerListPageSteps, streamerListView)
 
@@ -47,6 +48,7 @@ type alias AppData =
     , selectedStreamers : List Twitch.User
     , schedules : RefreshData Error (List Twitch.Schedule)
     , timeZone : Time.Zone
+    , time : Time.Posix
     }
 
 
@@ -62,6 +64,7 @@ type alias LoadingData =
     -- the first n streamers to display in the streamer list
     , firstStreamers : Maybe (List Twitch.User)
     , timeZone : Maybe Time.Zone
+    , time : Maybe Time.Posix
     }
 
 
@@ -87,6 +90,7 @@ type Msg
     | StreamerListMsg StreamerListMsg
     | Logout
     | GotTimeZone Time.Zone
+    | GotTime Time.Posix
     | HourlyValidation
 
 
@@ -105,6 +109,7 @@ init flags url navKey =
                 , signedInUser = Nothing
                 , firstStreamers = Nothing
                 , timeZone = Nothing
+                , time = Nothing
                 }
                 navKey
             , Cmd.batch [ Cmd.map GotValidateTokenResponse (Twitch.validateToken token), Nav.replaceUrl navKey "/" ]
@@ -126,6 +131,7 @@ init flags url navKey =
                         , signedInUser = Nothing
                         , firstStreamers = Nothing
                         , timeZone = Nothing
+                        , time = Nothing
                         }
                         navKey
                     , Cmd.batch [ Cmd.map GotValidateTokenResponse (Twitch.validateToken token), Nav.replaceUrl navKey "/" ]
@@ -152,8 +158,8 @@ fetchUserProfile userID token =
     Cmd.map GotUserProfile (Twitch.getUser userID TwitchConfig.clientId token)
 
 
-fetchStreamingSchedule : String -> Time.Zone -> Twitch.Token -> Cmd Msg
-fetchStreamingSchedule userID timeZone token =
+fetchStreamingSchedule : String -> Time.Zone -> Time.Posix -> Twitch.Token -> Cmd Msg
+fetchStreamingSchedule userID timeZone time token =
     let
         -- get all segments that start before endTime
         beforeEndTime : Time.Posix -> List Twitch.Segment -> List Twitch.Segment
@@ -205,8 +211,7 @@ fetchStreamingSchedule userID timeZone token =
                                 Task.succeed data
                     )
     in
-    Time.now
-        |> Task.andThen (\now -> startFetching (Utils.timeInOneWeek now))
+    startFetching (Utils.timeInOneWeek time)
         |> Task.attempt
             GotStreamingSchedule
 
@@ -214,6 +219,11 @@ fetchStreamingSchedule userID timeZone token =
 getTimeZone : Cmd Msg
 getTimeZone =
     Task.perform GotTimeZone Time.here
+
+
+getTime : Cmd Msg
+getTime =
+    Task.perform GotTime Time.now
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -243,9 +253,10 @@ update msg model =
                                 , follows = Nothing
                                 , firstStreamers = Nothing
                                 , timeZone = Nothing
+                                , time = Nothing
                                 }
                                 navKey
-                            , getTimeZone
+                            , Cmd.batch [ getTimeZone, getTime ]
                             )
 
                 GotRevokeTokenResponse ->
@@ -298,6 +309,7 @@ update msg model =
                                 , streamerFilterName = Nothing
                                 , schedules = LoadingMore []
                                 , timeZone = Maybe.withDefault Time.utc m.timeZone
+                                , time = Maybe.withDefault (Time.millisToPosix 0) m.time
                                 }
                                 navKey
                             , Cmd.none
@@ -335,6 +347,12 @@ update msg model =
 
                         Nothing ->
                             Debug.todo "error"
+                    )
+
+                GotTime time ->
+                    ( LoadingScreen { m | time = Just time }
+                        navKey
+                    , Cmd.none
                     )
 
                 GotStreamingSchedule _ ->
@@ -473,7 +491,7 @@ update msg model =
 
                 FetchStreamingSchedules ->
                     ( LoggedIn { appData | schedules = RefreshData.map LoadingMore appData.schedules } navKey
-                    , Cmd.batch (List.map (\streamer -> fetchStreamingSchedule streamer.id appData.timeZone appData.signedInUser.token) appData.selectedStreamers)
+                    , Cmd.batch (List.map (\streamer -> fetchStreamingSchedule streamer.id appData.timeZone appData.time appData.signedInUser.token) appData.selectedStreamers)
                     )
 
                 Logout ->
@@ -483,6 +501,9 @@ update msg model =
                     ( model, Cmd.map GotValidateTokenResponse (Twitch.validateToken appData.signedInUser.token) )
 
                 GotTimeZone _ ->
+                    ( model, Cmd.none )
+
+                GotTime _ ->
                     ( model, Cmd.none )
 
         NotLoggedIn _ navKey ->
@@ -522,6 +543,9 @@ update msg model =
                     ( model, Cmd.none )
 
                 GotTimeZone _ ->
+                    ( model, Cmd.none )
+
+                GotTime _ ->
                     ( model, Cmd.none )
 
                 HourlyValidation ->
@@ -686,6 +710,10 @@ appView appData =
                     , Tw.w_full
                     , Tw.ml_60
                     , Tw.mt_16
+                    , Tw.flex
+                    , Tw.flex_col
+                    , Tw.items_center
+                    , Tw.space_y_4
                     ]
                 ]
                 -- Test fetching streaming schedule
@@ -694,29 +722,21 @@ appView appData =
                         |> List.map (\streamer -> text (streamer.displayName ++ " "))
                     )
                 , button [ css [ Tw.btn, Tw.btn_primary, Css.hover [ Tw.bg_primary_focus ] ], onClick FetchStreamingSchedules ] [ text "Load schedule" ]
-                , div [ css [ Tw.text_white ] ]
-                    [ case appData.schedules of
-                        --
-                        RefreshData.ErrorWithData (HttpError (Http.BadStatus 404)) _ ->
-                            text ""
+                , div [ css [ Tw.w_5over6 ] ]
+                    [ calendarView appData.timeZone appData.time appData.streamers appData.schedules ]
 
-                        RefreshData.ErrorWithData error _ ->
-                            errorView (Error.toString error)
-
-                        _ ->
-                            text ""
-                    , div []
-                        (schedules
-                            |> List.map (\schedule -> ( schedule.broadcasterId, schedule.segments ))
-                            |> List.filterMap
-                                (\( userID, segments ) ->
-                                    findUserByID userID (RefreshData.mapTo (\_ v -> v) appData.streamers)
-                                        |> Maybe.map (\user -> List.map (scheduleSegmentView appData.timeZone user) segments)
-                                )
-                            |> List.concat
-                            |> List.map (\segView -> div [ css [ Tw.m_4 ] ] [ segView ])
-                        )
-                    ]
+                -- TODO: Remove
+                , div []
+                    (schedules
+                        |> List.map (\schedule -> ( schedule.broadcasterId, schedule.segments ))
+                        |> List.filterMap
+                            (\( userID, segments ) ->
+                                findUserByID userID (RefreshData.mapTo (\_ v -> v) appData.streamers)
+                                    |> Maybe.map (\user -> List.map (scheduleSegmentView appData.timeZone user) segments)
+                            )
+                        |> List.concat
+                        |> List.map (\segView -> div [ css [ Tw.m_4 ] ] [ segView ])
+                    )
                 ]
             ]
         ]
