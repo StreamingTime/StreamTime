@@ -188,7 +188,7 @@ scheduleTimeSegment timeZone row segment =
                     else
                         48
 
-                ( _, _ ) ->
+                _ ->
                     0
 
         {- One time segment represents 30 minutes. Therefore we divide by 30 and add 1,
