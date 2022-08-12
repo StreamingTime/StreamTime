@@ -33,8 +33,7 @@ calendarView timezone time streamers schedules =
                 , Tw.space_y_4
                 ]
             ]
-            ([ -- Header
-               div [ css [ Tw.flex ] ]
+            (div [ css [ Tw.flex ] ]
                 [ div
                     [ css
                         [ Tw.flex
@@ -70,10 +69,7 @@ calendarView timezone time streamers schedules =
                         ]
                     ]
                 ]
-
-             -- Table View
-             ]
-                ++ dayViews timezone time streamers schedules
+                :: dayViews timezone time streamers schedules
             )
         ]
 
@@ -154,7 +150,7 @@ schedulesViews timeZone time streamers schedules =
                         (\user ->
                             List.concat
                                 [ filterSegments segments
-                                    |> List.map (\_ -> scheduleTimeSegment (index + 1))
+                                    |> List.map (scheduleTimeSegment timeZone (index + 1))
                                 , filterSegments segments
                                     |> List.map (scheduleContentSegment timeZone user (index + 1))
                                 ]
@@ -163,15 +159,39 @@ schedulesViews timeZone time streamers schedules =
         |> List.concat
 
 
-scheduleTimeSegment : Int -> Html msg
-scheduleTimeSegment row =
+scheduleTimeSegment : Time.Zone -> Int -> Twitch.Segment -> Html msg
+scheduleTimeSegment timeZone row segment =
     let
-        -- TODO
+        startTimePosix =
+            RFC3339.toPosix segment.startTime
+
+        startMinutes =
+            case startTimePosix of
+                Just value ->
+                    Time.toHour timeZone value * 60 + Time.toMinute timeZone value
+
+                Nothing ->
+                    0
+
+        endTimePosix =
+            RFC3339.toPosix segment.endTime
+
+        endMinutes =
+            case endTimePosix of
+                Just value ->
+                    Time.toHour timeZone value * 60 + Time.toMinute timeZone value
+
+                Nothing ->
+                    0
+
+        {- One time segment represents 30 minutes. Therefore we divide by 30 and add 1, because
+           grid numeration starts with 1.
+        -}
         start =
-            3
+            startMinutes // 30 + 1
 
         end =
-            20
+            endMinutes // 30 + 1
     in
     div
         [ css
