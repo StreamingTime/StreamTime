@@ -23,6 +23,7 @@ calendarView timezone time streamers schedules =
             [ Tw.rounded_md
             , Tw.bg_dark_500
             , Tw.p_2
+            , Tw.pb_4
             ]
         ]
         [ div
