@@ -711,8 +711,6 @@ appView appData =
                     appData.sidebarStreamerCount
                     appData.streamerFilterName
                 )
-
-            -- Content placeholder
             , div
                 [ css
                     [ Tw.bg_base_100
@@ -725,13 +723,7 @@ appView appData =
                     , Tw.space_y_4
                     ]
                 ]
-                -- Test fetching streaming schedule
-                [ div []
-                    (appData.selectedStreamers
-                        |> List.map (\streamer -> text (streamer.displayName ++ " "))
-                    )
-                , button [ css [ Tw.btn, Tw.btn_primary, Css.hover [ Tw.bg_primary_focus ] ], onClick FetchStreamingSchedules ] [ text "Load schedule" ]
-                , div [ css [ Tw.w_5over6, Tw.pb_10 ] ]
+                [ div [ css [ Tw.w_5over6, Tw.py_10 ] ]
                     [ calendarView appData.timeZone appData.time appData.streamers appData.schedules appData.selectedStreamers ]
                 ]
             ]
