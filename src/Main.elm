@@ -21,9 +21,8 @@ import Time.Extra
 import Twitch
 import TwitchConfig
 import Url
-import Utils exposing (filterFollowsByLogin, findUserByID, missingProfileLogins, streamersWithSelection)
+import Utils exposing (filterFollowsByLogin, missingProfileLogins, streamersWithSelection)
 import Views.Calendar exposing (calendarView)
-import Views.ScheduleSegment exposing (scheduleSegmentView)
 import Views.StreamerList exposing (StreamerListMsg(..), streamerListPageSteps, streamerListView)
 
 
