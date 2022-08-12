@@ -179,6 +179,7 @@ scheduleTimeSegment timeZone row segment =
         endMinutes =
             case endTimePosix of
                 Just value ->
+                    if Time.
                     Time.toHour timeZone value * 60 + Time.toMinute timeZone value
 
                 Nothing ->
