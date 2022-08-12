@@ -686,10 +686,6 @@ loadingSpinner styles =
 
 appView : AppData -> Html Msg
 appView appData =
-    let
-        schedules =
-            RefreshData.mapTo (\_ -> identity) appData.schedules
-    in
     div []
         [ headerView appData.signedInUser
         , div [ css [ Tw.flex ] ]
@@ -725,19 +721,6 @@ appView appData =
                 , button [ css [ Tw.btn, Tw.btn_primary, Css.hover [ Tw.bg_primary_focus ] ], onClick FetchStreamingSchedules ] [ text "Load schedule" ]
                 , div [ css [ Tw.w_5over6 ] ]
                     [ calendarView appData.timeZone appData.time appData.streamers appData.schedules ]
-
-                -- TODO: Remove
-                , div []
-                    (schedules
-                        |> List.map (\schedule -> ( schedule.broadcasterId, schedule.segments ))
-                        |> List.filterMap
-                            (\( userID, segments ) ->
-                                findUserByID userID (RefreshData.mapTo (\_ v -> v) appData.streamers)
-                                    |> Maybe.map (\user -> List.map (scheduleSegmentView appData.timeZone user) segments)
-                            )
-                        |> List.concat
-                        |> List.map (\segView -> div [ css [ Tw.m_4 ] ] [ segView ])
-                    )
                 ]
             ]
         ]
