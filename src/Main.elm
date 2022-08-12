@@ -86,7 +86,6 @@ type Msg
     | GotStreamerProfiles (Result Http.Error (List Twitch.User))
     | GotUserProfile (Result Http.Error Twitch.User)
     | GotStreamingSchedule (Result Error Twitch.Schedule)
-    | FetchStreamingSchedules
     | StreamerListMsg StreamerListMsg
     | Logout
     | GotTimeZone Time.Zone
@@ -358,9 +357,6 @@ update msg model =
                 GotStreamingSchedule _ ->
                     ( model, Cmd.none )
 
-                FetchStreamingSchedules ->
-                    ( model, Cmd.none )
-
                 StreamerListMsg _ ->
                     ( model, Cmd.none )
 
@@ -504,9 +500,6 @@ update msg model =
                         Ok value ->
                             ( LoggedIn { appData | schedules = RefreshData.map (\oldSchedules -> Present (oldSchedules ++ [ value ])) appData.schedules } navKey, Cmd.none )
 
-                FetchStreamingSchedules ->
-                    ( model, Cmd.none )
-
                 Logout ->
                     ( NotLoggedIn Nothing navKey, Cmd.batch [ LocalStorage.removeData, revokeToken TwitchConfig.clientId appData.signedInUser.token ] )
 
@@ -547,9 +540,6 @@ update msg model =
                     ( model, Cmd.none )
 
                 GotStreamingSchedule _ ->
-                    ( model, Cmd.none )
-
-                FetchStreamingSchedules ->
                     ( model, Cmd.none )
 
                 Logout ->
