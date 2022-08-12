@@ -2,7 +2,7 @@ module Views.Calendar exposing (calendarView)
 
 import Error exposing (Error)
 import FormatTime
-import Html.Styled exposing (Html, div, text)
+import Html.Styled exposing (Html, div, p, text)
 import Html.Styled.Attributes exposing (css, style)
 import Http
 import List.Extra
@@ -22,8 +22,8 @@ calendarView timezone time streamers schedules =
         [ css
             [ Tw.rounded_md
             , Tw.bg_dark_500
-            , Tw.p_2
-            , Tw.pb_4
+            , Tw.py_4
+            , Tw.px_2
             ]
         ]
         [ div
@@ -43,15 +43,20 @@ calendarView timezone time streamers schedules =
                         , Tw.flex_col
                         , Tw.justify_center
                         , Tw.text_center
+                        , Tw.text_sm
                         ]
                     ]
-                    [ text "GMT +2" ]
+                    [ p [] [ text "GMT" ]
+                    , p [] [ text (FormatTime.format "%TZ" timezone time |> Result.withDefault "") ]
+                    ]
                 , div
                     [ css
                         [ Tw.flex
                         , Tw.w_full
                         , Tw.flex_col
                         , Tw.justify_center
+                        , Tw.text_lg
+                        , Tw.font_semibold
                         ]
                     ]
                     [ div [ css [ Tw.grid, Tw.grid_cols_12 ] ]
@@ -102,6 +107,7 @@ dayViews timeZone time streamers schedules =
                             , Tw.w_24
                             , Tw.items_center
                             , Tw.pt_4
+                            , Tw.font_semibold
                             ]
                         ]
                         [ div [] [ Time.Extra.timeInDays time offsetDays |> weekDayString |> text ]
@@ -217,7 +223,7 @@ scheduleContentSegment timeZone user row segment =
     div
         [ css
             [ Tw.col_span_full
-            , Tw.py_2
+            , Tw.py_1
             ]
         , style "grid-row-start" (String.fromInt row)
         ]
