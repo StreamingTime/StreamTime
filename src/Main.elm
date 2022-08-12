@@ -307,7 +307,7 @@ update msg model =
                                 , sidebarStreamerCount = streamerListPageSteps
                                 , selectedStreamers = []
                                 , streamerFilterName = Nothing
-                                , schedules = LoadingMore []
+                                , schedules = Present []
                                 , timeZone = Maybe.withDefault Time.utc m.timeZone
                                 , time = Maybe.withDefault (Time.millisToPosix 0) m.time
                                 }
@@ -473,7 +473,22 @@ update msg model =
                             else
                                 List.filter ((/=) streamer) appData.selectedStreamers
                     in
-                    ( LoggedIn { appData | selectedStreamers = newList } navKey, Cmd.none )
+                    ( LoggedIn { appData | schedules = RefreshData.map LoadingMore appData.schedules, selectedStreamers = newList } navKey
+                    , case appData.schedules of
+                        Present value ->
+                            Utils.missingStreamersInSchedules newList value
+                                |> List.map
+                                    (\s ->
+                                        fetchStreamingSchedule s.id appData.timeZone appData.time appData.signedInUser.token
+                                    )
+                                |> Cmd.batch
+
+                        LoadingMore _ ->
+                            Cmd.none
+
+                        ErrorWithData _ _ ->
+                            Cmd.none
+                    )
 
                 GotStreamerProfiles (Ok newProfiles) ->
                     ( LoggedIn { appData | streamers = RefreshData.map (\oldProfiles -> Present (oldProfiles ++ newProfiles)) appData.streamers } navKey, Cmd.none )
@@ -490,9 +505,7 @@ update msg model =
                             ( LoggedIn { appData | schedules = RefreshData.map (\oldSchedules -> Present (oldSchedules ++ [ value ])) appData.schedules } navKey, Cmd.none )
 
                 FetchStreamingSchedules ->
-                    ( LoggedIn { appData | schedules = RefreshData.map LoadingMore appData.schedules } navKey
-                    , Cmd.batch (List.map (\streamer -> fetchStreamingSchedule streamer.id appData.timeZone appData.time appData.signedInUser.token) appData.selectedStreamers)
-                    )
+                    ( model, Cmd.none )
 
                 Logout ->
                     ( NotLoggedIn Nothing navKey, Cmd.batch [ LocalStorage.removeData, revokeToken TwitchConfig.clientId appData.signedInUser.token ] )
@@ -719,7 +732,7 @@ appView appData =
                     )
                 , button [ css [ Tw.btn, Tw.btn_primary, Css.hover [ Tw.bg_primary_focus ] ], onClick FetchStreamingSchedules ] [ text "Load schedule" ]
                 , div [ css [ Tw.w_5over6, Tw.pb_10 ] ]
-                    [ calendarView appData.timeZone appData.time appData.streamers appData.schedules ]
+                    [ calendarView appData.timeZone appData.time appData.streamers appData.schedules appData.selectedStreamers ]
                 ]
             ]
         ]

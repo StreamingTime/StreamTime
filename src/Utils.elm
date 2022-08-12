@@ -1,4 +1,4 @@
-module Utils exposing (concatMaybeList, filterFollowsByLogin, findUserByID, missingProfileLogins, streamersWithSelection)
+module Utils exposing (concatMaybeList, filterFollowsByLogin, findUserByID, missingProfileLogins, missingStreamersInSchedules, schedulesWithStreamers, streamersWithSelection)
 
 import Twitch
 
@@ -62,3 +62,25 @@ findUserByID userID users =
     users
         |> List.filter (\user -> user.id == userID)
         |> List.head
+
+
+missingStreamersInSchedules : List Twitch.User -> List Twitch.Schedule -> List Twitch.User
+missingStreamersInSchedules streamers schedules =
+    streamers
+        |> List.filter
+            (\streamer ->
+                not
+                    (schedules
+                        |> List.any (\schedule -> schedule.broadcasterId == streamer.id)
+                    )
+            )
+
+
+schedulesWithStreamers : List Twitch.User -> List Twitch.Schedule -> List Twitch.Schedule
+schedulesWithStreamers streamers schedules =
+    schedules
+        |> List.filter
+            (\schedule ->
+                streamers
+                    |> List.any (\streamer -> schedule.broadcasterId == streamer.id)
+            )

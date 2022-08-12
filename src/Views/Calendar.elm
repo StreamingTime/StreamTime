@@ -16,8 +16,8 @@ import Utils exposing (findUserByID)
 import Views.ScheduleSegment exposing (scheduleSegmentView)
 
 
-calendarView : Time.Zone -> Time.Posix -> RefreshData Http.Error (List Twitch.User) -> RefreshData Error (List Twitch.Schedule) -> Html msg
-calendarView timezone time streamers schedules =
+calendarView : Time.Zone -> Time.Posix -> RefreshData Http.Error (List Twitch.User) -> RefreshData Error (List Twitch.Schedule) -> List Twitch.User -> Html msg
+calendarView timezone time streamers schedules selected =
     div
         [ css
             [ Tw.rounded_md
@@ -75,13 +75,13 @@ calendarView timezone time streamers schedules =
                         ]
                     ]
                 ]
-                :: dayViews timezone time streamers schedules
+                :: dayViews timezone time streamers schedules selected
             )
         ]
 
 
-dayViews : Time.Zone -> Time.Posix -> RefreshData Http.Error (List Twitch.User) -> RefreshData Error (List Twitch.Schedule) -> List (Html msg)
-dayViews timeZone time streamers schedules =
+dayViews : Time.Zone -> Time.Posix -> RefreshData Http.Error (List Twitch.User) -> RefreshData Error (List Twitch.Schedule) -> List Twitch.User -> List (Html msg)
+dayViews timeZone time streamers schedules selected =
     let
         weekDayString t =
             Time.Extra.toWeekdayString timeZone t
@@ -126,7 +126,9 @@ dayViews timeZone time streamers schedules =
                                 timeZone
                                 (Time.Extra.timeInDays time offsetDays)
                                 (RefreshData.mapTo (\_ -> identity) streamers)
-                                (RefreshData.mapTo (\_ -> identity) schedules)
+                                (RefreshData.mapTo (\_ -> identity) schedules
+                                    |> Utils.schedulesWithStreamers selected
+                                )
                         )
                     ]
                     :: views (offsetDays + 1)
