@@ -17,6 +17,7 @@ import RefreshData exposing (RefreshData(..))
 import Tailwind.Utilities as Tw
 import Task
 import Time
+import Time.Extra
 import Twitch
 import TwitchConfig
 import Url
@@ -211,7 +212,7 @@ fetchStreamingSchedule userID timeZone time token =
                                 Task.succeed data
                     )
     in
-    startFetching (Utils.timeInOneWeek time)
+    startFetching (Time.Extra.timeInOneWeek time)
         |> Task.attempt
             GotStreamingSchedule
 

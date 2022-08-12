@@ -1,4 +1,4 @@
-module Utils exposing (concatMaybeList, filterFollowsByLogin, findUserByID, missingProfileLogins, streamersWithSelection, timeInOneWeek)
+module Utils exposing (concatMaybeList, filterFollowsByLogin, findUserByID, missingProfileLogins, streamersWithSelection)
 
 import Time
 import Twitch
@@ -56,15 +56,6 @@ streamersWithSelection : List Twitch.User -> List Twitch.User -> List ( Twitch.U
 streamersWithSelection selected users =
     users
         |> List.map (\u -> ( u, List.any ((==) u) selected ))
-
-
-timeInOneWeek : Time.Posix -> Time.Posix
-timeInOneWeek time =
-    time
-        |> Time.posixToMillis
-        -- 60 seconds * 60 minutes * 24 hours * 7 days (in ms)
-        |> (+) (60 * 60 * 24 * 7 * 1000)
-        |> Time.millisToPosix
 
 
 findUserByID : String -> List Twitch.User -> Maybe Twitch.User

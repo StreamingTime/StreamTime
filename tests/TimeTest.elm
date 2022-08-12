@@ -1,6 +1,7 @@
-module TimeTest exposing (sameDayTest, timeInDaysTest, toWeekdayStringTest)
+module TimeTest exposing (sameDayTest, timeInDaysTest, timeInOneWeekTest, toWeekdayStringTest)
 
 import Expect
+import FormatTime
 import Test exposing (Test, describe, test)
 import Time
 import Time.Extra
@@ -70,3 +71,14 @@ sameDayTest =
                     |> Expect.false "Expected not to be the same day"
             )
         ]
+
+
+timeInOneWeekTest : Test
+timeInOneWeekTest =
+    test "calculate time in one week"
+        (\_ ->
+            Time.millisToPosix 2000000000000
+                |> Time.Extra.timeInOneWeek
+                |> FormatTime.asRFC3339 Time.utc
+                |> Expect.equal (Ok "2033-05-25T03:33:20+00:00")
+        )

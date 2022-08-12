@@ -1,4 +1,4 @@
-module Time.Extra exposing (sameDay, timeInDays, toWeekdayString)
+module Time.Extra exposing (sameDay, timeInDays, timeInOneWeek, toWeekdayString)
 
 import Time
 
@@ -35,6 +35,11 @@ timeInDays time days =
         -- 60 seconds * 60 minutes * 24 hours * X days (in ms)
         |> (+) (60 * 60 * 24 * days * 1000)
         |> Time.millisToPosix
+
+
+timeInOneWeek : Time.Posix -> Time.Posix
+timeInOneWeek time =
+    timeInDays time 7
 
 
 sameDay : Time.Zone -> Time.Posix -> Time.Posix -> Bool
