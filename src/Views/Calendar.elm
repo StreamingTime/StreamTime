@@ -177,16 +177,22 @@ scheduleTimeSegment timeZone row segment =
             RFC3339.toPosix segment.endTime
 
         endMinutes =
-            case endTimePosix of
-                Just value ->
-                    if Time.
-                    Time.toHour timeZone value * 60 + Time.toMinute timeZone value
+            case ( startTimePosix, endTimePosix ) of
+                ( Just s, Just e ) ->
+                    {- if it is not the same day we set endMinutes to the end of the current day:
+                       30 minutes * 48 cells / 60 minutes = 24 hours
+                    -}
+                    if Time.Extra.sameDay timeZone s e then
+                        Time.toHour timeZone e * 60 + Time.toMinute timeZone e
 
-                Nothing ->
+                    else
+                        48
+
+                ( _, _ ) ->
                     0
 
-        {- One time segment represents 30 minutes. Therefore we divide by 30 and add 1, because
-           grid numeration starts with 1.
+        {- One time segment represents 30 minutes. Therefore we divide by 30 and add 1,
+           because grid numeration starts with 1.
         -}
         start =
             startMinutes // 30 + 1
