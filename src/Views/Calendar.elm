@@ -104,6 +104,7 @@ dayViews timeZone time streamers schedules =
                             , Tw.flex_col
                             , Tw.w_24
                             , Tw.items_center
+                            , Tw.pt_4
                             ]
                         ]
                         [ div [] [ Time.Extra.timeInDays time offsetDays |> weekDayString |> text ]
@@ -114,13 +115,15 @@ dayViews timeZone time streamers schedules =
                             [ Tw.grid
                             , Tw.grid_cols_48
                             , Tw.w_full
+                            , Tw.space_y_4
                             ]
                         ]
-                        (schedulesViews
-                            timeZone
-                            (Time.Extra.timeInDays time offsetDays)
-                            (RefreshData.mapTo (\_ -> identity) streamers)
-                            (RefreshData.mapTo (\_ -> identity) schedules)
+                        (div [] []
+                            :: schedulesViews
+                                timeZone
+                                (Time.Extra.timeInDays time offsetDays)
+                                (RefreshData.mapTo (\_ -> identity) streamers)
+                                (RefreshData.mapTo (\_ -> identity) schedules)
                         )
                     ]
                     :: views (offsetDays + 1)
@@ -174,7 +177,6 @@ scheduleTimeSegment row =
         [ css
             [ Tw.rounded_sm
             , Tw.bg_purple_700
-            , Tw.h_full
             ]
         , style "grid-row-start" (String.fromInt row)
         , style "grid-column" (String.concat [ String.fromInt start, " / ", String.fromInt end ])
