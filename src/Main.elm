@@ -5,7 +5,7 @@ import Browser.Navigation as Nav
 import Components exposing (errorView)
 import Css
 import Css.Global
-import Error exposing (Error(..))
+import Error exposing (Error)
 import Html.Styled as Html exposing (Html, a, button, div, h1, img, li, p, span, text, toUnstyled, ul)
 import Html.Styled.Attributes exposing (alt, class, classList, css, href, src, style, tabindex)
 import Html.Styled.Events exposing (onClick)

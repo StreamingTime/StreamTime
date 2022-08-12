@@ -1,6 +1,5 @@
 module Utils exposing (concatMaybeList, filterFollowsByLogin, findUserByID, missingProfileLogins, streamersWithSelection)
 
-import Time
 import Twitch
 
 

@@ -1,6 +1,6 @@
 module Views.Calendar exposing (calendarView)
 
-import Error exposing (Error(..))
+import Error exposing (Error)
 import FormatTime
 import Html.Styled exposing (Html, div, text)
 import Html.Styled.Attributes exposing (css, style)
