@@ -470,20 +470,12 @@ update msg model =
                                 List.filter ((/=) streamer) appData.selectedStreamers
                     in
                     ( LoggedIn { appData | schedules = RefreshData.map LoadingMore appData.schedules, selectedStreamers = newList } navKey
-                    , case appData.schedules of
-                        Present value ->
-                            Utils.missingStreamersInSchedules newList value
-                                |> List.map
-                                    (\s ->
-                                        fetchStreamingSchedule s.id appData.timeZone appData.time appData.signedInUser.token
-                                    )
-                                |> Cmd.batch
-
-                        LoadingMore _ ->
-                            Cmd.none
-
-                        ErrorWithData _ _ ->
-                            Cmd.none
+                    , Utils.missingStreamersInSchedules newList (RefreshData.mapTo (\_ -> identity) appData.schedules)
+                        |> List.map
+                            (\s ->
+                                fetchStreamingSchedule s.id appData.timeZone appData.time appData.signedInUser.token
+                            )
+                        |> Cmd.batch
                     )
 
                 GotStreamerProfiles (Ok newProfiles) ->
