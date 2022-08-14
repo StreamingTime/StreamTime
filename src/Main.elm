@@ -460,6 +460,9 @@ update msg model =
                         Cmd.none
                     )
 
+                StreamerListMsg ClearFilterString ->
+                    ( LoggedIn { appData | streamerFilterName = Nothing } navKey, Cmd.none )
+
                 StreamerListMsg (SetStreamerSelection streamer newSelectionState) ->
                     let
                         newList =

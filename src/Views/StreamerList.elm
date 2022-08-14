@@ -4,8 +4,9 @@ import Components exposing (errorView, loadingSpinner)
 import Css
 import Error exposing (Error)
 import Html.Styled exposing (Html, a, button, div, hr, img, input, label, p, span, text)
-import Html.Styled.Attributes exposing (css, href, placeholder, src, type_)
+import Html.Styled.Attributes exposing (css, href, placeholder, src, type_, value)
 import Html.Styled.Events exposing (onClick, onInput)
+import Icons
 import RefreshData exposing (RefreshData)
 import Tailwind.Utilities as Tw
 import Twitch
@@ -16,6 +17,7 @@ type StreamerListMsg
     = ShowMore
     | ShowLess
     | Filter String
+    | ClearFilterString
     | SetStreamerSelection Twitch.User Bool
 
 
@@ -104,7 +106,8 @@ streamerListView streamersData follows showCount filterString =
                 streamersData
 
         filterUI =
-            div [ css [ Tw.form_control ] ]
+            div
+                [ css [ Tw.form_control, Tw.relative ] ]
                 [ label
                     [ css [ Tw.label ]
                     ]
@@ -112,12 +115,42 @@ streamerListView streamersData follows showCount filterString =
                     ]
                 , input
                     [ type_ "text"
+                    , value (Maybe.withDefault "" filterString)
                     , placeholder "Channel name"
-                    , css [ Tw.input, Tw.input_ghost, Tw.input_bordered, Tw.input_sm, Tw.m_1 ]
+                    , css
+                        [ Tw.input
+                        , Tw.input_ghost
+                        , Tw.input_bordered
+                        , Tw.input_sm
+                        , Tw.m_1
+                        , Tw.pr_8
+                        ]
                     , onInput (\s -> Filter s)
                     ]
                     []
+                , clearTextIcon
                 ]
+
+        clearTextIcon =
+            case filterString of
+                Just _ ->
+                    button
+                        [ css
+                            [ Tw.absolute
+                            , Tw.bottom_2
+                            , Tw.right_2
+                            ]
+                        , onClick ClearFilterString
+                        ]
+                        [ Icons.close
+                            [ Tw.w_6
+                            , Tw.text_dark_200
+                            , Tw.fill_current
+                            ]
+                        ]
+
+                Nothing ->
+                    text ""
 
         filteredList =
             case filterString of
