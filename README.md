@@ -47,6 +47,14 @@ To display time and date values to our users, we created our `FormatTime` module
 
 We use the browsers timezone and `elm/time` to display time and date values with the offset our users expect.
 
+### Twitch Login Process
+
+The Twitch API we are using requires an OAuth access token to access resources.
+In order to get this token we use Twitch [Implicit grant flow](https://dev.twitch.tv/docs/authentication/getting-tokens-oauth/#implicit-grant-flow). We navigate the user to 
+`https://id.twitch.tv/oauth2/authorize` with some required query parameters such as 
+the apps's registered client ID. The user needs to log in into Twitch and will be asked
+to authorize our application’s access. Twitch sends the user back to our redirect URI. The server includes the access token in the fragment portion of the URI. We can now read the access token from the URI and are able to send requests to Twitch APIs.
+
 ### Styling
 
 For the look and feel of our app, we use [TailwindCSS](https://v2.tailwindcss.com) and [daisyUI](https://v1.daisyui.com). TailwindCSS is a CSS framework that allows styling within the markup. 
