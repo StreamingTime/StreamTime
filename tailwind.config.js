@@ -17,7 +17,8 @@ module.exports = {
                 }
             },
             gridTemplateColumns: {
-                48: 'repeat(48, minmax(0, 1fr))',
+                calendar: 'repeat(12, minmax(3rem, 1fr))',
+                calendar_mark: 'repeat(48, minmax(0.75rem, 1fr))',
             },
         },
     },

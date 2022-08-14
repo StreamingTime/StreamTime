@@ -24,6 +24,7 @@ calendarView timezone time streamers schedules selected =
             , Tw.bg_dark_500
             , Tw.py_4
             , Tw.px_2
+            , Tw.overflow_x_auto
             ]
         ]
         [ div
@@ -36,10 +37,11 @@ calendarView timezone time streamers schedules selected =
             ]
             (div [ css [ Tw.flex ] ]
                 [ div
-                    [ css
+                    [ style "flex-shrink" "0"
+                    , css
                         [ Tw.flex
                         , Tw.h_10
-                        , Tw.w_24
+                        , Tw.w_20
                         , Tw.flex_col
                         , Tw.justify_center
                         , Tw.text_center
@@ -59,7 +61,7 @@ calendarView timezone time streamers schedules selected =
                         , Tw.font_semibold
                         ]
                     ]
-                    [ div [ css [ Tw.grid, Tw.grid_cols_12 ] ]
+                    [ div [ css [ Tw.grid, Tw.grid_cols_calendar ] ]
                         [ p [] [ text "00:00" ]
                         , p [] [ text "02:00" ]
                         , p [] [ text "04:00" ]
@@ -101,10 +103,11 @@ dayViews timeZone time streamers schedules selected =
             else
                 div [ css [ Tw.flex ] ]
                     [ div
-                        [ css
+                        [ style "flex-shrink" "0"
+                        , css
                             [ Tw.flex
                             , Tw.flex_col
-                            , Tw.w_24
+                            , Tw.w_20
                             , Tw.items_center
                             , Tw.pt_4
                             , Tw.font_semibold
@@ -116,7 +119,7 @@ dayViews timeZone time streamers schedules selected =
                     , div
                         [ css
                             [ Tw.grid
-                            , Tw.grid_cols_48
+                            , Tw.grid_cols_calendar_mark
                             , Tw.w_full
                             , Tw.space_y_4
                             ]
