@@ -58,6 +58,13 @@ The library generates Elm code for Tailwind utilities and components. It ensures
 TailwindCSS may be configured and customized by a config file (`tailwind.config.js`). We've added additional colors and modifications to the default daisyUI theme.
 In addition we've included some custom icon components (`tailwind_icons.js`) and extra grid classes.
 
+### Ports
+
+We make use of Ports to allow communication between Elm and JavaScript. We use them to save and load the Twitch access token from local storage. This allows us to skip the login process and directly send users to our app when their token is valid.
+
+Therefore we created a port module (`LocalStorage.elm`). It contains the port definitions, decoding and encoding functions for our local storage data and a function to save data to
+local storage. The `index.html` contains a script which provides respective JavaScript functions.
+
 ## Dependencies
 - [TailwindCSS](https://v2.tailwindcss.com)
 - [elm-tailwind-modules](https://github.com/matheus23/elm-tailwind-modules)
