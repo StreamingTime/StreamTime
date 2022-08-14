@@ -36,7 +36,7 @@ elm-live src/Main.elm -- --output=main.js
 Visit `http://localhost:8000`
 
 
-## TODO: heading for this section
+## Miscellaneous
 
 ### Time
 
@@ -46,6 +46,17 @@ Using `elm/parser`, we implemented a parser that can convert RFC3339 strings to 
 To display time and date values to our users, we created our `FormatTime` module that creates humand readable and flexible text representations from a `Time.Posix` value, a `Time.Zone` and a format string. Using `elm/parser`, we convert the format string (e.g. "%DD.%MM.%YYYY") to tokens, which are then used to build the resulting string. See [FormatTimeTest.elm](https://github.com/HS-Flensburg-DST/abschlussprojekt-fabian-w-und-florian/blob/master/tests/FormatTimeTest.elm) for examples.
 
 We use the browsers timezone and `elm/time` to display time and date values with the offset our users expect.
+
+### Styling
+
+For the look and feel of our app, we use [TailwindCSS](https://v2.tailwindcss.com) and [daisyUI](https://v1.daisyui.com). TailwindCSS is a CSS framework that allows styling within the markup. 
+daisyUI is a component library that adds classes for various UI components to TailwindCSS. This way we don't need extra CSS files and can
+change the styling directly in the markup. These tools provide a consistent look across all components in our app.
+In order to use Tailwind within elm we use [elm-tailwind-modules](https://github.com/matheus23/elm-tailwind-modules). 
+The library generates Elm code for Tailwind utilities and components. It ensures we can use TailwindCSS with elm-css.
+
+TailwindCSS may be configured and customized by a config file (`tailwind.config.js`). We've added additional colors and modifications to the default daisyUI theme.
+In addition we've included some custom icon components (`tailwind_icons.js`) and extra grid classes.
 
 ## Dependencies
 - [TailwindCSS](https://v2.tailwindcss.com)
