@@ -23,6 +23,7 @@ import Url
 import Utils exposing (filterFollowsByLogin, findUserByID, missingProfileLogins, streamersWithSelection)
 import Views.ScheduleSegment exposing (scheduleSegmentView)
 import Views.StreamerList exposing (StreamerListMsg(..), streamerListPageSteps, streamerListView)
+import Views.Video
 
 
 loginRedirectUrl : String
@@ -47,6 +48,7 @@ type alias AppData =
     , selectedStreamers : List Twitch.User
     , schedules : RefreshData Error (List Twitch.Schedule)
     , timeZone : Time.Zone
+    , videos : RefreshData Http.Error (List Twitch.Video)
     }
 
 
@@ -88,6 +90,8 @@ type Msg
     | Logout
     | GotTimeZone Time.Zone
     | HourlyValidation
+    | FetchVideos
+    | GotVideos (Result Http.Error (List Twitch.Video))
 
 
 type UrlMsg
@@ -211,6 +215,11 @@ fetchStreamingSchedule userID timeZone token =
             GotStreamingSchedule
 
 
+fetchVideos : Int -> Twitch.Token -> Twitch.UserID -> Cmd Msg
+fetchVideos count token userID =
+    Cmd.map GotVideos (Twitch.fetchVideos count userID TwitchConfig.clientId token)
+
+
 getTimeZone : Cmd Msg
 getTimeZone =
     Task.perform GotTimeZone Time.here
@@ -298,6 +307,7 @@ update msg model =
                                 , streamerFilterName = Nothing
                                 , schedules = LoadingMore []
                                 , timeZone = Maybe.withDefault Time.utc m.timeZone
+                                , videos = LoadingMore []
                                 }
                                 navKey
                             , Cmd.none
@@ -353,6 +363,12 @@ update msg model =
                     ( model, Cmd.none )
 
                 HourlyValidation ->
+                    ( model, Cmd.none )
+
+                FetchVideos ->
+                    ( model, Cmd.none )
+
+                GotVideos _ ->
                     ( model, Cmd.none )
 
         LoggedIn appData navKey ->
@@ -485,6 +501,15 @@ update msg model =
                 GotTimeZone _ ->
                     ( model, Cmd.none )
 
+                FetchVideos ->
+                    ( model, fetchVideos 10 appData.signedInUser.token (Twitch.UserID "84935311") )
+
+                GotVideos (Ok response) ->
+                    ( LoggedIn { appData | videos = RefreshData.map (\v -> Present (v ++ response)) appData.videos } navKey, Cmd.none )
+
+                GotVideos (Err e) ->
+                    ( LoggedIn { appData | videos = RefreshData.map (ErrorWithData e) appData.videos } navKey, Cmd.none )
+
         NotLoggedIn _ navKey ->
             case msg of
                 UrlMsg urlMsg ->
@@ -525,6 +550,12 @@ update msg model =
                     ( model, Cmd.none )
 
                 HourlyValidation ->
+                    ( model, Cmd.none )
+
+                FetchVideos ->
+                    ( model, Cmd.none )
+
+                GotVideos _ ->
                     ( model, Cmd.none )
 
 
@@ -689,34 +720,47 @@ appView appData =
                     ]
                 ]
                 -- Test fetching streaming schedule
-                [ div []
-                    (appData.selectedStreamers
-                        |> List.map (\streamer -> text (streamer.displayName ++ " "))
-                    )
-                , button [ css [ Tw.btn, Tw.btn_primary, Css.hover [ Tw.bg_primary_focus ] ], onClick FetchStreamingSchedules ] [ text "Load schedule" ]
-                , div [ css [ Tw.text_white ] ]
-                    [ case appData.schedules of
-                        --
-                        RefreshData.ErrorWithData (HttpError (Http.BadStatus 404)) _ ->
-                            text ""
+                {- [ div []
+                       (appData.selectedStreamers
+                           |> List.map (\streamer -> text (streamer.displayName ++ " "))
+                       )
+                   , button [ css [ Tw.btn, Tw.btn_primary, Css.hover [ Tw.bg_primary_focus ] ], onClick FetchStreamingSchedules ] [ text "Load schedule" ]
+                   , div [ css [ Tw.text_white ] ]
+                       [ case appData.schedules of
+                           --
+                           RefreshData.ErrorWithData (HttpError (Http.BadStatus 404)) _ ->
+                               text ""
 
+                           RefreshData.ErrorWithData error _ ->
+                               errorView (Error.toString error)
+
+                           _ ->
+                               text ""
+                       , div []
+                           (schedules
+                               |> List.map (\schedule -> ( schedule.broadcasterId, schedule.segments ))
+                               |> List.filterMap
+                                   (\( userID, segments ) ->
+                                       findUserByID userID (RefreshData.mapTo (\_ v -> v) appData.streamers)
+                                           |> Maybe.map (\user -> List.map (scheduleSegmentView appData.timeZone user) segments)
+                                   )
+                               |> List.concat
+                               |> List.map (\segView -> div [ css [ Tw.m_4 ] ] [ segView ])
+                           )
+                       ]
+                   ]
+                -}
+                [ button [ onClick FetchVideos ] [ text "fetch videos" ]
+                , div []
+                    (case appData.videos of
                         RefreshData.ErrorWithData error _ ->
-                            errorView (Error.toString error)
+                            [ text (Debug.toString error) ]
 
                         _ ->
-                            text ""
-                    , div []
-                        (schedules
-                            |> List.map (\schedule -> ( schedule.broadcasterId, schedule.segments ))
-                            |> List.filterMap
-                                (\( userID, segments ) ->
-                                    findUserByID userID (RefreshData.mapTo (\_ v -> v) appData.streamers)
-                                        |> Maybe.map (\user -> List.map (scheduleSegmentView appData.timeZone user) segments)
-                                )
-                            |> List.concat
-                            |> List.map (\segView -> div [ css [ Tw.m_4 ] ] [ segView ])
-                        )
-                    ]
+                            appData.videos
+                                |> RefreshData.unwrap
+                                |> List.map Views.Video.videoView
+                    )
                 ]
             ]
         ]

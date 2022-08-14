@@ -1,4 +1,4 @@
-module RefreshData exposing (RefreshData(..), isLoading, map, mapTo, mapValue)
+module RefreshData exposing (RefreshData(..), isLoading, map, mapTo, mapValue, unwrap)
 
 {-| `RefreshData` holds a value that may be replaced or updated later.
 When the update is in progress or there is an error, it can indicate loading or stores the error without losing the data.
@@ -68,6 +68,11 @@ mapValue func data =
 
         ErrorWithData err value ->
             ErrorWithData err (func value)
+
+{-| Just give me the value please-}
+unwrap : RefreshData errorType a -> a
+unwrap =
+    mapTo (\_ v -> v)
 
 
 {-| Whether this `RefreshData` is currently waiting for (new) data
