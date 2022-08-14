@@ -185,7 +185,7 @@ scheduleTimeSegment timeZone row segment =
                     0
 
         endTimePosix =
-            RFC3339.toPosix segment.endTime
+            segment.endTime |> Maybe.andThen (\value -> RFC3339.toPosix value)
 
         endMinutes =
             case ( startTimePosix, endTimePosix ) of
@@ -198,6 +198,10 @@ scheduleTimeSegment timeZone row segment =
 
                     else
                         1440
+
+                {- if end time is not present we set endMinutes to the end of the current day -}
+                ( Just _, Nothing ) ->
+                    1440
 
                 _ ->
                     0
