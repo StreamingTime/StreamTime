@@ -138,7 +138,7 @@ scheduleSegmentView zone { displayName, profileImageUrl } { title, startTime, en
                 ]
     in
     div
-        [ css [ Tw.rounded, Tw.bg_base_300, Tw.flex, Tw.justify_between ]
+        [ css [ Tw.rounded, Tw.bg_dark_800, Tw.flex, Tw.justify_between ]
         ]
         [ avatar
         , div [ css [ Tw.flex, Tw.justify_center, Tw.flex_col, Tw.flex_grow ] ]

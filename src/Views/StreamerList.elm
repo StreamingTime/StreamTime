@@ -2,11 +2,10 @@ module Views.StreamerList exposing (StreamerListMsg(..), streamerListPageSteps, 
 
 import Components exposing (errorView, loadingSpinner)
 import Css
-import Error
+import Error exposing (Error)
 import Html.Styled exposing (Html, a, button, div, hr, img, input, label, p, span, text)
 import Html.Styled.Attributes exposing (css, href, placeholder, src, type_)
 import Html.Styled.Events exposing (onClick, onInput)
-import Http
 import RefreshData exposing (RefreshData)
 import Tailwind.Utilities as Tw
 import Twitch
@@ -25,7 +24,7 @@ streamerListPageSteps =
     10
 
 
-streamerListView : RefreshData Http.Error (List ( Twitch.User, Bool )) -> List Twitch.FollowRelation -> Int -> Maybe String -> Html StreamerListMsg
+streamerListView : RefreshData Error (List ( Twitch.User, Bool )) -> List Twitch.FollowRelation -> Int -> Maybe String -> Html StreamerListMsg
 streamerListView streamersData follows showCount filterString =
     let
         streamers =
@@ -97,7 +96,7 @@ streamerListView streamersData follows showCount filterString =
                 (\err _ ->
                     case err of
                         Just error ->
-                            div [ css [ Tw.mt_2, Tw.mx_2 ] ] [ errorView (Error.httpErrorToString error) ]
+                            div [ css [ Tw.mt_2, Tw.mx_2 ] ] [ errorView (Error.toString error) ]
 
                         Nothing ->
                             text ""
