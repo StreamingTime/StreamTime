@@ -35,6 +35,18 @@ elm-live src/Main.elm -- --output=main.js
 
 Visit `http://localhost:8000`
 
+
+## TODO: heading for this section
+
+### Time
+
+Twitch uses the RFC3339 format in its API responses, which can not be handled directly by elm.
+Using `elm/parser`, we implemented a parser that can convert RFC3339 strings to our own data structures. Our datatypes then can be converted to `Time.Posix` for further use. There is also a Json Decoder that directly decodes into `Time.Posix`. Our Implementation is tested against the examples contained in the RFC specification, but we deliberately ignore fractional seconds. See [RFC3339Test.elm](https://github.com/HS-Flensburg-DST/abschlussprojekt-fabian-w-und-florian/blob/master/tests/RFC3339Test.elm) for usage examples.
+
+To display time and date values to our users, we created our `FormatTime` module that creates humand readable and flexible text representations from a `Time.Posix` value, a `Time.Zone` and a format string. Using `elm/parser`, we convert the format string (e.g. "%DD.%MM.%YYYY") to tokens, which are then used to build the resulting string. See [FormatTimeTest.elm](https://github.com/HS-Flensburg-DST/abschlussprojekt-fabian-w-und-florian/blob/master/tests/FormatTimeTest.elm) for examples.
+
+We use the browsers timezone and `elm/time` to display time and date values with the offset our users expect.
+
 ## Dependencies
 - [TailwindCSS](https://v2.tailwindcss.com)
 - [elm-tailwind-modules](https://github.com/matheus23/elm-tailwind-modules)
