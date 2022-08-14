@@ -6,7 +6,6 @@ import Error exposing (Error)
 import Html.Styled exposing (Html, a, button, div, hr, img, input, label, p, span, text)
 import Html.Styled.Attributes exposing (css, href, placeholder, src, type_)
 import Html.Styled.Events exposing (onClick, onInput)
-import Http
 import RefreshData exposing (RefreshData)
 import Tailwind.Utilities as Tw
 import Twitch
