@@ -38,6 +38,11 @@ type Model
     | {- User has logged in via twitch, but we have yet to validate the token and fetch user details -} LoadingScreen LoadingData Nav.Key
 
 
+type Tab
+    = ScheduleTab
+    | VideoTab
+
+
 type alias AppData =
     { signedInUser : SignedInUser
     , streamers : RefreshData Error (List Twitch.User)
@@ -51,6 +56,7 @@ type alias AppData =
     , timeZone : Time.Zone
     , videos : RefreshData Http.Error (List Twitch.Video)
     , time : Time.Posix
+    , tab : Tab
     }
 
 
@@ -95,6 +101,7 @@ type Msg
     | HourlyValidation
     | FetchVideos
     | GotVideos (Result Http.Error (List Twitch.Video))
+    | SwitchTab Tab
 
 
 type UrlMsg
@@ -319,6 +326,7 @@ update msg model =
                                 , timeZone = Maybe.withDefault Time.utc m.timeZone
                                 , videos = LoadingMore []
                                 , time = Maybe.withDefault (Time.millisToPosix 0) m.time
+                                , tab = ScheduleTab
                                 }
                                 navKey
                             , Cmd.batch [ fetchVideos 10 user.token (Twitch.UserID "84935311"), fetchVideos 10 user.token (Twitch.UserID "653873565"), fetchVideos 10 user.token (Twitch.UserID "511509943") ]
@@ -383,6 +391,9 @@ update msg model =
                     ( model, Cmd.none )
 
                 GotVideos _ ->
+                    ( model, Cmd.none )
+
+                SwitchTab _ ->
                     ( model, Cmd.none )
 
         LoggedIn appData navKey ->
@@ -529,6 +540,9 @@ update msg model =
                 GotTime _ ->
                     ( model, Cmd.none )
 
+                SwitchTab newTab ->
+                    ( LoggedIn { appData | tab = newTab } navKey, Cmd.none )
+
         NotLoggedIn _ navKey ->
             case msg of
                 UrlMsg urlMsg ->
@@ -575,6 +589,9 @@ update msg model =
                     ( model, Cmd.none )
 
                 GotVideos _ ->
+                    ( model, Cmd.none )
+
+                SwitchTab _ ->
                     ( model, Cmd.none )
 
 
@@ -711,6 +728,23 @@ loadingSpinner styles =
 
 appView : AppData -> Html Msg
 appView appData =
+    let
+        tabButtons =
+            div [ css [ Tw.tabs, Tw.tabs_boxed ] ]
+                [ div
+                    [ css [ Tw.tab, Tw.tab_bordered ]
+                    , classList [ ( "tab-active", appData.tab == ScheduleTab ) ]
+                    , onClick (SwitchTab ScheduleTab)
+                    ]
+                    [ text "Schedule" ]
+                , div
+                    [ css [ Tw.tab, Tw.tab_bordered ]
+                    , classList [ ( "tab-active", appData.tab == VideoTab ) ]
+                    , onClick (SwitchTab VideoTab)
+                    ]
+                    [ text "Videos" ]
+                ]
+    in
     div []
         [ headerView appData.signedInUser
         , div [ css [ Tw.flex ] ]
@@ -730,32 +764,45 @@ appView appData =
                     , Tw.w_full
                     , Tw.ml_60
                     , Tw.mt_16
-                    , Tw.flex
-                    , Tw.flex_col
-                    , Tw.items_center
-                    , Tw.space_y_4
                     ]
                 ]
                 [ div []
-                    [ button [ onClick FetchVideos ] [ text "fetch videos" ]
+                    [ tabButtons
                     , div []
-                        (case appData.videos of
-                            RefreshData.ErrorWithData error _ ->
-                                [ text (Debug.toString error) ]
+                        [ case appData.tab of
+                            VideoTab ->
+                                videoTabView appData
 
-                            _ ->
-                                [ appData.videos
-                                    |> RefreshData.unwrap
-                                    |> Views.Video.videoListView
-                                ]
-                        )
-                    , div []
-                        [ div [ css [ Tw.w_5over6, Tw.py_10 ] ]
-                            [ calendarView appData.timeZone appData.time appData.streamers appData.schedules appData.selectedStreamers ]
+                            ScheduleTab ->
+                                scheduleTabView appData
                         ]
                     ]
                 ]
             ]
+        ]
+
+
+scheduleTabView : AppData -> Html Msg
+scheduleTabView appData =
+    div [ css [ Tw.w_5over6, Tw.py_10 ] ]
+        [ calendarView appData.timeZone appData.time appData.streamers appData.schedules appData.selectedStreamers ]
+
+
+videoTabView : AppData -> Html Msg
+videoTabView appData =
+    div []
+        [ button [ onClick FetchVideos ] [ text "fetch videos" ]
+        , div []
+            (case appData.videos of
+                RefreshData.ErrorWithData error _ ->
+                    [ text (Debug.toString error) ]
+
+                _ ->
+                    [ appData.videos
+                        |> RefreshData.unwrap
+                        |> Views.Video.videoListView
+                    ]
+            )
         ]
 
 
