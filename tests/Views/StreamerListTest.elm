@@ -1,5 +1,6 @@
 module Views.StreamerListTest exposing (streamerDataStatusTest)
 
+import Error exposing (Error(..))
 import Html.Styled exposing (toUnstyled)
 import Http
 import RefreshData
@@ -16,7 +17,7 @@ streamerDataStatusTest =
             (\_ ->
                 let
                     streamers =
-                        RefreshData.ErrorWithData Http.Timeout []
+                        RefreshData.ErrorWithData (HttpError Http.Timeout) []
                 in
                 streamerListView streamers [] 10 Nothing
                     |> toUnstyled

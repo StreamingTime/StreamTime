@@ -32,13 +32,13 @@ loginRedirectUrl =
 
 type Model
     = {- User is logged in, token is verified -} LoggedIn AppData Nav.Key
-    | {- User has not started the login process -} NotLoggedIn (Maybe Http.Error) Nav.Key
+    | {- User has not started the login process -} NotLoggedIn (Maybe Error) Nav.Key
     | {- User has logged in via twitch, but we have yet to validate the token and fetch user details -} LoadingScreen LoadingData Nav.Key
 
 
 type alias AppData =
     { signedInUser : SignedInUser
-    , streamers : RefreshData Http.Error (List Twitch.User)
+    , streamers : RefreshData Error (List Twitch.User)
 
     -- a list of follow relation metadata originating from our user
     , follows : List Twitch.FollowRelation
@@ -227,7 +227,7 @@ update msg model =
                 GotValidateTokenResponse response ->
                     case response of
                         Err err ->
-                            ( NotLoggedIn (Just err) navKey, Cmd.none )
+                            ( NotLoggedIn (Just (HttpError err)) navKey, Cmd.none )
 
                         Ok value ->
                             ( LoadingScreen
@@ -254,7 +254,7 @@ update msg model =
                 GotUserFollows response ->
                     case ( m.signedInUser, response ) of
                         ( _, Err e ) ->
-                            ( NotLoggedIn (Just e) navKey, Cmd.none )
+                            ( NotLoggedIn (Just (HttpError e)) navKey, Cmd.none )
 
                         ( Just user, Ok paginatedResponse ) ->
                             let
@@ -304,7 +304,7 @@ update msg model =
                             )
 
                         ( _, _, Err e ) ->
-                            ( NotLoggedIn (Just e) navKey, Cmd.none )
+                            ( NotLoggedIn (Just (HttpError e)) navKey, Cmd.none )
 
                         _ ->
                             Debug.todo "this case should not happen, since we cant fetch profiles if user or follows are unknown"
@@ -321,7 +321,7 @@ update msg model =
                             )
 
                         ( _, Err e ) ->
-                            ( NotLoggedIn (Just e) navKey, Cmd.none )
+                            ( NotLoggedIn (Just (HttpError e)) navKey, Cmd.none )
 
                         ( Nothing, _ ) ->
                             Debug.todo "again, a case that should not happen"
@@ -361,7 +361,7 @@ update msg model =
                     ( LoggedIn appData navKey, handleUrlMsg urlMsg navKey )
 
                 GotValidateTokenResponse (Err err) ->
-                    ( NotLoggedIn (Just err) navKey, Cmd.none )
+                    ( NotLoggedIn (Just (HttpError err)) navKey, Cmd.none )
 
                 GotValidateTokenResponse (Ok _) ->
                     ( model, Cmd.none )
@@ -390,7 +390,7 @@ update msg model =
                         Err err ->
                             ( LoggedIn
                                 { appData
-                                    | streamers = RefreshData.map (RefreshData.ErrorWithData err) appData.streamers
+                                    | streamers = RefreshData.map (RefreshData.ErrorWithData (HttpError err)) appData.streamers
                                 }
                                 navKey
                             , Cmd.none
@@ -461,7 +461,7 @@ update msg model =
                     ( LoggedIn { appData | streamers = RefreshData.map (\oldProfiles -> Present (oldProfiles ++ newProfiles)) appData.streamers } navKey, Cmd.none )
 
                 GotStreamerProfiles (Err err) ->
-                    ( LoggedIn { appData | streamers = RefreshData.map (ErrorWithData err) appData.streamers } navKey, Cmd.none )
+                    ( LoggedIn { appData | streamers = RefreshData.map (ErrorWithData (HttpError err)) appData.streamers } navKey, Cmd.none )
 
                 GotStreamingSchedule response ->
                     case response of
@@ -566,7 +566,7 @@ view model =
     }
 
 
-loginView : Maybe Http.Error -> Html Msg
+loginView : Maybe Error -> Html Msg
 loginView err =
     div
         [ css
@@ -615,7 +615,7 @@ loginView err =
                 , case err of
                     Just e ->
                         div [ css [ Tw.mt_8 ] ]
-                            [ errorView (Error.httpErrorToString e) ]
+                            [ errorView (Error.toString e) ]
 
                     Nothing ->
                         text ""
