@@ -1,4 +1,4 @@
-module Error exposing (Error(..), httpErrorToString, toString)
+module Error exposing (Error(..), toString)
 
 import Http
 
