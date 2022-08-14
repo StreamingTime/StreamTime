@@ -1,5 +1,9 @@
 # Abschlussprojekt
 
+## What and why?
+
+Twitch allows streamers to create schedules to inform their community about when and what they will stream. Users can view this schedule when visiting a streamers profile page. Our application allows Twitch users to view multiple schedules at once, without the need to manually visit multiple profile pages.
+
 ## Prerequisites
 
 Follow [this](https://dev.twitch.tv/docs/authentication/register-app) instruction in order to register a Twitch application.
