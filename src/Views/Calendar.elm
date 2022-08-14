@@ -192,13 +192,13 @@ scheduleTimeSegment timeZone row segment =
             case ( startTimePosix, endTimePosix ) of
                 ( Just s, Just e ) ->
                     {- if it is not the same day we set endMinutes to the end of the current day:
-                       30 minutes * 48 cells / 60 minutes = 24 hours
+                       24 * 60 minutes = 1440 minutes
                     -}
                     if Time.Extra.sameDay timeZone s e then
                         Time.toHour timeZone e * 60 + Time.toMinute timeZone e
 
                     else
-                        48
+                        1440
 
                 _ ->
                     0
