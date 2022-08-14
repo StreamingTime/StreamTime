@@ -4,7 +4,6 @@ import Error exposing (Error)
 import FormatTime
 import Html.Styled exposing (Html, div, p, text)
 import Html.Styled.Attributes exposing (css, style)
-import Http
 import List.Extra
 import RFC3339
 import RefreshData exposing (RefreshData)
