@@ -1,11 +1,9 @@
-module UtilsTest exposing (concatMaybeListTest, filterFollowsByLoginTest, missingProfileLoginsTest, streamersWithSelectionTest, timeInOneWeekTest)
+module UtilsTest exposing (concatMaybeListTest, filterFollowsByLoginTest, missingProfileLoginsTest, missingStreamersInSchedulesTest, streamersInSchedulesTest, streamersWithSelectionTest)
 
 import Expect
-import FormatTime
 import Test exposing (Test, describe, test)
-import Time
 import Twitch
-import Utils exposing (concatMaybeList, filterFollowsByLogin, missingProfileLogins, streamersWithSelection)
+import Utils exposing (concatMaybeList, filterFollowsByLogin, missingProfileLogins, missingStreamersInSchedules, schedulesWithStreamers, streamersWithSelection)
 
 
 concatMaybeListTest : Test
@@ -133,12 +131,44 @@ streamersWithSelectionTest =
         )
 
 
-timeInOneWeekTest : Test
-timeInOneWeekTest =
-    test "calculate time in one week"
+missingStreamersInSchedulesTest : Test
+missingStreamersInSchedulesTest =
+    test "missing streamers in schedules"
         (\_ ->
-            Time.millisToPosix 2000000000000
-                |> Utils.timeInOneWeek
-                |> FormatTime.asRFC3339 Time.utc
-                |> Expect.equal (Ok "2033-05-25T03:33:20+00:00")
+            let
+                missing =
+                    [ { id = "3", displayName = "c", profileImageUrl = "", loginName = "c" } ]
+
+                streamers =
+                    [ { id = "1", displayName = "a", profileImageUrl = "", loginName = "a" }
+                    , { id = "2", displayName = "b", profileImageUrl = "", loginName = "b" }
+                    ]
+                        ++ missing
+
+                schedules =
+                    [ { segments = [], broadcasterId = "1", broadcasterName = "a" }
+                    , { segments = [], broadcasterId = "2", broadcasterName = "b" }
+                    ]
+            in
+            missingStreamersInSchedules streamers schedules
+                |> Expect.equal missing
+        )
+
+
+streamersInSchedulesTest : Test
+streamersInSchedulesTest =
+    test "streamers in schedules"
+        (\_ ->
+            let
+                streamers =
+                    [ { id = "1", displayName = "a", profileImageUrl = "", loginName = "a" }
+                    ]
+
+                schedules =
+                    [ { segments = [], broadcasterId = "1", broadcasterName = "a" }
+                    , { segments = [], broadcasterId = "2", broadcasterName = "b" }
+                    ]
+            in
+            schedulesWithStreamers streamers schedules
+                |> Expect.equal [ { segments = [], broadcasterId = "1", broadcasterName = "a" } ]
         )

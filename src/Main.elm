@@ -17,11 +17,12 @@ import RefreshData exposing (RefreshData(..))
 import Tailwind.Utilities as Tw
 import Task
 import Time
+import Time.Extra
 import Twitch
 import TwitchConfig
 import Url
-import Utils exposing (filterFollowsByLogin, findUserByID, missingProfileLogins, streamersWithSelection)
-import Views.ScheduleSegment exposing (scheduleSegmentView)
+import Utils exposing (filterFollowsByLogin, missingProfileLogins, streamersWithSelection)
+import Views.Calendar exposing (calendarView)
 import Views.StreamerList exposing (StreamerListMsg(..), streamerListPageSteps, streamerListView)
 
 
@@ -47,6 +48,7 @@ type alias AppData =
     , selectedStreamers : List Twitch.User
     , schedules : RefreshData Error (List Twitch.Schedule)
     , timeZone : Time.Zone
+    , time : Time.Posix
     }
 
 
@@ -62,6 +64,7 @@ type alias LoadingData =
     -- the first n streamers to display in the streamer list
     , firstStreamers : Maybe (List Twitch.User)
     , timeZone : Maybe Time.Zone
+    , time : Maybe Time.Posix
     }
 
 
@@ -83,10 +86,10 @@ type Msg
     | GotStreamerProfiles (Result Http.Error (List Twitch.User))
     | GotUserProfile (Result Http.Error Twitch.User)
     | GotStreamingSchedule (Result Error Twitch.Schedule)
-    | FetchStreamingSchedules
     | StreamerListMsg StreamerListMsg
     | Logout
     | GotTimeZone Time.Zone
+    | GotTime Time.Posix
     | HourlyValidation
 
 
@@ -105,6 +108,7 @@ init flags url navKey =
                 , signedInUser = Nothing
                 , firstStreamers = Nothing
                 , timeZone = Nothing
+                , time = Nothing
                 }
                 navKey
             , Cmd.batch [ Cmd.map GotValidateTokenResponse (Twitch.validateToken token), Nav.replaceUrl navKey "/" ]
@@ -126,6 +130,7 @@ init flags url navKey =
                         , signedInUser = Nothing
                         , firstStreamers = Nothing
                         , timeZone = Nothing
+                        , time = Nothing
                         }
                         navKey
                     , Cmd.batch [ Cmd.map GotValidateTokenResponse (Twitch.validateToken token), Nav.replaceUrl navKey "/" ]
@@ -152,8 +157,8 @@ fetchUserProfile userID token =
     Cmd.map GotUserProfile (Twitch.getUser userID TwitchConfig.clientId token)
 
 
-fetchStreamingSchedule : String -> Time.Zone -> Twitch.Token -> Cmd Msg
-fetchStreamingSchedule userID timeZone token =
+fetchStreamingSchedule : String -> Time.Zone -> Time.Posix -> Twitch.Token -> Cmd Msg
+fetchStreamingSchedule userID timeZone time token =
     let
         -- get all segments that start before endTime
         beforeEndTime : Time.Posix -> List Twitch.Segment -> List Twitch.Segment
@@ -205,8 +210,7 @@ fetchStreamingSchedule userID timeZone token =
                                 Task.succeed data
                     )
     in
-    Time.now
-        |> Task.andThen (\now -> startFetching (Utils.timeInOneWeek now))
+    startFetching (Time.Extra.timeInOneWeek time)
         |> Task.attempt
             GotStreamingSchedule
 
@@ -214,6 +218,11 @@ fetchStreamingSchedule userID timeZone token =
 getTimeZone : Cmd Msg
 getTimeZone =
     Task.perform GotTimeZone Time.here
+
+
+getTime : Cmd Msg
+getTime =
+    Task.perform GotTime Time.now
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -243,9 +252,10 @@ update msg model =
                                 , follows = Nothing
                                 , firstStreamers = Nothing
                                 , timeZone = Nothing
+                                , time = Nothing
                                 }
                                 navKey
-                            , getTimeZone
+                            , Cmd.batch [ getTimeZone, getTime ]
                             )
 
                 GotRevokeTokenResponse ->
@@ -296,8 +306,9 @@ update msg model =
                                 , sidebarStreamerCount = streamerListPageSteps
                                 , selectedStreamers = []
                                 , streamerFilterName = Nothing
-                                , schedules = LoadingMore []
+                                , schedules = Present []
                                 , timeZone = Maybe.withDefault Time.utc m.timeZone
+                                , time = Maybe.withDefault (Time.millisToPosix 0) m.time
                                 }
                                 navKey
                             , Cmd.none
@@ -337,10 +348,13 @@ update msg model =
                             Debug.todo "error"
                     )
 
-                GotStreamingSchedule _ ->
-                    ( model, Cmd.none )
+                GotTime time ->
+                    ( LoadingScreen { m | time = Just time }
+                        navKey
+                    , Cmd.none
+                    )
 
-                FetchStreamingSchedules ->
+                GotStreamingSchedule _ ->
                     ( model, Cmd.none )
 
                 StreamerListMsg _ ->
@@ -455,7 +469,14 @@ update msg model =
                             else
                                 List.filter ((/=) streamer) appData.selectedStreamers
                     in
-                    ( LoggedIn { appData | selectedStreamers = newList } navKey, Cmd.none )
+                    ( LoggedIn { appData | schedules = RefreshData.map LoadingMore appData.schedules, selectedStreamers = newList } navKey
+                    , Utils.missingStreamersInSchedules newList (RefreshData.mapTo (\_ -> identity) appData.schedules)
+                        |> List.map
+                            (\s ->
+                                fetchStreamingSchedule s.id appData.timeZone appData.time appData.signedInUser.token
+                            )
+                        |> Cmd.batch
+                    )
 
                 GotStreamerProfiles (Ok newProfiles) ->
                     ( LoggedIn { appData | streamers = RefreshData.map (\oldProfiles -> Present (oldProfiles ++ newProfiles)) appData.streamers } navKey, Cmd.none )
@@ -471,11 +492,6 @@ update msg model =
                         Ok value ->
                             ( LoggedIn { appData | schedules = RefreshData.map (\oldSchedules -> Present (oldSchedules ++ [ value ])) appData.schedules } navKey, Cmd.none )
 
-                FetchStreamingSchedules ->
-                    ( LoggedIn { appData | schedules = RefreshData.map LoadingMore appData.schedules } navKey
-                    , Cmd.batch (List.map (\streamer -> fetchStreamingSchedule streamer.id appData.timeZone appData.signedInUser.token) appData.selectedStreamers)
-                    )
-
                 Logout ->
                     ( NotLoggedIn Nothing navKey, Cmd.batch [ LocalStorage.removeData, revokeToken TwitchConfig.clientId appData.signedInUser.token ] )
 
@@ -483,6 +499,9 @@ update msg model =
                     ( model, Cmd.map GotValidateTokenResponse (Twitch.validateToken appData.signedInUser.token) )
 
                 GotTimeZone _ ->
+                    ( model, Cmd.none )
+
+                GotTime _ ->
                     ( model, Cmd.none )
 
         NotLoggedIn _ navKey ->
@@ -515,13 +534,13 @@ update msg model =
                 GotStreamingSchedule _ ->
                     ( model, Cmd.none )
 
-                FetchStreamingSchedules ->
-                    ( model, Cmd.none )
-
                 Logout ->
                     ( model, Cmd.none )
 
                 GotTimeZone _ ->
+                    ( model, Cmd.none )
+
+                GotTime _ ->
                     ( model, Cmd.none )
 
                 HourlyValidation ->
@@ -661,10 +680,6 @@ loadingSpinner styles =
 
 appView : AppData -> Html Msg
 appView appData =
-    let
-        schedules =
-            RefreshData.mapTo (\_ -> identity) appData.schedules
-    in
     div []
         [ headerView appData.signedInUser
         , div [ css [ Tw.flex ] ]
@@ -678,45 +693,20 @@ appView appData =
                     appData.sidebarStreamerCount
                     appData.streamerFilterName
                 )
-
-            -- Content placeholder
             , div
                 [ css
                     [ Tw.bg_base_100
                     , Tw.w_full
                     , Tw.ml_60
                     , Tw.mt_16
+                    , Tw.flex
+                    , Tw.flex_col
+                    , Tw.items_center
+                    , Tw.space_y_4
                     ]
                 ]
-                -- Test fetching streaming schedule
-                [ div []
-                    (appData.selectedStreamers
-                        |> List.map (\streamer -> text (streamer.displayName ++ " "))
-                    )
-                , button [ css [ Tw.btn, Tw.btn_primary, Css.hover [ Tw.bg_primary_focus ] ], onClick FetchStreamingSchedules ] [ text "Load schedule" ]
-                , div [ css [ Tw.text_white ] ]
-                    [ case appData.schedules of
-                        --
-                        RefreshData.ErrorWithData (HttpError (Http.BadStatus 404)) _ ->
-                            text ""
-
-                        RefreshData.ErrorWithData error _ ->
-                            errorView (Error.toString error)
-
-                        _ ->
-                            text ""
-                    , div []
-                        (schedules
-                            |> List.map (\schedule -> ( schedule.broadcasterId, schedule.segments ))
-                            |> List.filterMap
-                                (\( userID, segments ) ->
-                                    findUserByID userID (RefreshData.mapTo (\_ v -> v) appData.streamers)
-                                        |> Maybe.map (\user -> List.map (scheduleSegmentView appData.timeZone user) segments)
-                                )
-                            |> List.concat
-                            |> List.map (\segView -> div [ css [ Tw.m_4 ] ] [ segView ])
-                        )
-                    ]
+                [ div [ css [ Tw.w_5over6, Tw.py_10 ] ]
+                    [ calendarView appData.timeZone appData.time appData.streamers appData.schedules appData.selectedStreamers ]
                 ]
             ]
         ]

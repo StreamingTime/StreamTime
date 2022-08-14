@@ -15,7 +15,11 @@ module.exports = {
                     800: "#141517",
                     900: "#101113",
                 }
-            }
+            },
+            gridTemplateColumns: {
+                calendar: 'repeat(12, minmax(3rem, 1fr))',
+                calendar_mark: 'repeat(48, minmax(0.75rem, 1fr))',
+            },
         },
     },
     plugins: [

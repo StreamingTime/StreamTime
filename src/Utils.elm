@@ -1,6 +1,5 @@
-module Utils exposing (concatMaybeList, filterFollowsByLogin, findUserByID, missingProfileLogins, streamersWithSelection, timeInOneWeek)
+module Utils exposing (concatMaybeList, filterFollowsByLogin, findUserByID, missingProfileLogins, missingStreamersInSchedules, schedulesWithStreamers, streamersWithSelection)
 
-import Time
 import Twitch
 
 
@@ -58,17 +57,30 @@ streamersWithSelection selected users =
         |> List.map (\u -> ( u, List.any ((==) u) selected ))
 
 
-timeInOneWeek : Time.Posix -> Time.Posix
-timeInOneWeek time =
-    time
-        |> Time.posixToMillis
-        -- 60 seconds * 60 minutes * 24 hours * 7 days (in ms)
-        |> (+) (60 * 60 * 24 * 7 * 1000)
-        |> Time.millisToPosix
-
-
 findUserByID : String -> List Twitch.User -> Maybe Twitch.User
 findUserByID userID users =
     users
         |> List.filter (\user -> user.id == userID)
         |> List.head
+
+
+missingStreamersInSchedules : List Twitch.User -> List Twitch.Schedule -> List Twitch.User
+missingStreamersInSchedules streamers schedules =
+    streamers
+        |> List.filter
+            (\streamer ->
+                not
+                    (schedules
+                        |> List.any (\schedule -> schedule.broadcasterId == streamer.id)
+                    )
+            )
+
+
+schedulesWithStreamers : List Twitch.User -> List Twitch.Schedule -> List Twitch.Schedule
+schedulesWithStreamers streamers schedules =
+    schedules
+        |> List.filter
+            (\schedule ->
+                streamers
+                    |> List.any (\streamer -> schedule.broadcasterId == streamer.id)
+            )
