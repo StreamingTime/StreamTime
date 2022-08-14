@@ -99,7 +99,6 @@ type Msg
     | GotTimeZone Time.Zone
     | GotTime Time.Posix
     | HourlyValidation
-    | FetchVideos
     | GotVideos (Result Http.Error (List Twitch.Video))
     | SwitchTab Tab
 
@@ -231,6 +230,27 @@ fetchVideos count token userID =
     Cmd.map GotVideos (Twitch.fetchVideos count userID TwitchConfig.clientId token)
 
 
+{-| Fetch schedules for every streamer that is selected, but whose schedule is not in the list
+-}
+fetchMissingSchedules : AppData -> Cmd Msg
+fetchMissingSchedules { selectedStreamers, schedules, timeZone, signedInUser, time } =
+    Utils.missingStreamersInSchedules selectedStreamers (RefreshData.mapTo (\_ -> identity) schedules)
+        |> List.map
+            (\s ->
+                fetchStreamingSchedule s.id timeZone time signedInUser.token
+            )
+        |> Cmd.batch
+
+
+{-| Fetch videos for every streamer that is selected, but whose videos are not in the list
+-}
+fetchMissingVideos : AppData -> Cmd Msg
+fetchMissingVideos { selectedStreamers, videos, signedInUser } =
+    Utils.missingStreamersInVideos selectedStreamers (RefreshData.unwrap videos)
+        |> List.map (\s -> fetchVideos 10 signedInUser.token (Twitch.UserID s.id))
+        |> Cmd.batch
+
+
 getTimeZone : Cmd Msg
 getTimeZone =
     Task.perform GotTimeZone Time.here
@@ -329,7 +349,7 @@ update msg model =
                                 , tab = ScheduleTab
                                 }
                                 navKey
-                            , Cmd.batch [ fetchVideos 10 user.token (Twitch.UserID "84935311"), fetchVideos 10 user.token (Twitch.UserID "653873565"), fetchVideos 10 user.token (Twitch.UserID "511509943") ]
+                            , Cmd.none
                             )
 
                         ( _, _, Err e ) ->
@@ -385,9 +405,6 @@ update msg model =
                     ( model, Cmd.none )
 
                 HourlyValidation ->
-                    ( model, Cmd.none )
-
-                FetchVideos ->
                     ( model, Cmd.none )
 
                 GotVideos _ ->
@@ -495,14 +512,17 @@ update msg model =
 
                             else
                                 List.filter ((/=) streamer) appData.selectedStreamers
+
+                        newAppData =
+                            { appData | schedules = RefreshData.map LoadingMore appData.schedules, selectedStreamers = newList }
                     in
-                    ( LoggedIn { appData | schedules = RefreshData.map LoadingMore appData.schedules, selectedStreamers = newList } navKey
-                    , Utils.missingStreamersInSchedules newList (RefreshData.mapTo (\_ -> identity) appData.schedules)
-                        |> List.map
-                            (\s ->
-                                fetchStreamingSchedule s.id appData.timeZone appData.time appData.signedInUser.token
-                            )
-                        |> Cmd.batch
+                    ( LoggedIn newAppData navKey
+                    , case appData.tab of
+                        ScheduleTab ->
+                            fetchMissingSchedules newAppData
+
+                        VideoTab ->
+                            fetchMissingVideos newAppData
                     )
 
                 GotStreamerProfiles (Ok newProfiles) ->
@@ -528,9 +548,6 @@ update msg model =
                 GotTimeZone _ ->
                     ( model, Cmd.none )
 
-                FetchVideos ->
-                    ( model, fetchVideos 10 appData.signedInUser.token (Twitch.UserID "84935311") )
-
                 GotVideos (Ok response) ->
                     ( LoggedIn { appData | videos = RefreshData.map (\v -> Present (v ++ response)) appData.videos } navKey, Cmd.none )
 
@@ -541,7 +558,14 @@ update msg model =
                     ( model, Cmd.none )
 
                 SwitchTab newTab ->
-                    ( LoggedIn { appData | tab = newTab } navKey, Cmd.none )
+                    ( LoggedIn { appData | tab = newTab } navKey
+                    , case newTab of
+                        ScheduleTab ->
+                            fetchMissingSchedules appData
+
+                        VideoTab ->
+                            fetchMissingVideos appData
+                    )
 
         NotLoggedIn _ navKey ->
             case msg of
@@ -583,9 +607,6 @@ update msg model =
                     ( model, Cmd.none )
 
                 HourlyValidation ->
-                    ( model, Cmd.none )
-
-                FetchVideos ->
                     ( model, Cmd.none )
 
                 GotVideos _ ->
@@ -789,21 +810,19 @@ scheduleTabView appData =
 
 
 videoTabView : AppData -> Html Msg
-videoTabView appData =
+videoTabView { selectedStreamers, videos } =
     div []
-        [ button [ onClick FetchVideos ] [ text "fetch videos" ]
-        , div []
-            (case appData.videos of
-                RefreshData.ErrorWithData error _ ->
-                    [ text (Debug.toString error) ]
+        (case videos of
+            RefreshData.ErrorWithData error _ ->
+                [ text (Debug.toString error) ]
 
-                _ ->
-                    [ appData.videos
-                        |> RefreshData.unwrap
-                        |> Views.Video.videoListView
-                    ]
-            )
-        ]
+            _ ->
+                [ videos
+                    |> RefreshData.unwrap
+                    |> List.filter (\video -> List.any (\streamer -> Twitch.UserID streamer.id == video.userID) selectedStreamers)
+                    |> Views.Video.videoListView
+                ]
+        )
 
 
 headerView : SignedInUser -> Html Msg
