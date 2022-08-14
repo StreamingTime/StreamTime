@@ -310,7 +310,7 @@ update msg model =
                                 , videos = LoadingMore []
                                 }
                                 navKey
-                            , Cmd.none
+                            , Cmd.batch [ fetchVideos 10 user.token (Twitch.UserID "84935311"), fetchVideos 10 user.token (Twitch.UserID "653873565"), fetchVideos 10 user.token (Twitch.UserID "511509943") ]
                             )
 
                         ( _, _, Err e ) ->
@@ -757,9 +757,10 @@ appView appData =
                             [ text (Debug.toString error) ]
 
                         _ ->
-                            appData.videos
+                            [ appData.videos
                                 |> RefreshData.unwrap
-                                |> List.map Views.Video.videoView
+                                |> Views.Video.videoListView
+                            ]
                     )
                 ]
             ]

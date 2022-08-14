@@ -1,9 +1,48 @@
-module Views.Video exposing (videoView)
+module Views.Video exposing (videoListView)
 
+import Dict
+import FormatTime
 import Html.Styled exposing (Html, a, div, img, p, text)
 import Html.Styled.Attributes exposing (css, height, href, src, width)
+import List.Extra
 import Tailwind.Utilities as Tw
+import Time
 import Twitch exposing (VideoType(..))
+
+
+dayString : Time.Posix -> String
+dayString posix =
+    posix
+        |> FormatTime.format "%Month %DD, %YYYY" Time.utc
+        |> Result.withDefault "Failed to format date"
+
+
+videoListView : List Twitch.Video -> Html msg
+videoListView videos =
+    div
+        [ css [ Tw.m_5 ] ]
+        (videos
+            -- Time.Posix is not comparable, so we build the date heading here and use it as key to group the videos
+            |> List.Extra.groupBy (\video -> dayString video.createdAt)
+            |> Dict.map dayView
+            |> Dict.toList
+            |> List.map Tuple.second
+        )
+
+
+dayView : String -> List Twitch.Video -> Html msg
+dayView dayText videos =
+    div
+        []
+        [ p
+            [ css [ Tw.font_bold ]
+            , css [ Tw.mt_5, Tw.mb_5 ]
+            ]
+            [ text dayText ]
+        , div
+            [ css [ Tw.grid, Tw.grid_cols_3, Tw.gap_5 ] ]
+            (List.map videoView videos)
+        ]
 
 
 videoView : Twitch.Video -> Html msg
@@ -68,8 +107,7 @@ videoView { title, thumbnailURL, videoType, duration, userName, url } =
     in
     div
         [ css
-            [ Tw.m_10
-            , Tw.p_5
+            [ Tw.p_5
             , Tw.rounded
             , Tw.inline_block
             , Tw.bg_dark_800
