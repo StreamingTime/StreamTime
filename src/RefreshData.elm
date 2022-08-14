@@ -69,7 +69,9 @@ mapValue func data =
         ErrorWithData err value ->
             ErrorWithData err (func value)
 
-{-| Just give me the value please-}
+
+{-| Just give me the value please
+-}
 unwrap : RefreshData errorType a -> a
 unwrap =
     mapTo (\_ v -> v)
