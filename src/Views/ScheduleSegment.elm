@@ -55,13 +55,6 @@ scheduleSegmentView zone { displayName, profileImageUrl } { title, startTime, en
                     p [] [ text title ]
                 ]
 
-        endTimeFormat =
-            if Time.toDay zone (asPosix startTime) == Time.toDay zone (asPosix endTime) then
-                "%hh:%mm GMT%TZ"
-
-            else
-                "%DD.%MM.%YYYY %hh:%mm GMT%TZ"
-
         isRecurringView =
             if isRecurring then
                 div
@@ -78,14 +71,33 @@ scheduleSegmentView zone { displayName, profileImageUrl } { title, startTime, en
             else
                 text ""
 
+        timeZoneString =
+            date "GMT%TZ" startTime
+
         datesView =
             div [ strikeIfCanceled ]
-                [ span [] [ text (date "%DD.%MM.%YYYY %hh:%mm" startTime) ]
-                , span [] [ text " - " ]
-                , span []
-                    [ text (date endTimeFormat endTime) ]
-                , isRecurringView
-                ]
+                (span [] [ text (date "%DD.%MM.%YYYY %hh:%mm" startTime) ]
+                    :: (case endTime of
+                            Just value ->
+                                let
+                                    endTimeFormat =
+                                        if Time.toDay zone (asPosix startTime) == Time.toDay zone (asPosix value) then
+                                            "%hh:%mm"
+
+                                        else
+                                            "%DD.%MM.%YYYY %hh:%mm"
+                                in
+                                [ span [] [ text " - " ]
+                                , span [] [ text (date endTimeFormat value) ]
+                                ]
+
+                            Nothing ->
+                                []
+                       )
+                    ++ [ span [] [ text (String.concat [ " ", timeZoneString ]) ]
+                       , isRecurringView
+                       ]
+                )
 
         categoryImageView =
             case category of

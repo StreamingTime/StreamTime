@@ -102,7 +102,7 @@ type alias Schedule =
 
 type alias Segment =
     { startTime : RFC3339.DateTime
-    , endTime : RFC3339.DateTime
+    , endTime : Maybe RFC3339.DateTime
     , title : String
     , canceledUntil : Maybe RFC3339.DateTime
     , category : Maybe Category
@@ -132,7 +132,7 @@ decodeSegment : Decode.Decoder Segment
 decodeSegment =
     Decode.map6 Segment
         (Decode.field "start_time" decodeTimestamp)
-        (Decode.field "end_time" decodeTimestamp)
+        (Decode.maybe (Decode.field "end_time" decodeTimestamp))
         (Decode.field "title" Decode.string)
         (Decode.maybe (Decode.field "canceled_until" decodeTimestamp))
         (Decode.maybe (Decode.field "category" decodeCategory))

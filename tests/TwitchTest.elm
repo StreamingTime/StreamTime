@@ -241,18 +241,19 @@ decodeSegmentTest =
                             , offset = zulu
                             }
                         , endTime =
-                            { date =
-                                { year = 2021
-                                , month = 7
-                                , day = 1
+                            Just
+                                { date =
+                                    { year = 2021
+                                    , month = 7
+                                    , day = 1
+                                    }
+                                , time =
+                                    { hours = 19
+                                    , minutes = 0
+                                    , seconds = 0
+                                    }
+                                , offset = zulu
                                 }
-                            , time =
-                                { hours = 19
-                                , minutes = 0
-                                , seconds = 0
-                                }
-                            , offset = zulu
-                            }
                         , title = "TwitchDev Monthly Update // July 1, 2021"
                         , canceledUntil = Nothing
                         , category = Just { name = "Science & Technology", id = "509670" }
@@ -279,18 +280,19 @@ decodeSegmentTest =
                             , offset = zulu
                             }
                         , endTime =
-                            { date =
-                                { year = 2021
-                                , month = 7
-                                , day = 1
+                            Just
+                                { date =
+                                    { year = 2021
+                                    , month = 7
+                                    , day = 1
+                                    }
+                                , time =
+                                    { hours = 19
+                                    , minutes = 0
+                                    , seconds = 0
+                                    }
+                                , offset = zulu
                                 }
-                            , time =
-                                { hours = 19
-                                , minutes = 0
-                                , seconds = 0
-                                }
-                            , offset = zulu
-                            }
                         , title = "TwitchDev Monthly Update // July 1, 2021"
                         , canceledUntil =
                             Just
@@ -336,18 +338,19 @@ decodeScheduleTest =
                                 , offset = zulu
                                 }
                           , endTime =
-                                { date =
-                                    { year = 2021
-                                    , month = 7
-                                    , day = 1
+                                Just
+                                    { date =
+                                        { year = 2021
+                                        , month = 7
+                                        , day = 1
+                                        }
+                                    , time =
+                                        { hours = 19
+                                        , minutes = 0
+                                        , seconds = 0
+                                        }
+                                    , offset = zulu
                                     }
-                                , time =
-                                    { hours = 19
-                                    , minutes = 0
-                                    , seconds = 0
-                                    }
-                                , offset = zulu
-                                }
                           , title = "TwitchDev Monthly Update // July 1, 2021"
                           , canceledUntil = Nothing
                           , category = Just { name = "Science & Technology", id = "509670" }
