@@ -2,7 +2,7 @@ module Main exposing (main)
 
 import Browser exposing (Document)
 import Browser.Navigation as Nav
-import Components exposing (errorView)
+import Components exposing (errorView, loadingSpinner)
 import Css
 import Css.Global
 import Error exposing (Error(..))
@@ -660,25 +660,6 @@ validationView =
             []
             [ loadingSpinner [ Tw.w_16, Tw.h_16 ] ]
         ]
-
-
-loadingSpinner : List Css.Style -> Html Msg
-loadingSpinner styles =
-    div
-        [ css
-            (List.concat
-                [ styles
-                , [ Tw.border_4
-                  , Tw.border_solid
-                  , Tw.border_white
-                  , Tw.rounded_full
-                  , Tw.animate_spin
-                  ]
-                ]
-            )
-        , style "border-top-color" "transparent"
-        ]
-        []
 
 
 appView : AppData -> Html Msg
