@@ -11,6 +11,7 @@ import Html.Styled.Attributes exposing (alt, class, classList, css, href, src, s
 import Html.Styled.Events exposing (onClick)
 import Http
 import Json.Encode as Encode
+import Loading exposing (AppData, SignedInUser)
 import LocalStorage
 import RFC3339
 import RefreshData exposing (RefreshData(..))
@@ -37,141 +38,6 @@ type Model
     | {- User has logged in via twitch, but we have yet to validate the token and fetch user details -} LoadingScreen Nav.Key
 
 
-type alias AppData =
-    { signedInUser : SignedInUser
-    , streamers : RefreshData Error (List Twitch.User)
-
-    -- a list of follow relation metadata originating from our user
-    , follows : List Twitch.FollowRelation
-    , sidebarStreamerCount : Int
-    , streamerFilterName : Maybe String
-    , selectedStreamers : List Twitch.User
-    , schedules : RefreshData Error (List Twitch.Schedule)
-    , timeZone : Time.Zone
-    , time : Time.Posix
-    }
-
-
-
-{- Data we need or fetch during the loading screen -}
-
-
-type alias WithVerifiedToken =
-    { token : Twitch.Token
-    , loginName : String
-    , userID : String
-    }
-
-
-type alias WithFullUser =
-    SignedInUser
-
-
-type alias WithTimeInfo =
-    { signedInUser : SignedInUser
-    , zone : Time.Zone
-    , time : Time.Posix
-    }
-
-
-type alias WithFollows =
-    { signedInUser : SignedInUser
-    , zone : Time.Zone
-    , time : Time.Posix
-    , follows : List Twitch.FollowRelation
-    }
-
-
-type alias SignedInUser =
-    { token : Twitch.Token
-    , loginName : String
-    , userID : String
-    , displayName : String
-    , profileImageUrl : String
-    }
-
-
-validateToken : Twitch.Token -> Task.Task Http.Error WithVerifiedToken
-validateToken token =
-    Twitch.validateTokenTask token
-        |> Task.map
-            (\{ login, userID } ->
-                { token = token
-                , loginName = login
-                , userID = userID
-                }
-            )
-
-
-getUserInfo : WithVerifiedToken -> Task.Task Http.Error WithFullUser
-getUserInfo { token } =
-    Twitch.getLoggedInUserTask TwitchConfig.clientId token
-        |> Task.map
-            (\{ id, displayName, profileImageUrl, loginName } ->
-                { token = token
-                , userID = id
-                , loginName = loginName
-                , displayName = displayName
-                , profileImageUrl = profileImageUrl
-                }
-            )
-
-
-getTimeStuff : WithFullUser -> Task.Task Http.Error WithTimeInfo
-getTimeStuff signedInUser =
-    Task.map2
-        (\time zone ->
-            { signedInUser = signedInUser, time = time, zone = zone }
-        )
-        Time.now
-        Time.here
-
-
-getFollows : WithTimeInfo -> Task.Task Http.Error WithFollows
-getFollows { signedInUser, time, zone } =
-    Twitch.getUserFollowsTask signedInUser.userID Nothing TwitchConfig.clientId signedInUser.token
-        |> Task.map
-            (\page ->
-                { signedInUser = signedInUser
-                , time = time
-                , zone = zone
-                , follows = page.data
-                }
-            )
-
-
-getFirstStreamerProfiles : WithFollows -> Task.Task Http.Error AppData
-getFirstStreamerProfiles { follows, signedInUser, time, zone } =
-    let
-        streamerIDs =
-            List.map .toID follows
-    in
-    Twitch.getUsersTask streamerIDs TwitchConfig.clientId signedInUser.token
-        |> Task.map
-            (\streamers ->
-                { signedInUser = signedInUser
-                , streamers = RefreshData.Present streamers
-                , follows = follows
-                , timeZone = zone
-                , time = time
-                , sidebarStreamerCount = streamerListPageSteps
-                , streamerFilterName = Nothing
-                , schedules = RefreshData.LoadingMore []
-                , selectedStreamers = []
-                }
-            )
-
-
-loadStuff : Twitch.Token -> Cmd Msg
-loadStuff token =
-    validateToken token
-        |> Task.andThen getUserInfo
-        |> Task.andThen getTimeStuff
-        |> Task.andThen getFollows
-        |> Task.andThen getFirstStreamerProfiles
-        |> Task.attempt LoadingFinished
-
-
 type Msg
     = UrlMsg UrlMsg
     | GotValidateTokenResponse (Result Http.Error Twitch.ValidateTokenResponse)
@@ -196,7 +62,7 @@ init flags url navKey =
         Just token ->
             ( LoadingScreen navKey
             , Cmd.batch
-                [ loadStuff token
+                [ Cmd.map LoadingFinished (Loading.loadInitialData token streamerListPageSteps)
                 , LocalStorage.persistData { token = Twitch.getTokenValue token }
                 , Nav.replaceUrl navKey "/"
                 ]
@@ -213,7 +79,10 @@ init flags url navKey =
                             Twitch.Token data.token
                     in
                     ( LoadingScreen navKey
-                    , Cmd.batch [ loadStuff token, Nav.replaceUrl navKey "/" ]
+                    , Cmd.batch
+                        [ Cmd.map LoadingFinished (Loading.loadInitialData token streamerListPageSteps)
+                        , Nav.replaceUrl navKey "/"
+                        ]
                     )
 
 
