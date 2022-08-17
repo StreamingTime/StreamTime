@@ -86,8 +86,8 @@ type alias SignedInUser =
     { token : Twitch.Token
     , loginName : String
     , userID : String
-    , displayName : Maybe String -- TODO: dont use maybe here
-    , profileImageUrl : Maybe String -- TODO: dont use maybe here
+    , displayName : String
+    , profileImageUrl : String
     }
 
 
@@ -111,8 +111,8 @@ getUserInfo { token } =
                 { token = token
                 , userID = id
                 , loginName = loginName
-                , displayName = Just displayName
-                , profileImageUrl = Just profileImageUrl
+                , displayName = displayName
+                , profileImageUrl = profileImageUrl
                 }
             )
 
@@ -653,26 +653,10 @@ headerView user =
 userView : SignedInUser -> Html Msg
 userView user =
     let
-        imgUrl =
-            case user.profileImageUrl of
-                Just url ->
-                    url
-
-                Nothing ->
-                    ""
-
-        name =
-            case user.displayName of
-                Just displayName ->
-                    displayName
-
-                Nothing ->
-                    user.loginName
-
         avatar =
             div [ css [ Tw.avatar, Css.hover [ Tw.cursor_pointer ] ], tabindex 0 ]
                 [ div [ css [ Tw.rounded_full, Tw.w_10, Tw.h_10 ] ]
-                    [ img [ src imgUrl, alt (name ++ " profile image") ] []
+                    [ img [ src user.profileImageUrl, alt (user.displayName ++ " profile image") ] []
                     ]
                 ]
     in
@@ -697,7 +681,7 @@ userView user =
             , class "dropdown-content"
             ]
             [ li []
-                [ p [ css [ Tw.text_center, Tw.font_semibold ] ] [ text name ] ]
+                [ p [ css [ Tw.text_center, Tw.font_semibold ] ] [ text user.displayName ] ]
             , li
                 [ css
                     [ Tw.border_t_2
