@@ -1,4 +1,4 @@
-module Twitch exposing (Category, ClientID(..), FollowRelation, PaginatedResponse, Schedule, Segment, Token(..), User, ValidateTokenResponse, accessTokenFromUrl, boxArtUrl, decodeCategory, decodeFollowRelation, decodeListHead, decodePaginated, decodeSchedule, decodeSegment, decodeUser, decodeValidateTokenResponse, getStreamingSchedule, getTokenValue, getUser, getUserFollows, getUsers, loginFlowUrl, revokeToken, toFormData, validateToken)
+module Twitch exposing (Category, ClientID(..), FollowRelation, PaginatedResponse, Schedule, Segment, Token(..), User, ValidateTokenResponse, accessTokenFromUrl, boxArtUrl, decodeCategory, decodeFollowRelation, decodeListHead, decodePaginated, decodeSchedule, decodeSegment, decodeUser, decodeValidateTokenResponse, getLoggedInUserTask, getStreamingSchedule, getTokenValue, getUserFollowsTask, getUsers, getUsersTask, loginFlowUrl, revokeToken, toFormData, validateToken, validateTokenTask)
 
 import Error exposing (Error(..))
 import FormatTime
@@ -72,9 +72,26 @@ type alias ValidateTokenResponse =
     }
 
 
+{-| <https://dev.twitch.tv/docs/authentication/validate-tokens>
+-}
 validateToken : Token -> Cmd (Result Http.Error ValidateTokenResponse)
-validateToken =
-    oAuthRequest "https://id.twitch.tv/oauth2/validate" decodeValidateTokenResponse
+validateToken token =
+    Task.attempt identity (validateTokenTask token)
+
+
+{-| <https://dev.twitch.tv/docs/authentication/validate-tokens>
+-}
+validateTokenTask : Token -> Task.Task Http.Error ValidateTokenResponse
+validateTokenTask (Token token) =
+    Http.task
+        { method = "GET"
+        , headers =
+            [ Http.header "Authorization" ("OAuth " ++ token) ]
+        , url = "https://id.twitch.tv/oauth2/validate"
+        , body = Http.emptyBody
+        , resolver = Http.stringResolver <| handleJsonResponse <| decodeValidateTokenResponse
+        , timeout = Nothing
+        }
 
 
 decodeValidateTokenResponse : Decode.Decoder ValidateTokenResponse
@@ -257,8 +274,8 @@ decodeFollowRelation =
 -}
 
 
-getUserFollows : String -> Maybe String -> ClientID -> Token -> Cmd (Result Http.Error (PaginatedResponse (List FollowRelation)))
-getUserFollows userID cursor =
+getUserFollowsTask : String -> Maybe String -> ClientID -> Token -> Task.Task Http.Error (PaginatedResponse (List FollowRelation))
+getUserFollowsTask userID cursor =
     let
         params =
             [ Url.Builder.string "from_id" userID
@@ -279,7 +296,9 @@ getUserFollows userID cursor =
                         params
                 )
     in
-    bearerRequest u (decodePaginated (Decode.list decodeFollowRelation))
+    bearerGetRequestTask
+        u
+        (decodePaginated (Decode.list decodeFollowRelation))
 
 
 
@@ -321,22 +340,29 @@ getUsers userIDs =
     bearerRequest u (Decode.field "data" (Decode.list decodeUser))
 
 
-
-{- https://dev.twitch.tv/docs/api/reference#get-users -}
-
-
-getUser : String -> ClientID -> Token -> Cmd (Result Http.Error User)
-getUser userID =
+getUsersTask : List String -> ClientID -> Token -> Task.Task Http.Error (List User)
+getUsersTask userIDs =
     let
         u =
             apiUrlBuilder
                 [ "users" ]
-                [ Url.Builder.string "id" userID ]
+                (List.map
+                    (Url.Builder.string "id")
+                    userIDs
+                )
     in
-    bearerRequest u
-        (Decode.field "data"
-            (decodeListHead decodeUser)
-        )
+    bearerGetRequestTask u (Decode.field "data" (Decode.list decodeUser))
+
+
+
+{- https://dev.twitch.tv/docs/api/reference#get-users -}
+
+
+getLoggedInUserTask : ClientID -> Token -> Task.Task Http.Error User
+getLoggedInUserTask =
+    bearerGetRequestTask
+        (apiUrlBuilder [ "users" ] [])
+        (Decode.field "data" (decodeListHead decodeUser))
 
 
 decodeListHead : Decode.Decoder a -> Decode.Decoder a
@@ -352,23 +378,6 @@ decodeListHead listItemDecoder =
                     Decode.fail "Can't take head of empty list"
     in
     Decode.andThen headOrFail (Decode.list listItemDecoder)
-
-
-
-{- create an HTTP.request with OAuth header -}
-
-
-oAuthRequest : String -> Decode.Decoder a -> Token -> Cmd (Result Http.Error a)
-oAuthRequest url decoder (Token token) =
-    Http.request
-        { method = "GET"
-        , headers = [ Http.header "Authorization" ("OAuth " ++ token) ]
-        , url = url
-        , body = Http.emptyBody
-        , expect = Http.expectJson identity decoder
-        , timeout = Nothing
-        , tracker = Nothing
-        }
 
 
 
@@ -405,6 +414,21 @@ bearerRequest url decoder (ClientID clientID) (Token token) =
         , expect = Http.expectJson identity decoder
         , timeout = Nothing
         , tracker = Nothing
+        }
+
+
+bearerGetRequestTask : String -> Decode.Decoder a -> ClientID -> Token -> Task.Task Http.Error a
+bearerGetRequestTask url decoder (ClientID clientID) (Token token) =
+    Http.task
+        { method = "GET"
+        , headers =
+            [ Http.header "Authorization" ("Bearer " ++ token)
+            , Http.header "Client-Id" clientID
+            ]
+        , url = url
+        , body = Http.emptyBody
+        , resolver = Http.stringResolver <| handleJsonResponse <| decoder
+        , timeout = Nothing
         }
 
 
