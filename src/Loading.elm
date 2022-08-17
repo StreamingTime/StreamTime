@@ -118,13 +118,18 @@ getTimeStuff signedInUser =
 
 getFollows : WithTimeInfo -> Task.Task Http.Error WithFollows
 getFollows { signedInUser, time, zone } =
-    Twitch.getUserFollowsTask signedInUser.userID Nothing TwitchConfig.clientId signedInUser.token
+    let
+        fetch cursor =
+            Twitch.getUserFollowsTask signedInUser.userID cursor TwitchConfig.clientId signedInUser.token
+    in
+    fetch
+        |> Twitch.allPages
         |> Task.map
-            (\page ->
+            (\follows ->
                 { signedInUser = signedInUser
                 , time = time
                 , zone = zone
-                , follows = page.data
+                , follows = follows
                 }
             )
 

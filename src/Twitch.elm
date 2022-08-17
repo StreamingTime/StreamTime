@@ -1,4 +1,4 @@
-module Twitch exposing (Category, ClientID(..), FollowRelation, PaginatedResponse, Schedule, Segment, Token(..), User, ValidateTokenResponse, accessTokenFromUrl, boxArtUrl, decodeCategory, decodeFollowRelation, decodeListHead, decodePaginated, decodeSchedule, decodeSegment, decodeUser, decodeValidateTokenResponse, getLoggedInUserTask, getStreamingSchedule, getTokenValue, getUserFollowsTask, getUsers, getUsersTask, loginFlowUrl, revokeToken, toFormData, validateToken, validateTokenTask)
+module Twitch exposing (Category, ClientID(..), FollowRelation, PaginatedResponse, Schedule, Segment, Token(..), User, ValidateTokenResponse, accessTokenFromUrl, allPages, boxArtUrl, decodeCategory, decodeFollowRelation, decodeListHead, decodePaginated, decodeSchedule, decodeSegment, decodeUser, decodeValidateTokenResponse, getLoggedInUserTask, getStreamingSchedule, getTokenValue, getUserFollowsTask, getUsers, getUsersTask, loginFlowUrl, revokeToken, toFormData, validateToken, validateTokenTask)
 
 import Error exposing (Error(..))
 import FormatTime
@@ -451,6 +451,28 @@ decodePaginated dataDecoder =
     Decode.map2 PaginatedResponse
         (Decode.field "pagination" (Decode.maybe (Decode.field "cursor" Decode.string)))
         (Decode.field "data" dataDecoder)
+
+
+{-| Fetch all pages of a PaginatedResponse. Calls fetchFromCursor withe new cursor values (or Nothing, for the first page)
+-}
+allPages : (Maybe String -> Task.Task x (PaginatedResponse (List a))) -> Task.Task x (List a)
+allPages fetchFromCursor =
+    fetchFromCursor Nothing
+        |> Task.andThen (nextPageOrSucceed fetchFromCursor [])
+        |> Task.map identity
+
+
+{-| helper function for allPages. Recursively calls fetchFrom with the new cursor value and collects results into the accumulator
+-}
+nextPageOrSucceed : (Maybe String -> Task.Task x (PaginatedResponse (List a))) -> List a -> PaginatedResponse (List a) -> Task.Task x (List a)
+nextPageOrSucceed fetchFrom accumulator page =
+    case page.cursor of
+        Just _ ->
+            fetchFrom page.cursor
+                |> Task.andThen (nextPageOrSucceed fetchFrom (accumulator ++ page.data))
+
+        Nothing ->
+            Task.succeed (accumulator ++ page.data)
 
 
 
