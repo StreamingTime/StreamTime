@@ -1,4 +1,4 @@
-module Utils exposing (concatMaybeList, filterFollowsByLogin, findUserByID, missingProfileLogins, missingStreamersInSchedules, schedulesWithStreamers, streamersWithSelection)
+module Utils exposing (concatMaybeList, filterFollowsByLogin, findUserByID, missingProfileLogins, missingStreamersInSchedules, missingStreamersInVideos, schedulesWithStreamers, streamersWithSelection)
 
 import Twitch
 
@@ -72,6 +72,20 @@ missingStreamersInSchedules streamers schedules =
                 not
                     (schedules
                         |> List.any (\schedule -> schedule.broadcasterId == streamer.id)
+                    )
+            )
+
+
+{-| -Find every streamer of our list that has no videos in the video list
+-}
+missingStreamersInVideos : List Twitch.User -> List Twitch.Video -> List Twitch.User
+missingStreamersInVideos streamers videos =
+    streamers
+        |> List.filter
+            (\streamer ->
+                not
+                    (videos
+                        |> List.any (\video -> video.userID == Twitch.UserID streamer.id)
                     )
             )
 

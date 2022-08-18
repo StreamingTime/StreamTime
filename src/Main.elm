@@ -24,6 +24,7 @@ import Url
 import Utils exposing (filterFollowsByLogin, missingProfileLogins, streamersWithSelection)
 import Views.Calendar exposing (calendarView)
 import Views.StreamerList exposing (StreamerListMsg(..), streamerListPageSteps, streamerListView)
+import Views.Video
 
 
 loginRedirectUrl : String
@@ -37,6 +38,11 @@ type Model
     | {- User has logged in via twitch, but we have yet to validate the token and fetch user details -} LoadingScreen LoadingData Nav.Key
 
 
+type Tab
+    = ScheduleTab
+    | VideoTab
+
+
 type alias AppData =
     { signedInUser : SignedInUser
     , streamers : RefreshData Error (List Twitch.User)
@@ -48,7 +54,9 @@ type alias AppData =
     , selectedStreamers : List Twitch.User
     , schedules : RefreshData Error (List Twitch.Schedule)
     , timeZone : Time.Zone
+    , videos : RefreshData Http.Error (List Twitch.Video)
     , time : Time.Posix
+    , tab : Tab
     }
 
 
@@ -91,6 +99,8 @@ type Msg
     | GotTimeZone Time.Zone
     | GotTime Time.Posix
     | HourlyValidation
+    | GotVideos (Result Http.Error (List Twitch.Video))
+    | SwitchTab Tab
 
 
 type UrlMsg
@@ -215,6 +225,32 @@ fetchStreamingSchedule userID timeZone time token =
             GotStreamingSchedule
 
 
+fetchVideos : Int -> Twitch.Token -> Twitch.UserID -> Cmd Msg
+fetchVideos count token userID =
+    Cmd.map GotVideos (Twitch.fetchVideos count userID TwitchConfig.clientId token)
+
+
+{-| Fetch schedules for every streamer that is selected, but whose schedule is not in the list
+-}
+fetchMissingSchedules : AppData -> Cmd Msg
+fetchMissingSchedules { selectedStreamers, schedules, timeZone, signedInUser, time } =
+    Utils.missingStreamersInSchedules selectedStreamers (RefreshData.mapTo (\_ -> identity) schedules)
+        |> List.map
+            (\s ->
+                fetchStreamingSchedule s.id timeZone time signedInUser.token
+            )
+        |> Cmd.batch
+
+
+{-| Fetch videos for every streamer that is selected, but whose videos are not in the list
+-}
+fetchMissingVideos : AppData -> Cmd Msg
+fetchMissingVideos { selectedStreamers, videos, signedInUser } =
+    Utils.missingStreamersInVideos selectedStreamers (RefreshData.unwrap videos)
+        |> List.map (\s -> fetchVideos 10 signedInUser.token (Twitch.UserID s.id))
+        |> Cmd.batch
+
+
 getTimeZone : Cmd Msg
 getTimeZone =
     Task.perform GotTimeZone Time.here
@@ -308,7 +344,9 @@ update msg model =
                                 , streamerFilterName = Nothing
                                 , schedules = Present []
                                 , timeZone = Maybe.withDefault Time.utc m.timeZone
+                                , videos = LoadingMore []
                                 , time = Maybe.withDefault (Time.millisToPosix 0) m.time
+                                , tab = ScheduleTab
                                 }
                                 navKey
                             , Cmd.none
@@ -367,6 +405,12 @@ update msg model =
                     ( model, Cmd.none )
 
                 HourlyValidation ->
+                    ( model, Cmd.none )
+
+                GotVideos _ ->
+                    ( model, Cmd.none )
+
+                SwitchTab _ ->
                     ( model, Cmd.none )
 
         LoggedIn appData navKey ->
@@ -471,14 +515,17 @@ update msg model =
 
                             else
                                 List.filter ((/=) streamer) appData.selectedStreamers
+
+                        newAppData =
+                            { appData | schedules = RefreshData.map LoadingMore appData.schedules, selectedStreamers = newList }
                     in
-                    ( LoggedIn { appData | schedules = RefreshData.map LoadingMore appData.schedules, selectedStreamers = newList } navKey
-                    , Utils.missingStreamersInSchedules newList (RefreshData.mapTo (\_ -> identity) appData.schedules)
-                        |> List.map
-                            (\s ->
-                                fetchStreamingSchedule s.id appData.timeZone appData.time appData.signedInUser.token
-                            )
-                        |> Cmd.batch
+                    ( LoggedIn newAppData navKey
+                    , case appData.tab of
+                        ScheduleTab ->
+                            fetchMissingSchedules newAppData
+
+                        VideoTab ->
+                            fetchMissingVideos newAppData
                     )
 
                 GotStreamerProfiles (Ok newProfiles) ->
@@ -504,8 +551,24 @@ update msg model =
                 GotTimeZone _ ->
                     ( model, Cmd.none )
 
+                GotVideos (Ok response) ->
+                    ( LoggedIn { appData | videos = RefreshData.map (\v -> Present (v ++ response)) appData.videos } navKey, Cmd.none )
+
+                GotVideos (Err e) ->
+                    ( LoggedIn { appData | videos = RefreshData.map (ErrorWithData e) appData.videos } navKey, Cmd.none )
+
                 GotTime _ ->
                     ( model, Cmd.none )
+
+                SwitchTab newTab ->
+                    ( LoggedIn { appData | tab = newTab } navKey
+                    , case newTab of
+                        ScheduleTab ->
+                            fetchMissingSchedules appData
+
+                        VideoTab ->
+                            fetchMissingVideos appData
+                    )
 
         NotLoggedIn _ navKey ->
             case msg of
@@ -547,6 +610,12 @@ update msg model =
                     ( model, Cmd.none )
 
                 HourlyValidation ->
+                    ( model, Cmd.none )
+
+                GotVideos _ ->
+                    ( model, Cmd.none )
+
+                SwitchTab _ ->
                     ( model, Cmd.none )
 
 
@@ -664,6 +733,23 @@ validationView =
 
 appView : AppData -> Html Msg
 appView appData =
+    let
+        tabButtons =
+            div [ css [ Tw.tabs, Tw.tabs_boxed ] ]
+                [ div
+                    [ css [ Tw.tab, Tw.tab_bordered ]
+                    , classList [ ( "tab-active", appData.tab == ScheduleTab ) ]
+                    , onClick (SwitchTab ScheduleTab)
+                    ]
+                    [ text "Schedule" ]
+                , div
+                    [ css [ Tw.tab, Tw.tab_bordered ]
+                    , classList [ ( "tab-active", appData.tab == VideoTab ) ]
+                    , onClick (SwitchTab VideoTab)
+                    ]
+                    [ text "Videos" ]
+                ]
+    in
     div []
         [ headerView appData.signedInUser
         , div [ css [ Tw.flex ] ]
@@ -683,17 +769,44 @@ appView appData =
                     , Tw.w_full
                     , Tw.ml_60
                     , Tw.mt_16
-                    , Tw.flex
-                    , Tw.flex_col
-                    , Tw.items_center
-                    , Tw.space_y_4
                     ]
                 ]
-                [ div [ css [ Tw.w_5over6, Tw.py_10 ] ]
-                    [ calendarView appData.timeZone appData.time appData.streamers appData.schedules appData.selectedStreamers ]
+                [ div []
+                    [ tabButtons
+                    , div []
+                        [ case appData.tab of
+                            VideoTab ->
+                                videoTabView appData
+
+                            ScheduleTab ->
+                                scheduleTabView appData
+                        ]
+                    ]
                 ]
             ]
         ]
+
+
+scheduleTabView : AppData -> Html Msg
+scheduleTabView appData =
+    div [ css [ Tw.w_5over6, Tw.py_10 ] ]
+        [ calendarView appData.timeZone appData.time appData.streamers appData.schedules appData.selectedStreamers ]
+
+
+videoTabView : AppData -> Html Msg
+videoTabView { selectedStreamers, videos } =
+    div []
+        (case videos of
+            RefreshData.ErrorWithData error _ ->
+                [ text (Debug.toString error) ]
+
+            _ ->
+                [ videos
+                    |> RefreshData.unwrap
+                    |> List.filter (\video -> List.any (\streamer -> Twitch.UserID streamer.id == video.userID) selectedStreamers)
+                    |> Views.Video.videoListView
+                ]
+        )
 
 
 headerView : SignedInUser -> Html Msg

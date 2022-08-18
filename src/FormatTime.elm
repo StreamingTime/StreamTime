@@ -24,6 +24,7 @@ zeroPadInt digits i =
 type FormatItem
     = Year
     | Month
+    | FullMonth
     | Day
     | Hours
     | Minutes
@@ -72,6 +73,46 @@ monthToInt month =
             12
 
 
+monthToFullName : Time.Month -> String
+monthToFullName month =
+    case month of
+        Time.Jan ->
+            "January"
+
+        Time.Feb ->
+            "February"
+
+        Time.Mar ->
+            "March"
+
+        Time.Apr ->
+            "April"
+
+        Time.May ->
+            "May"
+
+        Time.Jun ->
+            "June"
+
+        Time.Jul ->
+            "July"
+
+        Time.Aug ->
+            "August"
+
+        Time.Sep ->
+            "September"
+
+        Time.Oct ->
+            "October"
+
+        Time.Nov ->
+            "November"
+
+        Time.Dec ->
+            "December"
+
+
 offsetToString : Time.Zone -> String
 offsetToString zone =
     let
@@ -99,6 +140,9 @@ formatItemToString thing zone posix =
 
         Month ->
             zeroPadInt 2 (monthToInt (Time.toMonth zone posix))
+
+        FullMonth ->
+            monthToFullName (Time.toMonth zone posix)
 
         Day ->
             zeroPadInt 2 (Time.toDay zone posix)
@@ -150,6 +194,7 @@ parseFormatItem =
             , map (\_ -> Seconds) (token "%ss")
             , map (\_ -> Year) (token "%YYYY")
             , map (\_ -> Month) (token "%MM")
+            , map (\_ -> FullMonth) (token "%Month")
             , map (\_ -> Day) (token "%DD")
             , map (\_ -> Offset) (token "%TZ")
             , map Text readString

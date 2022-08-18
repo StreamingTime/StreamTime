@@ -1,4 +1,4 @@
-module RefreshDataTest exposing (isLoadingTest, mapTest, mapToTest, mapValueTest)
+module RefreshDataTest exposing (isLoadingTest, mapTest, mapToTest, mapValueTest, unwrapTest)
 
 import Expect
 import Http
@@ -55,6 +55,16 @@ mapValueTest =
             RefreshData.Present "foo"
                 |> RefreshData.mapValue String.toUpper
                 |> Expect.equal (RefreshData.Present "FOO")
+        )
+
+
+unwrapTest : Test
+unwrapTest =
+    test "unwrap RefreshData"
+        (\_ ->
+            RefreshData.Present "foo"
+                |> RefreshData.unwrap
+                |> Expect.equal "foo"
         )
 
 

@@ -1,4 +1,4 @@
-module Twitch exposing (Category, ClientID(..), FollowRelation, PaginatedResponse, Schedule, Segment, Token(..), User, ValidateTokenResponse, accessTokenFromUrl, boxArtUrl, decodeCategory, decodeFollowRelation, decodeListHead, decodePaginated, decodeSchedule, decodeSegment, decodeUser, decodeValidateTokenResponse, getStreamingSchedule, getTokenValue, getUser, getUserFollows, getUsers, loginFlowUrl, revokeToken, toFormData, validateToken)
+module Twitch exposing (Category, ClientID(..), FollowRelation, PaginatedResponse, Schedule, Segment, Token(..), User, UserID(..), ValidateTokenResponse, Video, VideoType(..), accessTokenFromUrl, boxArtUrl, decodeCategory, decodeFollowRelation, decodeListHead, decodePaginated, decodeSchedule, decodeSegment, decodeUser, decodeValidateTokenResponse, fetchVideos, getStreamingSchedule, getTokenValue, getUser, getUserFollows, getUsers, loginFlowUrl, revokeToken, toFormData, userProfileUrl, validateToken, videoPreview)
 
 import Error exposing (Error(..))
 import FormatTime
@@ -26,6 +26,10 @@ type Token
 
 type ClientID
     = ClientID String
+
+
+type UserID
+    = UserID String
 
 
 getTokenValue : Token -> String
@@ -409,6 +413,101 @@ bearerRequest url decoder (ClientID clientID) (Token token) =
 
 
 
+{- get videos -}
+
+
+type VideoType
+    = Upload
+    | Highlight
+    | Archive
+
+
+decodeVideoType : Decode.Decoder VideoType
+decodeVideoType =
+    Decode.andThen
+        (\s ->
+            case s of
+                "upload" ->
+                    Decode.succeed Upload
+
+                "archive" ->
+                    Decode.succeed Archive
+
+                "highlight" ->
+                    Decode.succeed Highlight
+
+                _ ->
+                    Decode.fail "unknown video type"
+        )
+        Decode.string
+
+
+type alias Video =
+    { id : String
+    , userID : UserID
+    , userLogin : String
+    , userName : String
+    , title : String
+    , description : String
+    , createdAt : Time.Posix
+    , publishedAt : Time.Posix
+    , url : String
+    , thumbnailURL : String
+    , viewable : String
+    , viewCount : Int
+    , language : String
+    , duration : String
+    , videoType : VideoType
+    }
+
+
+decodeVideo : Decode.Decoder Video
+decodeVideo =
+    Decode.succeed Video
+        |> apply (Decode.field "id" Decode.string)
+        |> apply (Decode.map UserID (Decode.field "user_id" Decode.string))
+        |> apply (Decode.field "user_login" Decode.string)
+        |> apply (Decode.field "user_name" Decode.string)
+        |> apply (Decode.field "title" Decode.string)
+        |> apply (Decode.field "description" Decode.string)
+        |> apply (Decode.field "created_at" RFC3339.decode)
+        |> apply (Decode.field "published_at" RFC3339.decode)
+        |> apply (Decode.field "url" Decode.string)
+        |> apply (Decode.field "thumbnail_url" Decode.string)
+        |> apply (Decode.field "viewable" Decode.string)
+        |> apply (Decode.field "view_count" Decode.int)
+        |> apply (Decode.field "language" Decode.string)
+        |> apply (Decode.field "duration" Decode.string)
+        |> apply (Decode.field "type" decodeVideoType)
+
+
+
+{- https://dev.twitch.tv/docs/api/reference#get-videos -}
+
+
+fetchVideos : Int -> UserID -> ClientID -> Token -> Cmd (Result Http.Error (List Video))
+fetchVideos count (UserID userID) =
+    let
+        u =
+            apiUrlBuilder
+                [ "videos" ]
+                [ Url.Builder.string "user_id" userID
+                , Url.Builder.int "first" count
+                ]
+    in
+    bearerRequest u (Decode.field "data" (Decode.list decodeVideo))
+
+
+
+{- replace the width and height placeholder in a video preview url with the given dimensions -}
+
+
+videoPreview : Int -> Int -> String -> String
+videoPreview width height =
+    String.replace "%{width}x%{height}" (String.fromInt width ++ "x" ++ String.fromInt height)
+
+
+
 {- Wrapper to fetch paginated resources -}
 
 
@@ -479,3 +578,13 @@ toFormData : List ( String, String ) -> String
 toFormData =
     List.map (\( k, v ) -> Url.percentEncode k ++ "=" ++ Url.percentEncode v)
         >> String.join "&"
+
+
+apply : Decode.Decoder a -> Decode.Decoder (a -> b) -> Decode.Decoder b
+apply =
+    Decode.map2 (|>)
+
+
+userProfileUrl : String -> String
+userProfileUrl userName =
+    Url.Builder.crossOrigin "https://twitch.tv" [ userName ] []
