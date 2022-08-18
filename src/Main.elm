@@ -51,7 +51,7 @@ type Msg
     | Logout
     | HourlyValidation
     | LoadingFinished (Result Http.Error AppData)
-    | GotVideos (Result Http.Error (List Twitch.Video))
+    | GotVideos (Result Error (List Twitch.Video))
     | SwitchTab Tab
 
 
@@ -570,7 +570,7 @@ videoTabView { selectedStreamers, videos } =
     div []
         (case videos of
             RefreshData.ErrorWithData error _ ->
-                [ text (Debug.toString error) ]
+                [ errorView (Error.toString error) ]
 
             _ ->
                 [ videos

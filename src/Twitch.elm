@@ -509,8 +509,8 @@ decodeVideo =
 {- https://dev.twitch.tv/docs/api/reference#get-videos -}
 
 
-fetchVideos : Int -> UserID -> ClientID -> Token -> Cmd (Result Http.Error (List Video))
-fetchVideos count (UserID userID) =
+fetchVideos : Int -> UserID -> ClientID -> Token -> Cmd (Result Error (List Video))
+fetchVideos count (UserID userID) clientID token =
     let
         u =
             apiUrlBuilder
@@ -519,7 +519,7 @@ fetchVideos count (UserID userID) =
                 , Url.Builder.int "first" count
                 ]
     in
-    bearerRequest u (Decode.field "data" (Decode.list decodeVideo))
+    Cmd.map (Result.mapError Error.HttpError) (bearerRequest u (Decode.field "data" (Decode.list decodeVideo)) clientID token)
 
 
 

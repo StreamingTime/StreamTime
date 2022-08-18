@@ -1,7 +1,6 @@
 module Types exposing (AppData, SignedInUser, Tab(..))
 
 import Error exposing (Error)
-import Http
 import RefreshData exposing (RefreshData)
 import Time
 import Twitch
@@ -23,7 +22,7 @@ type alias AppData =
     , selectedStreamers : List Twitch.User
     , schedules : RefreshData Error (List Twitch.Schedule)
     , timeZone : Time.Zone
-    , videos : RefreshData Http.Error (List Twitch.Video)
+    , videos : RefreshData Error (List Twitch.Video)
     , time : Time.Posix
     , tab : Tab
     }
