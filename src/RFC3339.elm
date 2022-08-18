@@ -1,11 +1,13 @@
-module RFC3339 exposing (Date, DateTime, Offset, OffsetDirection(..), Time, dateParser, dateTimeParser, decodeTimestamp, offsetDirectionParser, offsetParser, paddedIntParser, timeParser, toPosix, zOffsetParser, zulu)
+module RFC3339 exposing (Date, DateTime, Offset, OffsetDirection(..), Time, dateParser, dateTimeParser, decode, decodeTimestamp, offsetDirectionParser, offsetParser, paddedIntParser, timeParser, toPosix, zOffsetParser, zulu)
 
-{-| This module defines types parsers for a subset of RFC3339.
+{-| This module defines types parsers for a subset of RFC3339
+, allows conversion to Time.Posix and implements a Decoder to directly convert RFC3339 Json strings to Time.Posix.
 -}
 
 import Array
 import Basics exposing (remainderBy)
 import Json.Decode as Decode
+import Maybe
 import Parser exposing ((|.), (|=), Parser, int, map, oneOf, succeed, symbol)
 import Time
 
@@ -206,3 +208,29 @@ paddedIntParser =
         , succeed identity
             |= int
         ]
+
+
+{-| Convert a RFC3339 string directly to posix
+-}
+stringToPosix : String -> Maybe Time.Posix
+stringToPosix s =
+    s
+        |> Parser.run dateTimeParser
+        |> Result.toMaybe
+        |> Maybe.andThen toPosix
+
+
+{-| Decode a RFC3339 json string to Time.Posix
+-}
+decode : Decode.Decoder Time.Posix
+decode =
+    Decode.andThen
+        (\s ->
+            case stringToPosix s of
+                Just posix ->
+                    Decode.succeed posix
+
+                Nothing ->
+                    Decode.fail ""
+        )
+        Decode.string

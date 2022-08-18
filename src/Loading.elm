@@ -1,4 +1,4 @@
-module Loading exposing (AppData, SignedInUser, loadInitialData)
+module Loading exposing (loadInitialData)
 
 {-| The Loading module contains code we need at the start of our application, like verifying the token or fetching which streamers our user follows.
 For convenience, it also defines datatypes we need in our main application model, SignedInUser and AppData.
@@ -17,13 +17,13 @@ to handle states that should not be able to occur.
 
 -}
 
-import Error exposing (Error)
 import Http
-import RefreshData exposing (RefreshData)
+import RefreshData
 import Task
 import Time
 import Twitch
 import TwitchConfig
+import Types exposing (AppData, SignedInUser)
 
 
 type alias WithVerifiedToken =
@@ -35,17 +35,6 @@ type alias WithVerifiedToken =
 
 type alias WithFullUser =
     SignedInUser
-
-
-{-| All information directly related to our logged in user
--}
-type alias SignedInUser =
-    { token : Twitch.Token
-    , loginName : String
-    , userID : String
-    , displayName : String
-    , profileImageUrl : String
-    }
 
 
 type alias WithTimeInfo =
@@ -65,21 +54,6 @@ type alias WithFollows =
 
 {-| All the data we need for our application
 -}
-type alias AppData =
-    { signedInUser : SignedInUser
-    , streamers : RefreshData Error (List Twitch.User)
-
-    -- a list of follow relation metadata originating from our user
-    , follows : List Twitch.FollowRelation
-    , sidebarStreamerCount : Int
-    , streamerFilterName : Maybe String
-    , selectedStreamers : List Twitch.User
-    , schedules : RefreshData Error (List Twitch.Schedule)
-    , timeZone : Time.Zone
-    , time : Time.Posix
-    }
-
-
 validateToken : Twitch.Token -> Task.Task Http.Error WithVerifiedToken
 validateToken token =
     Twitch.validateTokenTask token
@@ -154,6 +128,8 @@ getFirstStreamerProfiles streamerListPageSteps { follows, signedInUser, time, zo
                 , streamerFilterName = Nothing
                 , schedules = RefreshData.LoadingMore []
                 , selectedStreamers = []
+                , tab = Types.ScheduleTab
+                , videos = RefreshData.LoadingMore []
                 }
             )
 
