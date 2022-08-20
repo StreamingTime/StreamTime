@@ -11,6 +11,7 @@ import Html.Styled.Attributes exposing (alt, class, classList, css, href, src, s
 import Html.Styled.Events exposing (onClick)
 import Http
 import Json.Encode as Encode
+import Loading
 import LocalStorage
 import RFC3339
 import RefreshData exposing (RefreshData(..))
@@ -20,6 +21,7 @@ import Time
 import Time.Extra
 import Twitch
 import TwitchConfig
+import Types exposing (AppData, SignedInUser, Tab(..))
 import Url
 import Utils exposing (filterFollowsByLogin, missingProfileLogins, streamersWithSelection)
 import Views.Calendar exposing (calendarView)
@@ -35,71 +37,21 @@ loginRedirectUrl =
 type Model
     = {- User is logged in, token is verified -} LoggedIn AppData Nav.Key
     | {- User has not started the login process -} NotLoggedIn (Maybe Error) Nav.Key
-    | {- User has logged in via twitch, but we have yet to validate the token and fetch user details -} LoadingScreen LoadingData Nav.Key
-
-
-type Tab
-    = ScheduleTab
-    | VideoTab
-
-
-type alias AppData =
-    { signedInUser : SignedInUser
-    , streamers : RefreshData Error (List Twitch.User)
-
-    -- a list of follow relation metadata originating from our user
-    , follows : List Twitch.FollowRelation
-    , sidebarStreamerCount : Int
-    , streamerFilterName : Maybe String
-    , selectedStreamers : List Twitch.User
-    , schedules : RefreshData Error (List Twitch.Schedule)
-    , timeZone : Time.Zone
-    , videos : RefreshData Http.Error (List Twitch.Video)
-    , time : Time.Posix
-    , tab : Tab
-    }
-
-
-
-{- Data we need or fetch during the loading screen -}
-
-
-type alias LoadingData =
-    { token : Twitch.Token
-    , follows : Maybe (List Twitch.FollowRelation)
-    , signedInUser : Maybe SignedInUser
-
-    -- the first n streamers to display in the streamer list
-    , firstStreamers : Maybe (List Twitch.User)
-    , timeZone : Maybe Time.Zone
-    , time : Maybe Time.Posix
-    }
-
-
-type alias SignedInUser =
-    { token : Twitch.Token
-    , loginName : String
-    , userID : String
-    , displayName : Maybe String
-    , profileImageUrl : Maybe String
-    }
+    | {- User has logged in via twitch, but we have yet to validate the token and fetch user details -} LoadingScreen Nav.Key
 
 
 type Msg
     = UrlMsg UrlMsg
     | GotValidateTokenResponse (Result Http.Error Twitch.ValidateTokenResponse)
     | GotRevokeTokenResponse
-    | GotUserFollows (Result Http.Error (Twitch.PaginatedResponse (List Twitch.FollowRelation)))
     | GotStreamerProfilesForSidebar (Result Http.Error (List Twitch.User))
     | GotStreamerProfiles (Result Http.Error (List Twitch.User))
-    | GotUserProfile (Result Http.Error Twitch.User)
     | GotStreamingSchedule (Result Error Twitch.Schedule)
     | StreamerListMsg StreamerListMsg
     | Logout
-    | GotTimeZone Time.Zone
-    | GotTime Time.Posix
     | HourlyValidation
-    | GotVideos (Result Http.Error (List Twitch.Video))
+    | LoadingFinished (Result Http.Error AppData)
+    | GotVideos (Result Error (List Twitch.Video))
     | SwitchTab Tab
 
 
@@ -112,16 +64,12 @@ init : Encode.Value -> Url.Url -> Nav.Key -> ( Model, Cmd Msg )
 init flags url navKey =
     case Twitch.accessTokenFromUrl url of
         Just token ->
-            ( LoadingScreen
-                { token = token
-                , follows = Nothing
-                , signedInUser = Nothing
-                , firstStreamers = Nothing
-                , timeZone = Nothing
-                , time = Nothing
-                }
-                navKey
-            , Cmd.batch [ Cmd.map GotValidateTokenResponse (Twitch.validateToken token), Nav.replaceUrl navKey "/" ]
+            ( LoadingScreen navKey
+            , Cmd.batch
+                [ Cmd.map LoadingFinished (Loading.loadInitialData token streamerListPageSteps)
+                , LocalStorage.persistData { token = Twitch.getTokenValue token }
+                , Nav.replaceUrl navKey "/"
+                ]
             )
 
         Nothing ->
@@ -134,16 +82,11 @@ init flags url navKey =
                         token =
                             Twitch.Token data.token
                     in
-                    ( LoadingScreen
-                        { token = token
-                        , follows = Nothing
-                        , signedInUser = Nothing
-                        , firstStreamers = Nothing
-                        , timeZone = Nothing
-                        , time = Nothing
-                        }
-                        navKey
-                    , Cmd.batch [ Cmd.map GotValidateTokenResponse (Twitch.validateToken token), Nav.replaceUrl navKey "/" ]
+                    ( LoadingScreen navKey
+                    , Cmd.batch
+                        [ Cmd.map LoadingFinished (Loading.loadInitialData token streamerListPageSteps)
+                        , Nav.replaceUrl navKey "/"
+                        ]
                     )
 
 
@@ -160,11 +103,6 @@ fetchStreamerProfilesForSidebar userIDs token =
 fetchStreamerProfiles : List String -> Twitch.Token -> Cmd Msg
 fetchStreamerProfiles userIDs token =
     Cmd.map GotStreamerProfiles (Twitch.getUsers userIDs TwitchConfig.clientId token)
-
-
-fetchUserProfile : String -> Twitch.Token -> Cmd Msg
-fetchUserProfile userID token =
-    Cmd.map GotUserProfile (Twitch.getUser userID TwitchConfig.clientId token)
 
 
 fetchStreamingSchedule : String -> Time.Zone -> Time.Posix -> Twitch.Token -> Cmd Msg
@@ -251,166 +189,18 @@ fetchMissingVideos { selectedStreamers, videos, signedInUser } =
         |> Cmd.batch
 
 
-getTimeZone : Cmd Msg
-getTimeZone =
-    Task.perform GotTimeZone Time.here
-
-
-getTime : Cmd Msg
-getTime =
-    Task.perform GotTime Time.now
-
-
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case model of
-        LoadingScreen m navKey ->
+        LoadingScreen navKey ->
             case msg of
-                UrlMsg urlMsg ->
-                    ( model, handleUrlMsg urlMsg navKey )
+                LoadingFinished (Ok appData) ->
+                    ( LoggedIn appData navKey, Cmd.none )
 
-                GotValidateTokenResponse response ->
-                    case response of
-                        Err err ->
-                            ( NotLoggedIn (Just (HttpError err)) navKey, Cmd.none )
+                LoadingFinished (Err error) ->
+                    ( NotLoggedIn (Just (Error.HttpError error)) navKey, Cmd.none )
 
-                        Ok value ->
-                            ( LoadingScreen
-                                { token = m.token
-                                , signedInUser =
-                                    Just
-                                        { token = m.token
-                                        , loginName = value.login
-                                        , userID = value.userID
-                                        , displayName = Nothing
-                                        , profileImageUrl = Nothing
-                                        }
-                                , follows = Nothing
-                                , firstStreamers = Nothing
-                                , timeZone = Nothing
-                                , time = Nothing
-                                }
-                                navKey
-                            , Cmd.batch [ getTimeZone, getTime ]
-                            )
-
-                GotRevokeTokenResponse ->
-                    ( model, Cmd.none )
-
-                GotUserFollows response ->
-                    case ( m.signedInUser, response ) of
-                        ( _, Err e ) ->
-                            ( NotLoggedIn (Just (HttpError e)) navKey, Cmd.none )
-
-                        ( Just user, Ok paginatedResponse ) ->
-                            let
-                                -- append the new page to the axisting values, if any
-                                oldAndNewValues =
-                                    Utils.concatMaybeList m.follows paginatedResponse.data
-
-                                -- use the cursor from the response to fetch the next page
-                                nextPage : String -> Cmd Msg
-                                nextPage cursor =
-                                    Cmd.map GotUserFollows (Twitch.getUserFollows user.userID (Just cursor) TwitchConfig.clientId user.token)
-                            in
-                            case paginatedResponse.cursor of
-                                -- if there are more follows to load, fetch the next page
-                                Just cursor ->
-                                    ( LoadingScreen { m | follows = Just oldAndNewValues } navKey
-                                    , nextPage cursor
-                                    )
-
-                                -- after all follows are fetched, fetch the first streamer profiles
-                                Nothing ->
-                                    ( LoadingScreen { m | follows = Just oldAndNewValues } navKey
-                                    , fetchStreamerProfilesForSidebar (List.map .toID (List.take streamerListPageSteps oldAndNewValues)) user.token
-                                    )
-
-                        ( Nothing, Ok _ ) ->
-                            Debug.todo "this case should not happen"
-
-                GotStreamerProfilesForSidebar response ->
-                    case ( m.signedInUser, m.follows, response ) of
-                        ( Just user, Just follows, Ok streamers ) ->
-                            -- all good, loading is complete
-                            ( LoggedIn
-                                { signedInUser = user
-                                , follows = follows
-                                , streamers = Present streamers
-
-                                -- TOOD: sidebarStreamerCount should depend on the number of streamers loaded
-                                , sidebarStreamerCount = streamerListPageSteps
-                                , selectedStreamers = []
-                                , streamerFilterName = Nothing
-                                , schedules = Present []
-                                , timeZone = Maybe.withDefault Time.utc m.timeZone
-                                , videos = LoadingMore []
-                                , time = Maybe.withDefault (Time.millisToPosix 0) m.time
-                                , tab = ScheduleTab
-                                }
-                                navKey
-                            , Cmd.none
-                            )
-
-                        ( _, _, Err e ) ->
-                            ( NotLoggedIn (Just (HttpError e)) navKey, Cmd.none )
-
-                        _ ->
-                            Debug.todo "this case should not happen, since we cant fetch profiles if user or follows are unknown"
-
-                GotUserProfile response ->
-                    case ( m.signedInUser, response ) of
-                        ( Just user, Ok profile ) ->
-                            let
-                                updatedUser =
-                                    { user | displayName = Just profile.displayName, profileImageUrl = Just profile.profileImageUrl }
-                            in
-                            ( LoadingScreen { m | signedInUser = Just updatedUser } navKey
-                            , Cmd.map GotUserFollows (Twitch.getUserFollows user.userID Nothing TwitchConfig.clientId m.token)
-                            )
-
-                        ( _, Err e ) ->
-                            ( NotLoggedIn (Just (HttpError e)) navKey, Cmd.none )
-
-                        ( Nothing, _ ) ->
-                            Debug.todo "again, a case that should not happen"
-
-                GotTimeZone zone ->
-                    ( LoadingScreen { m | timeZone = Just zone }
-                        navKey
-                    , case m.signedInUser of
-                        Just user ->
-                            Cmd.batch [ LocalStorage.persistData { token = Twitch.getTokenValue m.token }, fetchUserProfile user.userID m.token ]
-
-                        Nothing ->
-                            Debug.todo "error"
-                    )
-
-                GotTime time ->
-                    ( LoadingScreen { m | time = Just time }
-                        navKey
-                    , Cmd.none
-                    )
-
-                GotStreamingSchedule _ ->
-                    ( model, Cmd.none )
-
-                StreamerListMsg _ ->
-                    ( model, Cmd.none )
-
-                GotStreamerProfiles _ ->
-                    ( model, Cmd.none )
-
-                Logout ->
-                    ( model, Cmd.none )
-
-                HourlyValidation ->
-                    ( model, Cmd.none )
-
-                GotVideos _ ->
-                    ( model, Cmd.none )
-
-                SwitchTab _ ->
+                _ ->
                     ( model, Cmd.none )
 
         LoggedIn appData navKey ->
@@ -425,12 +215,6 @@ update msg model =
                     ( model, Cmd.none )
 
                 GotRevokeTokenResponse ->
-                    ( model, Cmd.none )
-
-                GotUserFollows _ ->
-                    ( model, Cmd.none )
-
-                GotUserProfile _ ->
                     ( model, Cmd.none )
 
                 GotStreamerProfilesForSidebar response ->
@@ -548,16 +332,13 @@ update msg model =
                 HourlyValidation ->
                     ( model, Cmd.map GotValidateTokenResponse (Twitch.validateToken appData.signedInUser.token) )
 
-                GotTimeZone _ ->
-                    ( model, Cmd.none )
-
                 GotVideos (Ok response) ->
                     ( LoggedIn { appData | videos = RefreshData.map (\v -> Present (v ++ response)) appData.videos } navKey, Cmd.none )
 
                 GotVideos (Err e) ->
                     ( LoggedIn { appData | videos = RefreshData.map (ErrorWithData e) appData.videos } navKey, Cmd.none )
 
-                GotTime _ ->
+                LoadingFinished _ ->
                     ( model, Cmd.none )
 
                 SwitchTab newTab ->
@@ -582,16 +363,10 @@ update msg model =
                 GotRevokeTokenResponse ->
                     ( model, Cmd.none )
 
-                GotUserFollows _ ->
-                    ( model, Cmd.none )
-
                 GotStreamerProfilesForSidebar _ ->
                     ( model, Cmd.none )
 
                 StreamerListMsg _ ->
-                    ( model, Cmd.none )
-
-                GotUserProfile _ ->
                     ( model, Cmd.none )
 
                 GotStreamerProfiles _ ->
@@ -603,13 +378,10 @@ update msg model =
                 Logout ->
                     ( model, Cmd.none )
 
-                GotTimeZone _ ->
-                    ( model, Cmd.none )
-
-                GotTime _ ->
-                    ( model, Cmd.none )
-
                 HourlyValidation ->
+                    ( model, Cmd.none )
+
+                LoadingFinished _ ->
                     ( model, Cmd.none )
 
                 GotVideos _ ->
@@ -646,7 +418,7 @@ view model =
                         NotLoggedIn err _ ->
                             loginView err
 
-                        LoadingScreen _ _ ->
+                        LoadingScreen _ ->
                             validationView
 
                         LoggedIn appData _ ->
@@ -798,7 +570,7 @@ videoTabView { selectedStreamers, videos } =
     div []
         (case videos of
             RefreshData.ErrorWithData error _ ->
-                [ text (Debug.toString error) ]
+                [ errorView (Error.toString error) ]
 
             _ ->
                 [ videos
@@ -849,26 +621,10 @@ headerView user =
 userView : SignedInUser -> Html Msg
 userView user =
     let
-        imgUrl =
-            case user.profileImageUrl of
-                Just url ->
-                    url
-
-                Nothing ->
-                    ""
-
-        name =
-            case user.displayName of
-                Just displayName ->
-                    displayName
-
-                Nothing ->
-                    user.loginName
-
         avatar =
             div [ css [ Tw.avatar, Css.hover [ Tw.cursor_pointer ] ], tabindex 0 ]
                 [ div [ css [ Tw.rounded_full, Tw.w_10, Tw.h_10 ] ]
-                    [ img [ src imgUrl, alt (name ++ " profile image") ] []
+                    [ img [ src user.profileImageUrl, alt (user.displayName ++ " profile image") ] []
                     ]
                 ]
     in
@@ -893,7 +649,7 @@ userView user =
             , class "dropdown-content"
             ]
             [ li []
-                [ p [ css [ Tw.text_center, Tw.font_semibold ] ] [ text name ] ]
+                [ p [ css [ Tw.text_center, Tw.font_semibold ] ] [ text user.displayName ] ]
             , li
                 [ css
                     [ Tw.border_t_2

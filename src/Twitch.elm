@@ -1,4 +1,4 @@
-module Twitch exposing (Category, ClientID(..), FollowRelation, PaginatedResponse, Schedule, Segment, Token(..), User, UserID(..), ValidateTokenResponse, Video, VideoType(..), accessTokenFromUrl, boxArtUrl, decodeCategory, decodeFollowRelation, decodeListHead, decodePaginated, decodeSchedule, decodeSegment, decodeUser, decodeValidateTokenResponse, fetchVideos, getStreamingSchedule, getTokenValue, getUser, getUserFollows, getUsers, loginFlowUrl, revokeToken, toFormData, userProfileUrl, validateToken, videoPreview)
+module Twitch exposing (Category, ClientID(..), FollowRelation, PaginatedResponse, Schedule, Segment, Token(..), User, UserID(..), ValidateTokenResponse, Video, VideoType(..), accessTokenFromUrl, allPages, boxArtUrl, decodeCategory, decodeFollowRelation, decodeListHead, decodePaginated, decodeSchedule, decodeSegment, decodeUser, decodeValidateTokenResponse, fetchVideos, getLoggedInUserTask, getStreamingSchedule, getTokenValue, getUserFollowsTask, getUsers, getUsersTask, loginFlowUrl, revokeToken, toFormData, userProfileUrl, validateToken, validateTokenTask, videoPreview)
 
 import Error exposing (Error(..))
 import FormatTime
@@ -76,9 +76,26 @@ type alias ValidateTokenResponse =
     }
 
 
+{-| <https://dev.twitch.tv/docs/authentication/validate-tokens>
+-}
 validateToken : Token -> Cmd (Result Http.Error ValidateTokenResponse)
-validateToken =
-    oAuthRequest "https://id.twitch.tv/oauth2/validate" decodeValidateTokenResponse
+validateToken token =
+    Task.attempt identity (validateTokenTask token)
+
+
+{-| <https://dev.twitch.tv/docs/authentication/validate-tokens>
+-}
+validateTokenTask : Token -> Task.Task Http.Error ValidateTokenResponse
+validateTokenTask (Token token) =
+    Http.task
+        { method = "GET"
+        , headers =
+            [ Http.header "Authorization" ("OAuth " ++ token) ]
+        , url = "https://id.twitch.tv/oauth2/validate"
+        , body = Http.emptyBody
+        , resolver = Http.stringResolver <| handleJsonResponse <| decodeValidateTokenResponse
+        , timeout = Nothing
+        }
 
 
 decodeValidateTokenResponse : Decode.Decoder ValidateTokenResponse
@@ -261,8 +278,8 @@ decodeFollowRelation =
 -}
 
 
-getUserFollows : String -> Maybe String -> ClientID -> Token -> Cmd (Result Http.Error (PaginatedResponse (List FollowRelation)))
-getUserFollows userID cursor =
+getUserFollowsTask : String -> Maybe String -> ClientID -> Token -> Task.Task Http.Error (PaginatedResponse (List FollowRelation))
+getUserFollowsTask userID cursor =
     let
         params =
             [ Url.Builder.string "from_id" userID
@@ -283,7 +300,9 @@ getUserFollows userID cursor =
                         params
                 )
     in
-    bearerRequest u (decodePaginated (Decode.list decodeFollowRelation))
+    bearerGetRequestTask
+        u
+        (decodePaginated (Decode.list decodeFollowRelation))
 
 
 
@@ -325,22 +344,29 @@ getUsers userIDs =
     bearerRequest u (Decode.field "data" (Decode.list decodeUser))
 
 
-
-{- https://dev.twitch.tv/docs/api/reference#get-users -}
-
-
-getUser : String -> ClientID -> Token -> Cmd (Result Http.Error User)
-getUser userID =
+getUsersTask : List String -> ClientID -> Token -> Task.Task Http.Error (List User)
+getUsersTask userIDs =
     let
         u =
             apiUrlBuilder
                 [ "users" ]
-                [ Url.Builder.string "id" userID ]
+                (List.map
+                    (Url.Builder.string "id")
+                    userIDs
+                )
     in
-    bearerRequest u
-        (Decode.field "data"
-            (decodeListHead decodeUser)
-        )
+    bearerGetRequestTask u (Decode.field "data" (Decode.list decodeUser))
+
+
+
+{- https://dev.twitch.tv/docs/api/reference#get-users -}
+
+
+getLoggedInUserTask : ClientID -> Token -> Task.Task Http.Error User
+getLoggedInUserTask =
+    bearerGetRequestTask
+        (apiUrlBuilder [ "users" ] [])
+        (Decode.field "data" (decodeListHead decodeUser))
 
 
 decodeListHead : Decode.Decoder a -> Decode.Decoder a
@@ -356,23 +382,6 @@ decodeListHead listItemDecoder =
                     Decode.fail "Can't take head of empty list"
     in
     Decode.andThen headOrFail (Decode.list listItemDecoder)
-
-
-
-{- create an HTTP.request with OAuth header -}
-
-
-oAuthRequest : String -> Decode.Decoder a -> Token -> Cmd (Result Http.Error a)
-oAuthRequest url decoder (Token token) =
-    Http.request
-        { method = "GET"
-        , headers = [ Http.header "Authorization" ("OAuth " ++ token) ]
-        , url = url
-        , body = Http.emptyBody
-        , expect = Http.expectJson identity decoder
-        , timeout = Nothing
-        , tracker = Nothing
-        }
 
 
 
@@ -409,6 +418,21 @@ bearerRequest url decoder (ClientID clientID) (Token token) =
         , expect = Http.expectJson identity decoder
         , timeout = Nothing
         , tracker = Nothing
+        }
+
+
+bearerGetRequestTask : String -> Decode.Decoder a -> ClientID -> Token -> Task.Task Http.Error a
+bearerGetRequestTask url decoder (ClientID clientID) (Token token) =
+    Http.task
+        { method = "GET"
+        , headers =
+            [ Http.header "Authorization" ("Bearer " ++ token)
+            , Http.header "Client-Id" clientID
+            ]
+        , url = url
+        , body = Http.emptyBody
+        , resolver = Http.stringResolver <| handleJsonResponse <| decoder
+        , timeout = Nothing
         }
 
 
@@ -485,8 +509,8 @@ decodeVideo =
 {- https://dev.twitch.tv/docs/api/reference#get-videos -}
 
 
-fetchVideos : Int -> UserID -> ClientID -> Token -> Cmd (Result Http.Error (List Video))
-fetchVideos count (UserID userID) =
+fetchVideos : Int -> UserID -> ClientID -> Token -> Cmd (Result Error (List Video))
+fetchVideos count (UserID userID) clientID token =
     let
         u =
             apiUrlBuilder
@@ -495,7 +519,7 @@ fetchVideos count (UserID userID) =
                 , Url.Builder.int "first" count
                 ]
     in
-    bearerRequest u (Decode.field "data" (Decode.list decodeVideo))
+    Cmd.map (Result.mapError Error.HttpError) (bearerRequest u (Decode.field "data" (Decode.list decodeVideo)) clientID token)
 
 
 
@@ -526,6 +550,28 @@ decodePaginated dataDecoder =
     Decode.map2 PaginatedResponse
         (Decode.field "pagination" (Decode.maybe (Decode.field "cursor" Decode.string)))
         (Decode.field "data" dataDecoder)
+
+
+{-| Fetch all pages of a PaginatedResponse. Calls fetchFromCursor withe new cursor values (or Nothing, for the first page)
+-}
+allPages : (Maybe String -> Task.Task x (PaginatedResponse (List a))) -> Task.Task x (List a)
+allPages fetchFromCursor =
+    fetchFromCursor Nothing
+        |> Task.andThen (nextPageOrSucceed fetchFromCursor [])
+        |> Task.map identity
+
+
+{-| helper function for allPages. Recursively calls fetchFrom with the new cursor value and collects results into the accumulator
+-}
+nextPageOrSucceed : (Maybe String -> Task.Task x (PaginatedResponse (List a))) -> List a -> PaginatedResponse (List a) -> Task.Task x (List a)
+nextPageOrSucceed fetchFrom accumulator page =
+    case page.cursor of
+        Just _ ->
+            fetchFrom page.cursor
+                |> Task.andThen (nextPageOrSucceed fetchFrom (accumulator ++ page.data))
+
+        Nothing ->
+            Task.succeed (accumulator ++ page.data)
 
 
 
