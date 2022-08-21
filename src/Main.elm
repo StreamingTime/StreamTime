@@ -12,7 +12,6 @@ import Http
 import Json.Encode as Encode
 import Loading
 import LocalStorage
-import RFC3339
 import RefreshData exposing (RefreshData(..))
 import Tailwind.Utilities as Tw
 import Task
@@ -113,12 +112,7 @@ fetchStreamingSchedule userID timeZone time token =
         beforeEndTime endTime =
             List.filter
                 (\segment ->
-                    case RFC3339.toPosix segment.startTime of
-                        Just startTime ->
-                            Time.posixToMillis startTime <= Time.posixToMillis endTime
-
-                        Nothing ->
-                            False
+                    Time.posixToMillis segment.startTime <= Time.posixToMillis endTime
                 )
 
         -- Fetch the next page until a) we got all segments that start before endTime or b) there are no pages left

@@ -5,7 +5,7 @@ import FormatTime
 import Http
 import Json.Decode as Decode
 import Maybe exposing (andThen)
-import RFC3339 exposing (decodeTimestamp)
+import RFC3339
 import Task
 import Time
 import Url
@@ -132,10 +132,10 @@ type alias Schedule =
 
 
 type alias Segment =
-    { startTime : RFC3339.DateTime
-    , endTime : Maybe RFC3339.DateTime
+    { startTime : Time.Posix
+    , endTime : Maybe Time.Posix
     , title : String
-    , canceledUntil : Maybe RFC3339.DateTime
+    , canceledUntil : Maybe Time.Posix
     , category : Maybe Category
     , isRecurring : Bool
     }
@@ -162,10 +162,10 @@ boxArtUrl { id } width height =
 decodeSegment : Decode.Decoder Segment
 decodeSegment =
     Decode.map6 Segment
-        (Decode.field "start_time" decodeTimestamp)
-        (Decode.maybe (Decode.field "end_time" decodeTimestamp))
+        (Decode.field "start_time" RFC3339.decode)
+        (Decode.maybe (Decode.field "end_time" RFC3339.decode))
         (Decode.field "title" Decode.string)
-        (Decode.maybe (Decode.field "canceled_until" decodeTimestamp))
+        (Decode.maybe (Decode.field "canceled_until" RFC3339.decode))
         (Decode.maybe (Decode.field "category" decodeCategory))
         (Decode.field "is_recurring" Decode.bool)
 

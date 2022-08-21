@@ -4,6 +4,7 @@ import Expect
 import Json.Decode as Decode
 import RFC3339 exposing (zulu)
 import Test exposing (Test, describe, test)
+import Time
 import Twitch
 import Url
 
@@ -228,20 +229,23 @@ decodeSegmentTest =
                 Expect.equal
                     (Ok
                         { startTime =
-                            { date =
-                                { year = 2021
-                                , month = 7
-                                , day = 1
-                                }
-                            , time =
-                                { hours = 18
-                                , minutes = 0
-                                , seconds = 0
-                                }
-                            , offset = zulu
-                            }
+                            Maybe.withDefault (Time.millisToPosix 0)
+                                (RFC3339.toPosix
+                                    { date =
+                                        { year = 2021
+                                        , month = 7
+                                        , day = 1
+                                        }
+                                    , time =
+                                        { hours = 18
+                                        , minutes = 0
+                                        , seconds = 0
+                                        }
+                                    , offset = zulu
+                                    }
+                                )
                         , endTime =
-                            Just
+                            RFC3339.toPosix
                                 { date =
                                     { year = 2021
                                     , month = 7
@@ -267,20 +271,23 @@ decodeSegmentTest =
                 Expect.equal
                     (Ok
                         { startTime =
-                            { date =
-                                { year = 2021
-                                , month = 7
-                                , day = 1
-                                }
-                            , time =
-                                { hours = 18
-                                , minutes = 0
-                                , seconds = 0
-                                }
-                            , offset = zulu
-                            }
+                            Maybe.withDefault (Time.millisToPosix 0)
+                                (RFC3339.toPosix
+                                    { date =
+                                        { year = 2021
+                                        , month = 7
+                                        , day = 1
+                                        }
+                                    , time =
+                                        { hours = 18
+                                        , minutes = 0
+                                        , seconds = 0
+                                        }
+                                    , offset = zulu
+                                    }
+                                )
                         , endTime =
-                            Just
+                            RFC3339.toPosix
                                 { date =
                                     { year = 2021
                                     , month = 7
@@ -295,7 +302,7 @@ decodeSegmentTest =
                                 }
                         , title = "TwitchDev Monthly Update // July 1, 2021"
                         , canceledUntil =
-                            Just
+                            RFC3339.toPosix
                                 { date =
                                     { year = 2021
                                     , month = 8
@@ -325,20 +332,23 @@ decodeScheduleTest =
                 (Ok
                     { segments =
                         [ { startTime =
-                                { date =
-                                    { year = 2021
-                                    , month = 7
-                                    , day = 1
-                                    }
-                                , time =
-                                    { hours = 18
-                                    , minutes = 0
-                                    , seconds = 0
-                                    }
-                                , offset = zulu
-                                }
+                                Maybe.withDefault (Time.millisToPosix 0)
+                                    (RFC3339.toPosix
+                                        { date =
+                                            { year = 2021
+                                            , month = 7
+                                            , day = 1
+                                            }
+                                        , time =
+                                            { hours = 18
+                                            , minutes = 0
+                                            , seconds = 0
+                                            }
+                                        , offset = zulu
+                                        }
+                                    )
                           , endTime =
-                                Just
+                                RFC3339.toPosix
                                     { date =
                                         { year = 2021
                                         , month = 7

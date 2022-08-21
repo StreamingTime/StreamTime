@@ -5,7 +5,6 @@ import FormatTime
 import Html.Styled exposing (Html, div, p, text)
 import Html.Styled.Attributes exposing (css, style)
 import List.Extra
-import RFC3339
 import RefreshData exposing (RefreshData)
 import Tailwind.Utilities as Tw
 import Time
@@ -144,12 +143,7 @@ schedulesViews timeZone time streamers schedules =
         filterSegments =
             List.filter
                 (\segment ->
-                    case RFC3339.toPosix segment.startTime of
-                        Just value ->
-                            Time.Extra.sameDay timeZone time value
-
-                        Nothing ->
-                            False
+                    Time.Extra.sameDay timeZone time segment.startTime
                 )
     in
     schedules
@@ -173,38 +167,24 @@ schedulesViews timeZone time streamers schedules =
 scheduleTimeSegment : Time.Zone -> Int -> Twitch.Segment -> Html msg
 scheduleTimeSegment timeZone row segment =
     let
-        startTimePosix =
-            RFC3339.toPosix segment.startTime
-
         startMinutes =
-            case startTimePosix of
-                Just value ->
-                    Time.toHour timeZone value * 60 + Time.toMinute timeZone value
-
-                Nothing ->
-                    0
-
-        endTimePosix =
-            segment.endTime |> Maybe.andThen (\value -> RFC3339.toPosix value)
+            Time.toHour timeZone segment.startTime * 60 + Time.toMinute timeZone segment.startTime
 
         endMinutes =
-            case ( startTimePosix, endTimePosix ) of
-                ( Just s, Just e ) ->
+            case segment.endTime of
+                Just e ->
                     {- if it is not the same day we set endMinutes to the end of the current day:
                        24 * 60 minutes = 1440 minutes
                     -}
-                    if Time.Extra.sameDay timeZone s e then
+                    if Time.Extra.sameDay timeZone segment.startTime e then
                         Time.toHour timeZone e * 60 + Time.toMinute timeZone e
 
                     else
                         1440
 
                 {- if end time is not present we set endMinutes to the end of the current day -}
-                ( Just _, Nothing ) ->
+                Nothing ->
                     1440
-
-                _ ->
-                    0
 
         {- One time segment represents 30 minutes. Therefore we divide by 30 and add 1,
            because grid numeration starts with 1.
