@@ -1,4 +1,4 @@
-module Components exposing (errorView, loadingSpinner)
+module Views.Components exposing (errorView, loadingSpinner)
 
 import Css
 import Html.Styled exposing (Html, div, text)
