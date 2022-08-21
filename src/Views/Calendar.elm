@@ -127,8 +127,8 @@ dayViews timeZone time streamers schedules selected =
                             :: schedulesViews
                                 timeZone
                                 (Time.Extra.timeInDays time offsetDays)
-                                (RefreshData.mapTo (\_ -> identity) streamers)
-                                (RefreshData.mapTo (\_ -> identity) schedules
+                                (RefreshData.unwrap streamers)
+                                (RefreshData.unwrap schedules
                                     |> Utils.schedulesWithStreamers selected
                                 )
                         )

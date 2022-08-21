@@ -172,7 +172,7 @@ fetchVideos count token userID =
 -}
 fetchMissingSchedules : AppData -> Cmd Msg
 fetchMissingSchedules { selectedStreamers, schedules, timeZone, signedInUser, time } =
-    Utils.missingStreamersInSchedules selectedStreamers (RefreshData.mapTo (\_ -> identity) schedules)
+    Utils.missingStreamersInSchedules selectedStreamers (RefreshData.unwrap schedules)
         |> List.map
             (\s ->
                 fetchStreamingSchedule s.id timeZone time signedInUser.token
@@ -278,7 +278,7 @@ update msg model =
                         searchResultsWithoutProfile =
                             appData.follows
                                 |> filterFollowsByLogin name
-                                |> (\f -> missingProfileLogins f (RefreshData.mapTo (\_ v -> v) appData.streamers))
+                                |> (\f -> missingProfileLogins f (RefreshData.unwrap appData.streamers))
                     in
                     ( LoggedIn { appData | streamerFilterName = Just name } navKey
                     , if String.length name >= 4 && List.length searchResultsWithoutProfile > 0 then
