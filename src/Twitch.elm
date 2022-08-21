@@ -341,20 +341,8 @@ decodeUser =
 
 
 getUsers : List UserID -> ClientID -> Token -> Cmd (Result Http.Error (List User))
-getUsers userIDs =
-    let
-        u =
-            apiUrlBuilder
-                [ "users" ]
-                --(List.map
-                --   (Url.Builder.string "id")
-                --   u
-                (userIDs
-                    |> List.map userIDtoString
-                    |> List.map (Url.Builder.string "id")
-                )
-    in
-    bearerRequest u (Decode.field "data" (Decode.list decodeUser))
+getUsers userIDs clientID token =
+    Task.attempt identity (getUsersTask userIDs clientID token)
 
 
 getUsersTask : List UserID -> ClientID -> Token -> Task.Task Http.Error (List User)
