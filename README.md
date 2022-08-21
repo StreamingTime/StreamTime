@@ -20,6 +20,14 @@ npx elm-tailwind-modules --dir ./gen --tailwind-config tailwind.config.js
 npx elm-review --ignore-dirs gen
 ```
 
+## Test
+
+Make sure [elm-test](https://github.com/elm-explorations/test) is installed.
+
+```
+elm-test
+```
+
 ## Development
 
 Make sure [elm-live](https://github.com/wking-io/elm-live) is installed and you have followed
