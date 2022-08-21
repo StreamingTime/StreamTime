@@ -34,7 +34,7 @@ filterFollowsByLogin name =
 -}
 
 
-missingProfileLogins : List Twitch.FollowRelation -> List Twitch.User -> List String
+missingProfileLogins : List Twitch.FollowRelation -> List Twitch.User -> List Twitch.UserID
 missingProfileLogins follows streamers =
     follows
         |> List.filterMap
@@ -57,7 +57,7 @@ streamersWithSelection selected users =
         |> List.map (\u -> ( u, List.any ((==) u) selected ))
 
 
-findUserByID : String -> List Twitch.User -> Maybe Twitch.User
+findUserByID : Twitch.UserID -> List Twitch.User -> Maybe Twitch.User
 findUserByID userID users =
     users
         |> List.filter (\user -> user.id == userID)
@@ -85,7 +85,7 @@ missingStreamersInVideos streamers videos =
             (\streamer ->
                 not
                     (videos
-                        |> List.any (\video -> video.userID == Twitch.UserID streamer.id)
+                        |> List.any (\video -> video.userID == streamer.id)
                     )
             )
 

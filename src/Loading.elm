@@ -29,7 +29,7 @@ import Types exposing (AppData, SignedInUser)
 type alias WithVerifiedToken =
     { token : Twitch.Token
     , loginName : String
-    , userID : String
+    , userID : Twitch.UserID
     }
 
 

@@ -1,4 +1,4 @@
-module TwitchTest exposing (accessTokenFromUrlTest, clientIDTest, decodeCategoryTest, decodeFollowRelationTest, decodeListHeadTest, decodePaginatedTest, decodeScheduleTest, decodeSegmentTest, decodeUserTest, decodeValidateTokenResponseTest, toFormDataTest)
+module TwitchTest exposing (accessTokenFromUrlTest, clientIDTest, decodeCategoryTest, decodeFollowRelationTest, decodeListHeadTest, decodePaginatedTest, decodeScheduleTest, decodeSegmentTest, decodeUserIDTest, decodeUserTest, decodeValidateTokenResponseTest, toFormDataTest)
 
 import Expect
 import Json.Decode as Decode
@@ -31,7 +31,7 @@ decodeValidateTokenResponseTest =
         (\_ ->
             Expect.equal
                 (Result.Ok
-                    { clientID = "wbmytr93xzw8zbg0p1izqyzzc5mbiz", login = "twitchdev", userID = "141981764" }
+                    { clientID = "wbmytr93xzw8zbg0p1izqyzzc5mbiz", login = "twitchdev", userID = Twitch.UserID "141981764" }
                 )
                 (Decode.decodeString
                     Twitch.decodeValidateTokenResponse
@@ -103,7 +103,7 @@ decodeUserTest =
         (\_ ->
             Expect.equal
                 (Result.Ok
-                    { id = "141981764"
+                    { id = Twitch.UserID "141981764"
                     , displayName = "TwitchDev"
                     , profileImageUrl = "https://static-cdn.jtvnw.net/jtv_user_pictures/8a6381c7-d0c0-4576-b179-38bd5ce1d6af-profile_image-300x300.png"
                     , loginName = "twitchdev"
@@ -122,10 +122,10 @@ decodeFollowRelationTest =
         (\_ ->
             Expect.equal
                 (Result.Ok
-                    { fromID = "171003792"
+                    { fromID = Twitch.UserID "171003792"
                     , fromLogin = "iiisutha067iii"
                     , fromName = "IIIsutha067III"
-                    , toID = "23161357"
+                    , toID = Twitch.UserID "23161357"
                     , followedAt = "2017-08-22T22:55:24Z"
                     , toName = "LIRIK"
                     , toLogin = "lirik"
@@ -357,9 +357,24 @@ decodeScheduleTest =
                           , isRecurring = False
                           }
                         ]
-                    , broadcasterId = "141981764"
+                    , broadcasterId = Twitch.UserID "141981764"
                     , broadcasterName = "TwitchDev"
                     }
                 )
                 (Decode.decodeString Twitch.decodeSchedule "{\"segments\":[{\"start_time\":\"2021-07-01T18:00:00Z\",\"end_time\":\"2021-07-01T19:00:00Z\",\"title\":\"TwitchDev Monthly Update // July 1, 2021\",\"canceled_until\":null,\"category\":{\"id\":\"509670\",\"name\":\"Science & Technology\"},\"is_recurring\":false}],\"broadcaster_id\":\"141981764\",\"broadcaster_name\":\"TwitchDev\"}")
+        )
+
+
+decodeUserIDTest : Test
+decodeUserIDTest =
+    test "Decode UserID"
+        (\_ ->
+            """
+        {
+            "user": "someUserID"
+        }
+        """
+                |> Decode.decodeString
+                    (Decode.field "user" Twitch.decodeUserID)
+                |> Expect.equal (Ok (Twitch.UserID "someUserID"))
         )

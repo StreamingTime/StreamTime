@@ -95,17 +95,17 @@ revokeToken clientId token =
     Cmd.map (\_ -> GotRevokeTokenResponse) (Twitch.revokeToken clientId token)
 
 
-fetchStreamerProfilesForSidebar : List String -> Twitch.Token -> Cmd Msg
+fetchStreamerProfilesForSidebar : List Twitch.UserID -> Twitch.Token -> Cmd Msg
 fetchStreamerProfilesForSidebar userIDs token =
     Cmd.map GotStreamerProfilesForSidebar (Twitch.getUsers userIDs TwitchConfig.clientId token)
 
 
-fetchStreamerProfiles : List String -> Twitch.Token -> Cmd Msg
+fetchStreamerProfiles : List Twitch.UserID -> Twitch.Token -> Cmd Msg
 fetchStreamerProfiles userIDs token =
     Cmd.map GotStreamerProfiles (Twitch.getUsers userIDs TwitchConfig.clientId token)
 
 
-fetchStreamingSchedule : String -> Time.Zone -> Time.Posix -> Twitch.Token -> Cmd Msg
+fetchStreamingSchedule : Twitch.UserID -> Time.Zone -> Time.Posix -> Twitch.Token -> Cmd Msg
 fetchStreamingSchedule userID timeZone time token =
     let
         -- get all segments that start before endTime
@@ -185,7 +185,7 @@ fetchMissingSchedules { selectedStreamers, schedules, timeZone, signedInUser, ti
 fetchMissingVideos : AppData -> Cmd Msg
 fetchMissingVideos { selectedStreamers, videos, signedInUser } =
     Utils.missingStreamersInVideos selectedStreamers (RefreshData.unwrap videos)
-        |> List.map (\s -> fetchVideos 10 signedInUser.token (Twitch.UserID s.id))
+        |> List.map (\s -> fetchVideos 10 signedInUser.token s.id)
         |> Cmd.batch
 
 
@@ -575,7 +575,7 @@ videoTabView { selectedStreamers, videos } =
             _ ->
                 [ videos
                     |> RefreshData.unwrap
-                    |> List.filter (\video -> List.any (\streamer -> Twitch.UserID streamer.id == video.userID) selectedStreamers)
+                    |> List.filter (\video -> List.any (\streamer -> streamer.id == video.userID) selectedStreamers)
                     |> Views.Video.videoListView
                 ]
         )
