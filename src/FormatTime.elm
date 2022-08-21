@@ -222,7 +222,7 @@ parseFormatString revStmts =
         ]
 
 
-{-| Format a DateTime using the given format string
+{-| Format a Time.Posix value using the given format string
 -}
 format : String -> Time.Zone -> Time.Posix -> Result (List Parser.DeadEnd) String
 format formatString zone posix =
