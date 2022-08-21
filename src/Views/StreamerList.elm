@@ -1,6 +1,5 @@
 module Views.StreamerList exposing (StreamerListMsg(..), streamerListPageSteps, streamerListView)
 
-import Components exposing (errorView, loadingSpinner)
 import Css
 import Error exposing (Error)
 import Html.Styled exposing (Html, a, button, div, hr, img, input, label, p, span, text)
@@ -11,6 +10,7 @@ import RefreshData exposing (RefreshData)
 import Tailwind.Utilities as Tw
 import Twitch
 import Utils exposing (filterFollowsByLogin)
+import Views.Components exposing (errorView, loadingSpinner)
 
 
 type StreamerListMsg

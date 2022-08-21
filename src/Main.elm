@@ -2,7 +2,6 @@ module Main exposing (main)
 
 import Browser exposing (Document)
 import Browser.Navigation as Nav
-import Components exposing (errorView, loadingSpinner)
 import Css
 import Css.Global
 import Error exposing (Error(..))
@@ -25,6 +24,7 @@ import Types exposing (AppData, SignedInUser, Tab(..))
 import Url
 import Utils exposing (filterFollowsByLogin, missingProfileLogins, streamersWithSelection)
 import Views.Calendar exposing (calendarView)
+import Views.Components exposing (errorView, loadingSpinner)
 import Views.StreamerList exposing (StreamerListMsg(..), streamerListPageSteps, streamerListView)
 import Views.Video
 
