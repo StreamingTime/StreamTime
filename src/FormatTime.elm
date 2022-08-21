@@ -10,15 +10,7 @@ import Time
 
 zeroPadInt : Int -> Int -> String
 zeroPadInt digits i =
-    let
-        pad d num =
-            if String.length num < d then
-                "0" ++ pad (d - 1) num
-
-            else
-                num
-    in
-    pad digits (String.fromInt i)
+    String.padLeft digits '0' (String.fromInt i)
 
 
 type FormatItem
