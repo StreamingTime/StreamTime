@@ -1,4 +1,4 @@
-module TimeTest exposing (sameDayTest, timeInDaysTest, timeInOneWeekTest, toWeekdayStringTest)
+module TimeTest exposing (onlyDateTest, sameDayTest, timeInDaysTest, timeInOneWeekTest, toWeekdayStringTest)
 
 import Expect
 import FormatTime
@@ -71,6 +71,25 @@ sameDayTest =
                     |> Expect.false "Expected not to be the same day"
             )
         ]
+
+
+onlyDateTest : Test
+onlyDateTest =
+    test "only date test"
+        (\_ ->
+            let
+                millisPerDay =
+                    86400000
+
+                date =
+                    millisPerDay * 10
+
+                toTest =
+                    date + 43459841
+            in
+            Time.Extra.onlyDate (Time.millisToPosix toTest)
+                |> Expect.equal (Time.millisToPosix date)
+        )
 
 
 timeInOneWeekTest : Test

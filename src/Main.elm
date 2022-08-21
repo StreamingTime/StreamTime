@@ -105,8 +105,8 @@ fetchStreamerProfiles userIDs token =
     Cmd.map GotStreamerProfiles (Twitch.getUsers userIDs TwitchConfig.clientId token)
 
 
-fetchStreamingSchedule : String -> Time.Zone -> Time.Posix -> Twitch.Token -> Cmd Msg
-fetchStreamingSchedule userID timeZone time token =
+fetchStreamingSchedule : String -> Time.Posix -> Twitch.Token -> Cmd Msg
+fetchStreamingSchedule userID time token =
     let
         -- get all segments that start before endTime
         beforeEndTime : Time.Posix -> List Twitch.Segment -> List Twitch.Segment
@@ -138,12 +138,12 @@ fetchStreamingSchedule userID timeZone time token =
                         Nothing ->
                             Task.succeed scheduleAcc
                 )
-                (Twitch.getStreamingSchedule userID timeZone Nothing currentCursor TwitchConfig.clientId token)
+                (Twitch.getStreamingSchedule userID Nothing currentCursor TwitchConfig.clientId token)
 
         {- fetch the first page (and more if needed) -}
         startFetching : Time.Posix -> Task.Task Error Twitch.Schedule
         startFetching endTime =
-            Twitch.getStreamingSchedule userID timeZone Nothing Nothing TwitchConfig.clientId token
+            Twitch.getStreamingSchedule userID (Time.Extra.onlyDate time |> Just) Nothing TwitchConfig.clientId token
                 |> Task.andThen
                     (\{ cursor, data } ->
                         case cursor of
@@ -171,11 +171,11 @@ fetchVideos count token userID =
 {-| Fetch schedules for every streamer that is selected, but whose schedule is not in the list
 -}
 fetchMissingSchedules : AppData -> Cmd Msg
-fetchMissingSchedules { selectedStreamers, schedules, timeZone, signedInUser, time } =
+fetchMissingSchedules { selectedStreamers, schedules, signedInUser, time } =
     Utils.missingStreamersInSchedules selectedStreamers (RefreshData.mapTo (\_ -> identity) schedules)
         |> List.map
             (\s ->
-                fetchStreamingSchedule s.id timeZone time signedInUser.token
+                fetchStreamingSchedule s.id time signedInUser.token
             )
         |> Cmd.batch
 
