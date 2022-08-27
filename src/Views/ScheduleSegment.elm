@@ -4,7 +4,6 @@ import FormatTime
 import Html.Styled exposing (Html, div, img, p, span, text)
 import Html.Styled.Attributes exposing (alt, attribute, class, css, height, src, width)
 import Icons
-import RFC3339
 import Tailwind.Utilities as Tw
 import Time
 import Twitch
@@ -30,16 +29,8 @@ scheduleSegmentView zone { displayName, profileImageUrl } { title, startTime, en
                 Nothing ->
                     text ""
 
-        asPosix dt =
-            case RFC3339.toPosix dt of
-                Just p ->
-                    p
-
-                Nothing ->
-                    Time.millisToPosix 0
-
         date format dt =
-            case FormatTime.format format zone (asPosix dt) of
+            case FormatTime.format format zone dt of
                 Ok s ->
                     s
 
@@ -81,7 +72,7 @@ scheduleSegmentView zone { displayName, profileImageUrl } { title, startTime, en
                             Just value ->
                                 let
                                     endTimeFormat =
-                                        if Time.toDay zone (asPosix startTime) == Time.toDay zone (asPosix value) then
+                                        if Time.toDay zone startTime == Time.toDay zone value then
                                             "%hh:%mm"
 
                                         else

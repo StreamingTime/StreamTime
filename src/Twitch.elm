@@ -1,11 +1,11 @@
-module Twitch exposing (Category, ClientID(..), FollowRelation, PaginatedResponse, Schedule, Segment, Token(..), User, UserID(..), ValidateTokenResponse, Video, VideoType(..), accessTokenFromUrl, allPages, boxArtUrl, decodeCategory, decodeFollowRelation, decodeListHead, decodePaginated, decodeSchedule, decodeSegment, decodeUser, decodeValidateTokenResponse, fetchVideos, getLoggedInUserTask, getStreamingSchedule, getTokenValue, getUserFollowsTask, getUsers, getUsersTask, loginFlowUrl, revokeToken, toFormData, userProfileUrl, validateToken, validateTokenTask, videoPreview)
+module Twitch exposing (Category, ClientID(..), FollowRelation, PaginatedResponse, Schedule, Segment, Token(..), User, UserID(..), ValidateTokenResponse, Video, VideoType(..), accessTokenFromUrl, allPages, boxArtUrl, decodeCategory, decodeFollowRelation, decodeListHead, decodePaginated, decodeSchedule, decodeSegment, decodeUser, decodeUserID, decodeValidateTokenResponse, fetchVideos, getLoggedInUserTask, getStreamingSchedule, getTokenValue, getUserFollowsTask, getUsers, getUsersTask, loginFlowUrl, revokeToken, toFormData, userProfileUrl, validateToken, validateTokenTask, videoPreview)
 
 import Error exposing (Error(..))
 import FormatTime
 import Http
 import Json.Decode as Decode
 import Maybe exposing (andThen)
-import RFC3339 exposing (decodeTimestamp)
+import RFC3339
 import Task
 import Time
 import Url
@@ -30,6 +30,16 @@ type ClientID
 
 type UserID
     = UserID String
+
+
+decodeUserID : Decode.Decoder UserID
+decodeUserID =
+    Decode.map UserID Decode.string
+
+
+userIDtoString : UserID -> String
+userIDtoString (UserID s) =
+    s
 
 
 getTokenValue : Token -> String
@@ -72,7 +82,7 @@ revokeToken (ClientID clientId) (Token token) =
 type alias ValidateTokenResponse =
     { clientID : String
     , login : String
-    , userID : String
+    , userID : UserID
     }
 
 
@@ -103,7 +113,7 @@ decodeValidateTokenResponse =
     Decode.map3 ValidateTokenResponse
         (Decode.field "client_id" Decode.string)
         (Decode.field "login" Decode.string)
-        (Decode.field "user_id" Decode.string)
+        (Decode.field "user_id" decodeUserID)
 
 
 
@@ -112,7 +122,7 @@ decodeValidateTokenResponse =
 
 type alias Schedule =
     { segments : List Segment
-    , broadcasterId : String
+    , broadcasterId : UserID
     , broadcasterName : String
     }
 
@@ -122,10 +132,10 @@ type alias Schedule =
 
 
 type alias Segment =
-    { startTime : RFC3339.DateTime
-    , endTime : Maybe RFC3339.DateTime
+    { startTime : Time.Posix
+    , endTime : Maybe Time.Posix
     , title : String
-    , canceledUntil : Maybe RFC3339.DateTime
+    , canceledUntil : Maybe Time.Posix
     , category : Maybe Category
     , isRecurring : Bool
     }
@@ -152,10 +162,10 @@ boxArtUrl { id } width height =
 decodeSegment : Decode.Decoder Segment
 decodeSegment =
     Decode.map6 Segment
-        (Decode.field "start_time" decodeTimestamp)
-        (Decode.maybe (Decode.field "end_time" decodeTimestamp))
+        (Decode.field "start_time" RFC3339.decode)
+        (Decode.maybe (Decode.field "end_time" RFC3339.decode))
         (Decode.field "title" Decode.string)
-        (Decode.maybe (Decode.field "canceled_until" decodeTimestamp))
+        (Decode.maybe (Decode.field "canceled_until" RFC3339.decode))
         (Decode.maybe (Decode.field "category" decodeCategory))
         (Decode.field "is_recurring" Decode.bool)
 
@@ -164,7 +174,7 @@ decodeSchedule : Decode.Decoder Schedule
 decodeSchedule =
     Decode.map3 Schedule
         (Decode.field "segments" (Decode.list decodeSegment))
-        (Decode.field "broadcaster_id" Decode.string)
+        (Decode.field "broadcaster_id" decodeUserID)
         (Decode.field "broadcaster_name" Decode.string)
 
 
@@ -172,8 +182,8 @@ decodeSchedule =
 {- https://dev.twitch.tv/docs/api/reference#get-channel-stream-schedule -}
 
 
-getStreamingSchedule : String -> Maybe Time.Posix -> Maybe String -> ClientID -> Token -> Task.Task Error (PaginatedResponse Schedule)
-getStreamingSchedule userID startTime cursor (ClientID clientID) (Token token) =
+getStreamingSchedule : UserID -> Maybe Time.Posix -> Maybe String -> ClientID -> Token -> Task.Task Error (PaginatedResponse Schedule)
+getStreamingSchedule (UserID userID) startTime cursor (ClientID clientID) (Token token) =
     let
         params =
             [ Url.Builder.string "broadcaster_id" userID
@@ -248,10 +258,10 @@ handleJsonResponse decoder response =
 
 
 type alias FollowRelation =
-    { fromID : String
+    { fromID : UserID
     , fromLogin : String
     , fromName : String
-    , toID : String
+    , toID : UserID
     , toName : String
     , toLogin : String
     , followedAt : String
@@ -261,10 +271,10 @@ type alias FollowRelation =
 decodeFollowRelation : Decode.Decoder FollowRelation
 decodeFollowRelation =
     Decode.map7 FollowRelation
-        (Decode.field "from_id" Decode.string)
+        (Decode.field "from_id" decodeUserID)
         (Decode.field "from_login" Decode.string)
         (Decode.field "from_name" Decode.string)
-        (Decode.field "to_id" Decode.string)
+        (Decode.field "to_id" decodeUserID)
         (Decode.field "to_name" Decode.string)
         (Decode.field "to_login" Decode.string)
         (Decode.field "followed_at" Decode.string)
@@ -278,8 +288,8 @@ decodeFollowRelation =
 -}
 
 
-getUserFollowsTask : String -> Maybe String -> ClientID -> Token -> Task.Task Http.Error (PaginatedResponse (List FollowRelation))
-getUserFollowsTask userID cursor =
+getUserFollowsTask : UserID -> Maybe String -> ClientID -> Token -> Task.Task Http.Error (PaginatedResponse (List FollowRelation))
+getUserFollowsTask (UserID userID) cursor =
     let
         params =
             [ Url.Builder.string "from_id" userID
@@ -310,7 +320,7 @@ getUserFollowsTask userID cursor =
 
 
 type alias User =
-    { id : String
+    { id : UserID
     , displayName : String
     , profileImageUrl : String
     , loginName : String
@@ -320,7 +330,7 @@ type alias User =
 decodeUser : Decode.Decoder User
 decodeUser =
     Decode.map4 User
-        (Decode.field "id" Decode.string)
+        (Decode.field "id" decodeUserID)
         (Decode.field "display_name" Decode.string)
         (Decode.field "profile_image_url" Decode.string)
         (Decode.field "login" Decode.string)
@@ -330,29 +340,20 @@ decodeUser =
 {- https://dev.twitch.tv/docs/api/reference#get-users -}
 
 
-getUsers : List String -> ClientID -> Token -> Cmd (Result Http.Error (List User))
-getUsers userIDs =
-    let
-        u =
-            apiUrlBuilder
-                [ "users" ]
-                (List.map
-                    (Url.Builder.string "id")
-                    userIDs
-                )
-    in
-    bearerRequest u (Decode.field "data" (Decode.list decodeUser))
+getUsers : List UserID -> ClientID -> Token -> Cmd (Result Http.Error (List User))
+getUsers userIDs clientID token =
+    Task.attempt identity (getUsersTask userIDs clientID token)
 
 
-getUsersTask : List String -> ClientID -> Token -> Task.Task Http.Error (List User)
+getUsersTask : List UserID -> ClientID -> Token -> Task.Task Http.Error (List User)
 getUsersTask userIDs =
     let
         u =
             apiUrlBuilder
                 [ "users" ]
-                (List.map
-                    (Url.Builder.string "id")
-                    userIDs
+                (userIDs
+                    |> List.map userIDtoString
+                    |> List.map (Url.Builder.string "id")
                 )
     in
     bearerGetRequestTask u (Decode.field "data" (Decode.list decodeUser))
@@ -489,7 +490,7 @@ decodeVideo : Decode.Decoder Video
 decodeVideo =
     Decode.succeed Video
         |> apply (Decode.field "id" Decode.string)
-        |> apply (Decode.map UserID (Decode.field "user_id" Decode.string))
+        |> apply (Decode.field "user_id" decodeUserID)
         |> apply (Decode.field "user_login" Decode.string)
         |> apply (Decode.field "user_name" Decode.string)
         |> apply (Decode.field "title" Decode.string)

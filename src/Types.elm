@@ -33,7 +33,7 @@ type alias AppData =
 type alias SignedInUser =
     { token : Twitch.Token
     , loginName : String
-    , userID : String
+    , userID : Twitch.UserID
     , displayName : String
     , profileImageUrl : String
     }

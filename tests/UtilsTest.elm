@@ -27,10 +27,10 @@ filterFollowsByLoginTest =
         follows =
             List.map
                 (\login ->
-                    { fromID = ""
+                    { fromID = Twitch.UserID ""
                     , fromLogin = ""
                     , fromName = ""
-                    , toID = ""
+                    , toID = Twitch.UserID ""
                     , toName = ""
                     , toLogin = login
                     , followedAt = ""
@@ -71,7 +71,7 @@ missingProfileLoginsTest =
                 follows =
                     List.map
                         (\( id, login ) ->
-                            { fromID = ""
+                            { fromID = Twitch.UserID ""
                             , fromLogin = ""
                             , fromName = ""
                             , toID = id
@@ -80,12 +80,12 @@ missingProfileLoginsTest =
                             , followedAt = ""
                             }
                         )
-                        [ ( "id1", "foo" ), ( "id2", "bar" ), ( "notFetchedId", "notFetched" ) ]
+                        [ ( Twitch.UserID "id1", "foo" ), ( Twitch.UserID "id2", "bar" ), ( Twitch.UserID "notFetchedId", "notFetched" ) ]
 
                 streamers =
                     List.map
                         (\login ->
-                            { id = ""
+                            { id = Twitch.UserID ""
                             , displayName = ""
                             , profileImageUrl = ""
                             , loginName = login
@@ -94,7 +94,7 @@ missingProfileLoginsTest =
                         [ "foo", "bar" ]
             in
             missingProfileLogins follows streamers
-                |> Expect.equal [ "notFetchedId" ]
+                |> Expect.equal [ Twitch.UserID "notFetchedId" ]
         )
 
 
@@ -106,7 +106,7 @@ streamersWithSelectionTest =
                 selected =
                     List.map
                         (\login ->
-                            { id = ""
+                            { id = Twitch.UserID ""
                             , displayName = ""
                             , profileImageUrl = ""
                             , loginName = login
@@ -117,7 +117,7 @@ streamersWithSelectionTest =
                 streamers =
                     List.map
                         (\login ->
-                            { id = ""
+                            { id = Twitch.UserID ""
                             , displayName = ""
                             , profileImageUrl = ""
                             , loginName = login
@@ -137,17 +137,17 @@ missingStreamersInSchedulesTest =
         (\_ ->
             let
                 missing =
-                    [ { id = "3", displayName = "c", profileImageUrl = "", loginName = "c" } ]
+                    [ { id = Twitch.UserID "3", displayName = "c", profileImageUrl = "", loginName = "c" } ]
 
                 streamers =
-                    [ { id = "1", displayName = "a", profileImageUrl = "", loginName = "a" }
-                    , { id = "2", displayName = "b", profileImageUrl = "", loginName = "b" }
+                    [ { id = Twitch.UserID "1", displayName = "a", profileImageUrl = "", loginName = "a" }
+                    , { id = Twitch.UserID "2", displayName = "b", profileImageUrl = "", loginName = "b" }
                     ]
                         ++ missing
 
                 schedules =
-                    [ { segments = [], broadcasterId = "1", broadcasterName = "a" }
-                    , { segments = [], broadcasterId = "2", broadcasterName = "b" }
+                    [ { segments = [], broadcasterId = Twitch.UserID "1", broadcasterName = "a" }
+                    , { segments = [], broadcasterId = Twitch.UserID "2", broadcasterName = "b" }
                     ]
             in
             missingStreamersInSchedules streamers schedules
@@ -161,14 +161,14 @@ streamersInSchedulesTest =
         (\_ ->
             let
                 streamers =
-                    [ { id = "1", displayName = "a", profileImageUrl = "", loginName = "a" }
+                    [ { id = Twitch.UserID "1", displayName = "a", profileImageUrl = "", loginName = "a" }
                     ]
 
                 schedules =
-                    [ { segments = [], broadcasterId = "1", broadcasterName = "a" }
-                    , { segments = [], broadcasterId = "2", broadcasterName = "b" }
+                    [ { segments = [], broadcasterId = Twitch.UserID "1", broadcasterName = "a" }
+                    , { segments = [], broadcasterId = Twitch.UserID "2", broadcasterName = "b" }
                     ]
             in
             schedulesWithStreamers streamers schedules
-                |> Expect.equal [ { segments = [], broadcasterId = "1", broadcasterName = "a" } ]
+                |> Expect.equal [ { segments = [], broadcasterId = Twitch.UserID "1", broadcasterName = "a" } ]
         )

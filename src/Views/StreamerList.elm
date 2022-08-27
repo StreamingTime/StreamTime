@@ -30,7 +30,7 @@ streamerListView : RefreshData Error (List ( Twitch.User, Bool )) -> List Twitch
 streamerListView streamersData follows showCount filterString =
     let
         streamers =
-            RefreshData.mapTo (\_ list -> list) streamersData
+            RefreshData.unwrap streamersData
 
         selectedStreamers =
             streamers

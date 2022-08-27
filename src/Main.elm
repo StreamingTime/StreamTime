@@ -12,7 +12,6 @@ import Http
 import Json.Encode as Encode
 import Loading
 import LocalStorage
-import RFC3339
 import RefreshData exposing (RefreshData(..))
 import Tailwind.Utilities as Tw
 import Task
@@ -95,17 +94,17 @@ revokeToken clientId token =
     Cmd.map (\_ -> GotRevokeTokenResponse) (Twitch.revokeToken clientId token)
 
 
-fetchStreamerProfilesForSidebar : List String -> Twitch.Token -> Cmd Msg
+fetchStreamerProfilesForSidebar : List Twitch.UserID -> Twitch.Token -> Cmd Msg
 fetchStreamerProfilesForSidebar userIDs token =
     Cmd.map GotStreamerProfilesForSidebar (Twitch.getUsers userIDs TwitchConfig.clientId token)
 
 
-fetchStreamerProfiles : List String -> Twitch.Token -> Cmd Msg
+fetchStreamerProfiles : List Twitch.UserID -> Twitch.Token -> Cmd Msg
 fetchStreamerProfiles userIDs token =
     Cmd.map GotStreamerProfiles (Twitch.getUsers userIDs TwitchConfig.clientId token)
 
 
-fetchStreamingSchedule : String -> Time.Posix -> Twitch.Token -> Cmd Msg
+fetchStreamingSchedule : Twitch.UserID -> Time.Posix -> Twitch.Token -> Cmd Msg
 fetchStreamingSchedule userID time token =
     let
         -- get all segments that start before endTime
@@ -113,12 +112,7 @@ fetchStreamingSchedule userID time token =
         beforeEndTime endTime =
             List.filter
                 (\segment ->
-                    case RFC3339.toPosix segment.startTime of
-                        Just startTime ->
-                            Time.posixToMillis startTime <= Time.posixToMillis endTime
-
-                        Nothing ->
-                            False
+                    Time.posixToMillis segment.startTime <= Time.posixToMillis endTime
                 )
 
         -- Fetch the next page until a) we got all segments that start before endTime or b) there are no pages left
@@ -143,7 +137,7 @@ fetchStreamingSchedule userID time token =
         {- fetch the first page (and more if needed) -}
         startFetching : Time.Posix -> Task.Task Error Twitch.Schedule
         startFetching endTime =
-            Twitch.getStreamingSchedule userID (Time.Extra.onlyDate time |> Just) Nothing TwitchConfig.clientId token
+            Twitch.getStreamingSchedule userID Nothing Nothing TwitchConfig.clientId token
                 |> Task.andThen
                     (\{ cursor, data } ->
                         case cursor of
@@ -171,11 +165,11 @@ fetchVideos count token userID =
 {-| Fetch schedules for every streamer that is selected, but whose schedule is not in the list
 -}
 fetchMissingSchedules : AppData -> Cmd Msg
-fetchMissingSchedules { selectedStreamers, schedules, signedInUser, time } =
-    Utils.missingStreamersInSchedules selectedStreamers (RefreshData.mapTo (\_ -> identity) schedules)
+fetchMissingSchedules { selectedStreamers, schedules, timeZone, signedInUser, time } =
+    Utils.missingStreamersInSchedules selectedStreamers (RefreshData.unwrap schedules)
         |> List.map
             (\s ->
-                fetchStreamingSchedule s.id time signedInUser.token
+                fetchStreamingSchedule s.id timeZone time signedInUser.token
             )
         |> Cmd.batch
 
@@ -185,7 +179,7 @@ fetchMissingSchedules { selectedStreamers, schedules, signedInUser, time } =
 fetchMissingVideos : AppData -> Cmd Msg
 fetchMissingVideos { selectedStreamers, videos, signedInUser } =
     Utils.missingStreamersInVideos selectedStreamers (RefreshData.unwrap videos)
-        |> List.map (\s -> fetchVideos 10 signedInUser.token (Twitch.UserID s.id))
+        |> List.map (\s -> fetchVideos 10 signedInUser.token s.id)
         |> Cmd.batch
 
 
@@ -278,7 +272,7 @@ update msg model =
                         searchResultsWithoutProfile =
                             appData.follows
                                 |> filterFollowsByLogin name
-                                |> (\f -> missingProfileLogins f (RefreshData.mapTo (\_ v -> v) appData.streamers))
+                                |> (\f -> missingProfileLogins f (RefreshData.unwrap appData.streamers))
                     in
                     ( LoggedIn { appData | streamerFilterName = Just name } navKey
                     , if String.length name >= 4 && List.length searchResultsWithoutProfile > 0 then
@@ -575,7 +569,7 @@ videoTabView { selectedStreamers, videos } =
             _ ->
                 [ videos
                     |> RefreshData.unwrap
-                    |> List.filter (\video -> List.any (\streamer -> Twitch.UserID streamer.id == video.userID) selectedStreamers)
+                    |> List.filter (\video -> List.any (\streamer -> streamer.id == video.userID) selectedStreamers)
                     |> Views.Video.videoListView
                 ]
         )
