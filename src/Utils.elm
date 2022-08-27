@@ -1,6 +1,7 @@
-module Utils exposing (concatMaybeList, filterFollowsByLogin, findUserByID, missingProfileLogins, missingStreamersInSchedules, missingStreamersInVideos, schedulesWithStreamers, streamersWithSelection)
+module Utils exposing (concatMaybeList, filterFollowsByLogin, findUserByID, missingProfileLogins, missingStreamersInSchedules, missingStreamersInVideos, protocolToString, schedulesWithStreamers, streamersWithSelection)
 
 import Twitch
+import Url
 
 
 
@@ -98,3 +99,13 @@ schedulesWithStreamers streamers schedules =
                 streamers
                     |> List.any (\streamer -> schedule.broadcasterId == streamer.id)
             )
+
+
+protocolToString : Url.Protocol -> String
+protocolToString protocol =
+    case protocol of
+        Url.Http ->
+            "http://"
+
+        Url.Https ->
+            "https://"

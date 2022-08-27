@@ -21,6 +21,7 @@ import Twitch
 import TwitchConfig
 import Types exposing (AppData, SignedInUser, Tab(..))
 import Url
+import Url.Builder
 import Utils exposing (filterFollowsByLogin, missingProfileLogins, streamersWithSelection)
 import Views.Calendar exposing (calendarView)
 import Views.Components exposing (errorView, loadingSpinner)
@@ -28,15 +29,16 @@ import Views.StreamerList exposing (StreamerListMsg(..), streamerListPageSteps, 
 import Views.Video
 
 
-loginRedirectUrl : String
-loginRedirectUrl =
-    "http://localhost:8000"
-
-
 type Model
-    = {- User is logged in, token is verified -} LoggedIn AppData Nav.Key
-    | {- User has not started the login process -} NotLoggedIn (Maybe Error) Nav.Key
-    | {- User has logged in via twitch, but we have yet to validate the token and fetch user details -} LoadingScreen Nav.Key
+    = {- User is logged in, token is verified -} LoggedIn AppData UrlInfo
+    | {- User has not started the login process -} NotLoggedIn (Maybe Error) UrlInfo
+    | {- User has logged in via twitch, but we have yet to validate the token and fetch user details -} LoadingScreen UrlInfo
+
+
+type alias UrlInfo =
+    { navKey : Nav.Key
+    , rootUrl : String
+    }
 
 
 type Msg
@@ -61,9 +63,35 @@ type UrlMsg
 
 init : Encode.Value -> Url.Url -> Nav.Key -> ( Model, Cmd Msg )
 init flags url navKey =
+    let
+        urlInfo =
+            { navKey = navKey
+            , rootUrl =
+                let
+                    rootUrl =
+                        -- we need an absolute Url for the redirect
+                        Url.Builder.crossOrigin
+                            (Utils.protocolToString url.protocol
+                                ++ url.host
+                                ++ Maybe.withDefault ""
+                                    (url.port_
+                                        |> Maybe.map (\p -> ":" ++ String.fromInt p)
+                                    )
+                            )
+                            []
+                            []
+                in
+                -- remove trailing whitespace for the Twitch return url allowlist
+                if String.endsWith "/" rootUrl then
+                    String.dropRight 1 rootUrl
+
+                else
+                    rootUrl
+            }
+    in
     case Twitch.accessTokenFromUrl url of
         Just token ->
-            ( LoadingScreen navKey
+            ( LoadingScreen urlInfo
             , Cmd.batch
                 [ Cmd.map LoadingFinished (Loading.loadInitialData token streamerListPageSteps)
                 , LocalStorage.persistData { token = Twitch.getTokenValue token }
@@ -74,17 +102,17 @@ init flags url navKey =
         Nothing ->
             case LocalStorage.decodePersistentData flags of
                 Err _ ->
-                    ( NotLoggedIn Nothing navKey, Cmd.none )
+                    ( NotLoggedIn Nothing urlInfo, Cmd.none )
 
                 Ok data ->
                     let
                         token =
                             Twitch.Token data.token
                     in
-                    ( LoadingScreen navKey
+                    ( LoadingScreen urlInfo
                     , Cmd.batch
                         [ Cmd.map LoadingFinished (Loading.loadInitialData token streamerListPageSteps)
-                        , Nav.replaceUrl navKey "/"
+                        , Nav.replaceUrl urlInfo.navKey "/"
                         ]
                     )
 
@@ -186,24 +214,24 @@ fetchMissingVideos { selectedStreamers, videos, signedInUser } =
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case model of
-        LoadingScreen navKey ->
+        LoadingScreen urlInfo ->
             case msg of
                 LoadingFinished (Ok appData) ->
-                    ( LoggedIn appData navKey, Cmd.none )
+                    ( LoggedIn appData urlInfo, Cmd.none )
 
                 LoadingFinished (Err error) ->
-                    ( NotLoggedIn (Just (Error.HttpError error)) navKey, Cmd.none )
+                    ( NotLoggedIn (Just (Error.HttpError error)) urlInfo, Cmd.none )
 
                 _ ->
                     ( model, Cmd.none )
 
-        LoggedIn appData navKey ->
+        LoggedIn appData urlInfo ->
             case msg of
                 UrlMsg urlMsg ->
-                    ( LoggedIn appData navKey, handleUrlMsg urlMsg navKey )
+                    ( LoggedIn appData urlInfo, handleUrlMsg urlMsg urlInfo.navKey )
 
                 GotValidateTokenResponse (Err err) ->
-                    ( NotLoggedIn (Just (HttpError err)) navKey, Cmd.none )
+                    ( NotLoggedIn (Just (HttpError err)) urlInfo, Cmd.none )
 
                 GotValidateTokenResponse (Ok _) ->
                     ( model, Cmd.none )
@@ -219,7 +247,7 @@ update msg model =
                                     | streamers = RefreshData.map (\oldProfiles -> Present (oldProfiles ++ newProfiles)) appData.streamers
                                     , sidebarStreamerCount = appData.sidebarStreamerCount + List.length newProfiles
                                 }
-                                navKey
+                                urlInfo
                             , Cmd.none
                             )
 
@@ -228,7 +256,7 @@ update msg model =
                                 { appData
                                     | streamers = RefreshData.map (RefreshData.ErrorWithData (HttpError err)) appData.streamers
                                 }
-                                navKey
+                                urlInfo
                             , Cmd.none
                             )
 
@@ -237,7 +265,7 @@ update msg model =
                         newItemCount =
                             max (appData.sidebarStreamerCount - streamerListPageSteps) streamerListPageSteps
                     in
-                    ( LoggedIn { appData | sidebarStreamerCount = newItemCount } navKey, Cmd.none )
+                    ( LoggedIn { appData | sidebarStreamerCount = newItemCount } urlInfo, Cmd.none )
 
                 StreamerListMsg ShowMore ->
                     let
@@ -252,7 +280,7 @@ update msg model =
                                     |> List.take streamerListPageSteps
                                     |> List.map .toID
                         in
-                        ( LoggedIn { appData | streamers = RefreshData.map RefreshData.LoadingMore appData.streamers } navKey
+                        ( LoggedIn { appData | streamers = RefreshData.map RefreshData.LoadingMore appData.streamers } urlInfo
                         , fetchStreamerProfilesForSidebar nextIDs appData.signedInUser.token
                         )
 
@@ -264,7 +292,7 @@ update msg model =
                             howMuchMore =
                                 min streamerListPageSteps (numProfiles - appData.sidebarStreamerCount)
                         in
-                        ( LoggedIn { appData | sidebarStreamerCount = appData.sidebarStreamerCount + howMuchMore } navKey, Cmd.none )
+                        ( LoggedIn { appData | sidebarStreamerCount = appData.sidebarStreamerCount + howMuchMore } urlInfo, Cmd.none )
 
                 StreamerListMsg (Filter name) ->
                     let
@@ -274,7 +302,7 @@ update msg model =
                                 |> filterFollowsByLogin name
                                 |> (\f -> missingProfileLogins f (RefreshData.unwrap appData.streamers))
                     in
-                    ( LoggedIn { appData | streamerFilterName = Just name } navKey
+                    ( LoggedIn { appData | streamerFilterName = Just name } urlInfo
                     , if String.length name >= 4 && List.length searchResultsWithoutProfile > 0 then
                         fetchStreamerProfiles searchResultsWithoutProfile appData.signedInUser.token
 
@@ -283,7 +311,7 @@ update msg model =
                     )
 
                 StreamerListMsg ClearFilterString ->
-                    ( LoggedIn { appData | streamerFilterName = Nothing } navKey, Cmd.none )
+                    ( LoggedIn { appData | streamerFilterName = Nothing } urlInfo, Cmd.none )
 
                 StreamerListMsg (SetStreamerSelection streamer newSelectionState) ->
                     let
@@ -297,7 +325,7 @@ update msg model =
                         newAppData =
                             { appData | schedules = RefreshData.map LoadingMore appData.schedules, selectedStreamers = newList }
                     in
-                    ( LoggedIn newAppData navKey
+                    ( LoggedIn newAppData urlInfo
                     , case appData.tab of
                         ScheduleTab ->
                             fetchMissingSchedules newAppData
@@ -307,36 +335,36 @@ update msg model =
                     )
 
                 GotStreamerProfiles (Ok newProfiles) ->
-                    ( LoggedIn { appData | streamers = RefreshData.map (\oldProfiles -> Present (oldProfiles ++ newProfiles)) appData.streamers } navKey, Cmd.none )
+                    ( LoggedIn { appData | streamers = RefreshData.map (\oldProfiles -> Present (oldProfiles ++ newProfiles)) appData.streamers } urlInfo, Cmd.none )
 
                 GotStreamerProfiles (Err err) ->
-                    ( LoggedIn { appData | streamers = RefreshData.map (ErrorWithData (HttpError err)) appData.streamers } navKey, Cmd.none )
+                    ( LoggedIn { appData | streamers = RefreshData.map (ErrorWithData (HttpError err)) appData.streamers } urlInfo, Cmd.none )
 
                 GotStreamingSchedule response ->
                     case response of
                         Err err ->
-                            ( LoggedIn { appData | schedules = RefreshData.map (ErrorWithData err) appData.schedules } navKey, Cmd.none )
+                            ( LoggedIn { appData | schedules = RefreshData.map (ErrorWithData err) appData.schedules } urlInfo, Cmd.none )
 
                         Ok value ->
-                            ( LoggedIn { appData | schedules = RefreshData.map (\oldSchedules -> Present (oldSchedules ++ [ value ])) appData.schedules } navKey, Cmd.none )
+                            ( LoggedIn { appData | schedules = RefreshData.map (\oldSchedules -> Present (oldSchedules ++ [ value ])) appData.schedules } urlInfo, Cmd.none )
 
                 Logout ->
-                    ( NotLoggedIn Nothing navKey, Cmd.batch [ LocalStorage.removeData, revokeToken TwitchConfig.clientId appData.signedInUser.token ] )
+                    ( NotLoggedIn Nothing urlInfo, Cmd.batch [ LocalStorage.removeData, revokeToken TwitchConfig.clientId appData.signedInUser.token ] )
 
                 HourlyValidation ->
                     ( model, Cmd.map GotValidateTokenResponse (Twitch.validateToken appData.signedInUser.token) )
 
                 GotVideos (Ok response) ->
-                    ( LoggedIn { appData | videos = RefreshData.map (\v -> Present (v ++ response)) appData.videos } navKey, Cmd.none )
+                    ( LoggedIn { appData | videos = RefreshData.map (\v -> Present (v ++ response)) appData.videos } urlInfo, Cmd.none )
 
                 GotVideos (Err e) ->
-                    ( LoggedIn { appData | videos = RefreshData.map (ErrorWithData e) appData.videos } navKey, Cmd.none )
+                    ( LoggedIn { appData | videos = RefreshData.map (ErrorWithData e) appData.videos } urlInfo, Cmd.none )
 
                 LoadingFinished _ ->
                     ( model, Cmd.none )
 
                 SwitchTab newTab ->
-                    ( LoggedIn { appData | tab = newTab } navKey
+                    ( LoggedIn { appData | tab = newTab } urlInfo
                     , case newTab of
                         ScheduleTab ->
                             fetchMissingSchedules appData
@@ -345,10 +373,10 @@ update msg model =
                             fetchMissingVideos appData
                     )
 
-        NotLoggedIn _ navKey ->
+        NotLoggedIn _ urlInfo ->
             case msg of
                 UrlMsg urlMsg ->
-                    ( model, handleUrlMsg urlMsg navKey )
+                    ( model, handleUrlMsg urlMsg urlInfo.navKey )
 
                 -- this msg should not be relevant for the LoadingScreen model
                 GotValidateTokenResponse _ ->
@@ -409,8 +437,8 @@ view model =
                 [ Css.Global.global Tw.globalStyles
                 , div []
                     [ case model of
-                        NotLoggedIn err _ ->
-                            loginView err
+                        NotLoggedIn err urlInfo ->
+                            loginView err urlInfo.rootUrl
 
                         LoadingScreen _ ->
                             validationView
@@ -423,8 +451,8 @@ view model =
     }
 
 
-loginView : Maybe Error -> Html Msg
-loginView err =
+loginView : Maybe Error -> String -> Html Msg
+loginView err loginRedirectUrl =
     div
         [ css
             [ Tw.hero
