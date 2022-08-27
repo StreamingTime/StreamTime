@@ -132,12 +132,12 @@ fetchStreamingSchedule userID timeZone time token =
                         Nothing ->
                             Task.succeed scheduleAcc
                 )
-                (Twitch.getStreamingSchedule userID timeZone Nothing currentCursor TwitchConfig.clientId token)
+                (Twitch.getStreamingSchedule userID Nothing currentCursor TwitchConfig.clientId token)
 
         {- fetch the first page (and more if needed) -}
         startFetching : Time.Posix -> Task.Task Error Twitch.Schedule
         startFetching endTime =
-            Twitch.getStreamingSchedule userID timeZone Nothing Nothing TwitchConfig.clientId token
+            Twitch.getStreamingSchedule userID Nothing Nothing TwitchConfig.clientId token
                 |> Task.andThen
                     (\{ cursor, data } ->
                         case cursor of
