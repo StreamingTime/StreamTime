@@ -193,11 +193,11 @@ fetchVideos count token userID =
 {-| Fetch schedules for every streamer that is selected, but whose schedule is not in the list
 -}
 fetchMissingSchedules : AppData -> Cmd Msg
-fetchMissingSchedules { selectedStreamers, schedules, timeZone, signedInUser, time } =
+fetchMissingSchedules { selectedStreamers, schedules, signedInUser, time } =
     Utils.missingStreamersInSchedules selectedStreamers (RefreshData.unwrap schedules)
         |> List.map
             (\s ->
-                fetchStreamingSchedule s.id timeZone time signedInUser.token
+                fetchStreamingSchedule s.id time signedInUser.token
             )
         |> Cmd.batch
 
