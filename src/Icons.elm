@@ -1,4 +1,4 @@
-module Icons exposing (close, repeat, warning, checkCircle)
+module Icons exposing (checkCircle, close, repeat, warning)
 
 import Css
 import Html.Styled exposing (Html)
