@@ -104,8 +104,8 @@ fetchStreamerProfiles userIDs token =
     Cmd.map GotStreamerProfiles (Twitch.getUsers userIDs TwitchConfig.clientId token)
 
 
-fetchStreamingSchedule : Twitch.UserID -> Time.Zone -> Time.Posix -> Twitch.Token -> Cmd Msg
-fetchStreamingSchedule userID timeZone time token =
+fetchStreamingSchedule : Twitch.UserID -> Time.Posix -> Twitch.Token -> Cmd Msg
+fetchStreamingSchedule userID time token =
     let
         -- get all segments that start before endTime
         beforeEndTime : Time.Posix -> List Twitch.Segment -> List Twitch.Segment
