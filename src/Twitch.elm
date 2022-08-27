@@ -182,8 +182,8 @@ decodeSchedule =
 {- https://dev.twitch.tv/docs/api/reference#get-channel-stream-schedule -}
 
 
-getStreamingSchedule : UserID -> Time.Zone -> Maybe Time.Posix -> Maybe String -> ClientID -> Token -> Task.Task Error (PaginatedResponse Schedule)
-getStreamingSchedule (UserID userID) timeZone startTime cursor (ClientID clientID) (Token token) =
+getStreamingSchedule : UserID -> Maybe Time.Posix -> Maybe String -> ClientID -> Token -> Task.Task Error (PaginatedResponse Schedule)
+getStreamingSchedule (UserID userID) startTime cursor (ClientID clientID) (Token token) =
     let
         params =
             [ Url.Builder.string "broadcaster_id" userID
@@ -217,7 +217,7 @@ getStreamingSchedule (UserID userID) timeZone startTime cursor (ClientID clientI
             Task.mapError HttpError (Http.task request)
 
         Just time ->
-            case FormatTime.asRFC3339 timeZone time of
+            case FormatTime.asRFC3339 Time.utc time of
                 Ok t ->
                     Task.mapError HttpError (Http.task { request | url = requestUrlWithoutParams (params ++ [ Url.Builder.string "start_time" t ]) })
 

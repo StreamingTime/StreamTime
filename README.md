@@ -7,10 +7,17 @@ Set OAuth Redirect URL to `http://localhost:8000` and capture your Client ID.
 
 Create a `TwitchConfig.elm` file with your Client ID in `src/`. We recommend to use `TwitchConfig.elm.example` as a template.
 
-## Build
+## Preparation
 
+### Install dependencies
 ```
 npm ci
+```
+
+### Generate Tailwind Elm code
+
+Repeat this step every time the Tailwind configuration changed.
+```
 npx elm-tailwind-modules --dir ./gen --tailwind-config tailwind.config.js
 ```
 
@@ -28,16 +35,31 @@ Make sure [elm-test](https://github.com/elm-explorations/test) is installed.
 elm-test
 ```
 
-## Development
+## Build
 
-Make sure [elm-live](https://github.com/wking-io/elm-live) is installed and you have followed
-build instructions.
+Make sure you have [installed dependencies](https://github.com/HS-Flensburg-DST/abschlussprojekt-fabian-w-und-florian#install-dependencies) and [generated tailwind elm code](https://github.com/HS-Flensburg-DST/abschlussprojekt-fabian-w-und-florian#generate-tailwind-elm-code).
+
+### Development
+
+Verify [elm-live](https://github.com/wking-io/elm-live) is installed on your machine.
+
+To build the app for development purposes, use
 
 ```
 elm-live src/Main.elm -- --output=main.js
 ```
 
-Visit `http://localhost:8000`
+and visit `http://localhost:8000` in your browser.
+
+### Production
+
+To build the app for production, use
+
+````
+elm make src/Main.elm --optimize --output=main.js
+````
+
+Then deploy `main.js` and `index.html` using a webserver of your choice. Make sure the domain/address and port of your server is included in the  _OAuth Redirect URLs_ list for your twitch app (See [Prerequisites](https://github.com/HS-Flensburg-DST/abschlussprojekt-fabian-w-und-florian#prerequisites)).
 
 ## Dependencies
 - [TailwindCSS](https://v2.tailwindcss.com)
