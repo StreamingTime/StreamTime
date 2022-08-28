@@ -1,4 +1,4 @@
-module Twitch exposing (Category, ClientID(..), FollowRelation, PaginatedResponse, Schedule, Segment, Token(..), User, UserID(..), ValidateTokenResponse, Video, VideoType(..), accessTokenFromUrl, allPages, boxArtUrl, decodeCategory, decodeFollowRelation, decodeListHead, decodePaginated, decodeSchedule, decodeSegment, decodeUser, decodeUserID, decodeValidateTokenResponse, fetchVideos, getLoggedInUserTask, getStreamingSchedule, getTokenValue, getUserFollowsTask, getUsers, getUsersTask, loginFlowUrl, revokeToken, toFormData, userProfileUrl, validateToken, validateTokenTask, videoPreview)
+module Twitch exposing (Category, ClientID(..), FollowRelation, PaginatedResponse, Schedule, Segment, Token(..), User, UserID(..), ValidateTokenResponse, Video, VideoType(..), accessTokenFromUrl, allPages, boxArtUrl, decodeCategory, decodeFollowRelation, decodeListHead, decodePaginated, decodeSchedule, decodeSegment, decodeUser, decodeUserID, decodeValidateTokenResponse, fetchVideos, getLoggedInUserTask, getStreamingSchedule, getTokenValue, getUserFollowsTask, getUsers, getUsersTask, loginFlowUrl, pagesWhile, revokeToken, toFormData, userProfileUrl, validateToken, validateTokenTask, videoPreview)
 
 import Error exposing (Error(..))
 import FormatTime
@@ -558,21 +558,35 @@ decodePaginated dataDecoder =
 allPages : (Maybe String -> Task.Task x (PaginatedResponse (List a))) -> Task.Task x (List a)
 allPages fetchFromCursor =
     fetchFromCursor Nothing
-        |> Task.andThen (nextPageOrSucceed fetchFromCursor [])
+        |> Task.andThen (pagesWhile fetchFromCursor (\_ -> True) [])
+        |> Task.map List.concat
         |> Task.map identity
 
 
-{-| helper function for allPages. Recursively calls fetchFrom with the new cursor value and collects results into the accumulator
--}
-nextPageOrSucceed : (Maybe String -> Task.Task x (PaginatedResponse (List a))) -> List a -> PaginatedResponse (List a) -> Task.Task x (List a)
-nextPageOrSucceed fetchFrom accumulator page =
-    case page.cursor of
-        Just _ ->
-            fetchFrom page.cursor
-                |> Task.andThen (nextPageOrSucceed fetchFrom (accumulator ++ page.data))
+{-| Recursively fetch a pages using fetchFrom with the new cursor value and collect results into the accumulator
 
-        Nothing ->
-            Task.succeed (accumulator ++ page.data)
+  - _fetchFrom_ takes an optional cursor and fetches a pages starting from there
+
+  - _pred_ takes the data of a fetched page and decides if more pages are to be fetched
+
+  - _acc_ is the accumulator
+
+  - _prevPage_ is the previously fetched page
+
+-}
+pagesWhile : (Maybe String -> Task.Task x (PaginatedResponse a)) -> (a -> Bool) -> List a -> PaginatedResponse a -> Task.Task x (List a)
+pagesWhile fetchFrom pred accumulator prevPage =
+    if pred prevPage.data then
+        case prevPage.cursor of
+            Just _ ->
+                fetchFrom prevPage.cursor
+                    |> Task.andThen (pagesWhile fetchFrom pred (accumulator ++ [ prevPage.data ]))
+
+            Nothing ->
+                Task.succeed (accumulator ++ [ prevPage.data ])
+
+    else
+        Task.succeed (accumulator ++ [ prevPage.data ])
 
 
 

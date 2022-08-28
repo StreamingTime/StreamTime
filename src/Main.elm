@@ -135,54 +135,42 @@ fetchStreamerProfiles userIDs token =
 fetchStreamingSchedule : Twitch.UserID -> Time.Posix -> Twitch.Token -> Cmd Msg
 fetchStreamingSchedule userID time token =
     let
-        -- get all segments that start before endTime
-        beforeEndTime : Time.Posix -> List Twitch.Segment -> List Twitch.Segment
-        beforeEndTime endTime =
-            List.filter
-                (\segment ->
-                    Time.posixToMillis segment.startTime <= Time.posixToMillis endTime
-                )
+        endTime =
+            Time.Extra.timeInOneWeek time
 
-        -- Fetch the next page until a) we got all segments that start before endTime or b) there are no pages left
-        -- scheduleAcc is used to accumulate schedule entries
-        fetchMore : Time.Posix -> Maybe String -> Twitch.Schedule -> Task.Task Error Twitch.Schedule
-        fetchMore endTime currentCursor scheduleAcc =
-            Task.andThen
-                (\result ->
-                    case result.cursor of
-                        Just _ ->
-                            if List.length (beforeEndTime endTime result.data.segments) < List.length result.data.segments then
-                                Task.succeed { scheduleAcc | segments = scheduleAcc.segments ++ beforeEndTime endTime result.data.segments }
-
-                            else
-                                fetchMore endTime result.cursor { scheduleAcc | segments = scheduleAcc.segments ++ beforeEndTime endTime result.data.segments }
-
-                        Nothing ->
-                            Task.succeed scheduleAcc
-                )
-                (Twitch.getStreamingSchedule userID Nothing currentCursor TwitchConfig.clientId token)
-
-        {- fetch the first page (and more if needed) -}
-        startFetching : Time.Posix -> Task.Task Error Twitch.Schedule
-        startFetching endTime =
-            Twitch.getStreamingSchedule userID Nothing Nothing TwitchConfig.clientId token
-                |> Task.andThen
-                    (\{ cursor, data } ->
-                        case cursor of
-                            Just _ ->
-                                if List.length (beforeEndTime endTime data.segments) < List.length data.segments then
-                                    Task.succeed { data | segments = beforeEndTime endTime data.segments }
-
-                                else
-                                    fetchMore endTime cursor data
-
-                            Nothing ->
-                                Task.succeed data
-                    )
+        fetchSchedulePage cursor =
+            Twitch.getStreamingSchedule userID (Just time) cursor TwitchConfig.clientId token
     in
-    startFetching (Time.Extra.timeInOneWeek time)
-        |> Task.attempt
-            GotStreamingSchedule
+    fetchSchedulePage Nothing
+        |> Task.andThen
+            (Twitch.pagesWhile
+                fetchSchedulePage
+                (\schedule ->
+                    List.all
+                        (\segment ->
+                            Time.posixToMillis segment.startTime <= Time.posixToMillis endTime
+                        )
+                        schedule.segments
+                )
+                []
+            )
+        |> Task.andThen
+            (\scheduleList ->
+                Task.mapError Error.StringError
+                    (case scheduleList of
+                        h :: _ ->
+                            Task.succeed
+                                { h
+                                    | segments =
+                                        scheduleList
+                                            |> List.concatMap .segments
+                                }
+
+                        _ ->
+                            Task.fail "did not get a schedule, but response was not 404 either"
+                    )
+            )
+        |> Task.attempt GotStreamingSchedule
 
 
 fetchVideos : Int -> Twitch.Token -> Twitch.UserID -> Cmd Msg
