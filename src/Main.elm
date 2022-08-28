@@ -529,15 +529,21 @@ appView : AppData -> Html Msg
 appView appData =
     let
         tabButtons =
-            div [ css [ Tw.tabs, Tw.tabs_boxed ] ]
+            div
+                [ css
+                    [ Tw.tabs
+                    , Tw.tabs_boxed
+                    , Tw.max_w_max
+                    ]
+                ]
                 [ div
-                    [ css [ Tw.tab, Tw.tab_bordered ]
+                    [ css [ Tw.tab, Tw.w_20 ]
                     , classList [ ( "tab-active", appData.tab == ScheduleTab ) ]
                     , onClick (SwitchTab ScheduleTab)
                     ]
                     [ text "Schedule" ]
                 , div
-                    [ css [ Tw.tab, Tw.tab_bordered ]
+                    [ css [ Tw.tab, Tw.w_20 ]
                     , classList [ ( "tab-active", appData.tab == VideoTab ) ]
                     , onClick (SwitchTab VideoTab)
                     ]
@@ -565,16 +571,22 @@ appView appData =
                     , Tw.mt_16
                     ]
                 ]
-                [ div []
-                    [ tabButtons
-                    , div []
-                        [ case appData.tab of
-                            VideoTab ->
-                                videoTabView appData
-
-                            ScheduleTab ->
-                                scheduleTabView appData
+                [ div
+                    [ css
+                        [ Tw.flex
+                        , Tw.justify_center
+                        , Tw.flex_col
+                        , Tw.items_center
+                        , Tw.mt_4
                         ]
+                    ]
+                    [ tabButtons
+                    , case appData.tab of
+                        VideoTab ->
+                            videoTabView appData
+
+                        ScheduleTab ->
+                            scheduleTabView appData
                     ]
                 ]
             ]
