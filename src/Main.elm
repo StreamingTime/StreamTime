@@ -589,7 +589,7 @@ scheduleTabView appData =
 
 videoTabView : AppData -> Html Msg
 videoTabView { selectedStreamers, videos } =
-    div []
+    div [ css [ Tw.self_start ] ]
         (case videos of
             RefreshData.ErrorWithData error _ ->
                 [ errorView (Error.toString error) ]
