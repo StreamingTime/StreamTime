@@ -583,8 +583,18 @@ appView appData =
 
 scheduleTabView : AppData -> Html Msg
 scheduleTabView appData =
-    div [ css [ Tw.w_5over6, Tw.py_10 ] ]
-        [ calendarView appData.timeZone appData.time appData.streamers appData.schedules appData.selectedStreamers ]
+    RefreshData.mapTo
+        (\err _ ->
+            case err of
+                Just error ->
+                    errorView (Error.toString error)
+
+                Nothing ->
+                    div
+                        [ css [ Tw.w_5over6, Tw.py_10 ] ]
+                        [ calendarView appData.timeZone appData.time appData.streamers appData.schedules appData.selectedStreamers ]
+        )
+        appData.schedules
 
 
 videoTabView : AppData -> Html Msg
