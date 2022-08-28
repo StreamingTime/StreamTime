@@ -14,7 +14,9 @@ module.exports = {
                     700: "#1A1B1E",
                     800: "#141517",
                     900: "#101113",
-                }
+                },
+                "primary-standalone": "#c685ff"
+
             },
             gridTemplateColumns: {
                 calendar: 'repeat(12, minmax(3rem, 1fr))',
@@ -32,7 +34,7 @@ module.exports = {
         themes: [
             {
                 mytheme: {
-                    "primary": "#793ef9",
+                    "primary": "#8b3dff",
                     "primary-focus": "#570df8",
                     "primary-content": "#ffffff",
                     "secondary": "#f000b8",
