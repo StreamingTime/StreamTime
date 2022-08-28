@@ -71,3 +71,4 @@ Then deploy `main.js` and `index.html` using a webserver of your choice. Make su
 - Google Material Icons ([License](https://github.com/google/material-design-icons#license))
   - [repeat](https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsoutlined/repeat/default/48px.svg)
   - [warning](https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsrounded/warning/default/48px.svg)
+  - [check circle](https://fonts.google.com/icons?selected=Material%20Symbols%20Outlined%3Acheck_circle%3AFILL%400%3Bwght%40400%3BGRAD%400%3Bopsz%4048)
