@@ -323,7 +323,7 @@ update msg model =
                                 List.filter ((/=) streamer) appData.selectedStreamers
 
                         newAppData =
-                            { appData | schedules = RefreshData.map LoadingMore appData.schedules, selectedStreamers = newList }
+                            { appData | schedules = RefreshData.map LoadingMore appData.schedules, selectedStreamers = newList, streamerFilterName = Nothing }
                     in
                     ( LoggedIn newAppData urlInfo
                     , case appData.tab of

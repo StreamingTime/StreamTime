@@ -107,7 +107,7 @@ streamerListView streamersData follows showCount filterString =
 
         filterUI =
             div
-                [ css [ Tw.form_control, Tw.relative ] ]
+                [ css [ Tw.form_control, Tw.relative, Tw.m_2 ] ]
                 [ label
                     [ css [ Tw.label ]
                     ]
@@ -122,7 +122,6 @@ streamerListView streamersData follows showCount filterString =
                         , Tw.input_ghost
                         , Tw.input_bordered
                         , Tw.input_sm
-                        , Tw.m_1
                         , Tw.pr_8
                         ]
                     , onInput (\s -> Filter s)
@@ -137,7 +136,7 @@ streamerListView streamersData follows showCount filterString =
                     button
                         [ css
                             [ Tw.absolute
-                            , Tw.bottom_2
+                            , Tw.bottom_1
                             , Tw.right_2
                             ]
                         , onClick ClearFilterString
@@ -155,29 +154,43 @@ streamerListView streamersData follows showCount filterString =
         filteredList =
             case filterString of
                 Just query ->
+                    let
+                        divider =
+                            [ hr [ css [ Tw.my_2 ] ] [] ]
+                    in
                     if String.length query >= 4 then
                         -- this is also computed in update, so we could save us the computation here
-                        (filterFollowsByLogin query follows
-                            |> List.map
-                                (\follow ->
-                                    let
-                                        streamerProfile =
-                                            streamers
-                                                |> List.filter (\( user, _ ) -> user.id == follow.toID)
-                                                |> List.head
-                                    in
-                                    case streamerProfile of
-                                        Just ( isSelected, streamer ) ->
-                                            streamerView isSelected streamer
+                        let
+                            list =
+                                filterFollowsByLogin query follows
+                                    |> List.map
+                                        (\follow ->
+                                            let
+                                                streamerProfile =
+                                                    streamers
+                                                        |> List.filter (\( user, _ ) -> user.id == follow.toID)
+                                                        |> List.head
+                                            in
+                                            case streamerProfile of
+                                                Just ( isSelected, streamer ) ->
+                                                    streamerView isSelected streamer
 
-                                        Nothing ->
-                                            loadingSpinner [ Tw.w_8, Tw.h_8 ]
-                                )
-                        )
-                            ++ [ hr [] [] ]
+                                                Nothing ->
+                                                    loadingSpinner [ Tw.w_8, Tw.h_8 ]
+                                        )
+
+                            result =
+                                if List.length list > 0 then
+                                    list
+
+                                else
+                                    [ div [ css [ Tw.text_center ] ] [ text "No channels found" ] ]
+                        in
+                        result
+                            ++ divider
 
                     else if String.length query > 0 then
-                        [ text "Enter at least 4 characters" ]
+                        div [ css [ Tw.text_center ] ] [ text "Enter at least 4 characters" ] :: divider
 
                     else
                         [ text "" ]
@@ -190,7 +203,7 @@ streamerListView streamersData follows showCount filterString =
                 text ""
 
             else
-                div []
+                div [ css [] ]
                     filteredList
 
         selectedView =
@@ -202,7 +215,7 @@ streamerListView streamersData follows showCount filterString =
                     ((selectedStreamers
                         |> List.map (\( selected, streamer ) -> streamerView selected streamer)
                      )
-                        ++ [ hr [] [] ]
+                        ++ [ hr [ css [ Tw.my_2 ] ] [] ]
                     )
     in
     div
@@ -259,7 +272,8 @@ streamerView streamer isSelected =
     div
         [ css
             [ Tw.block
-            , Tw.p_1
+            , Tw.px_2
+            , Tw.py_1
             , Css.hover [ Tw.bg_purple_500 ]
             , Tw.cursor_pointer
             ]
@@ -273,14 +287,19 @@ streamerView streamer isSelected =
                 , Tw.items_center
                 ]
             ]
-            [ a [ href ("https://twitch.tv/" ++ streamer.displayName) ] [ avatar ]
-            , div [ css [ Tw.font_medium, Tw.truncate ] ] [ text streamer.displayName ]
-            , text
-                (if isSelected then
-                    "✅"
+            ([ a [ href ("https://twitch.tv/" ++ streamer.displayName) ] [ avatar ]
+             , div [ css [ Tw.font_medium, Tw.truncate ] ] [ text streamer.displayName ]
+             ]
+                ++ (if isSelected then
+                        [ Icons.checkCircle
+                            [ Tw.w_6
+                            , Tw.text_green_400
+                            , Tw.fill_current
+                            ]
+                        ]
 
-                 else
-                    ""
-                )
-            ]
+                    else
+                        []
+                   )
+            )
         ]
