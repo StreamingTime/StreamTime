@@ -48,7 +48,7 @@ streamerListView streamersData follows showCount filterString =
                 )
 
         linkButtonStyle =
-            css [ Tw.text_primary, Tw.underline ]
+            css [ Tw.text_primary_standalone, Tw.underline ]
 
         moreAvailable =
             List.length unselectedStreamers > showCount || List.length follows > List.length streamers
