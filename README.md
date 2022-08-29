@@ -38,6 +38,8 @@ Visit `http://localhost:8000`
 
 ## Miscellaneous
 
+Below, we want to give insights into some aspects we found particularly interesting and/or challenging while developing the application.
+
 ### Time
 
 Twitch uses the RFC3339 format in its API responses, which can not be handled directly by elm.
