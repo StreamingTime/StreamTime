@@ -55,6 +55,12 @@ In order to get this token we use Twitch [Implicit grant flow](https://dev.twitc
 the apps's registered client ID. The user needs to log in into Twitch and will be asked
 to authorize our application’s access. Twitch sends the user back to our redirect URI. The server includes the access token in the fragment portion of the URI. We can now read the access token from the URI and are able to send requests to Twitch APIs.
 
+### Pagination
+
+Some Twitch API endpoints return ressources split into pages, each page containing a subset of the requested data and a cursor used to fetch the next page. We tried two separate ways to handle this. The first "message based" approach was to inspect the response in our `update` function and (depending on the result), start a new request to fetch the next page. Since we use the same message, all subsequent pages are handled the same way until the _message_ -> _update_ -> _request_ -> _message_ loop ends.
+
+Our second approach (the one we still use) is based on Elm Tasks. We use direct recursion (rather than recursion through messages and update) and an accumulator to fetch all pages (`pagesWhile`) or some pages as long as certain conditions are true (`pagesWhile`). When the data is loaded (or one of the requests has failed), a single message is emitted and handled by our `update`.This implementation is much more straightforward and improved the readability and reusability of the code that uses paginated endpoints.
+
 ### Styling
 
 For the look and feel of our app, we use [TailwindCSS](https://v2.tailwindcss.com) and [daisyUI](https://v1.daisyui.com). TailwindCSS is a CSS framework that allows styling within the markup. 
