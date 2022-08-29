@@ -1,9 +1,9 @@
-module RFC3339Test exposing (dateParserTest, dateTimeParserTest, decodeTimestampTest, offsetDirectionParserTest, offsetParserTest, paddedIntParserTest, timeParserTest, toPosixTest, zOffsetParserTest)
+module RFC3339Test exposing (dateParserTest, dateTimeParserTest, decodeTimestampTest, offsetDirectionParserTest, offsetParserTest, paddedIntParserTest, symbolIgnoreCaseTest, timeParserTest, toPosixTest, zOffsetParserTest)
 
 import Expect
 import Json.Decode as Decode
 import Parser
-import RFC3339 exposing (OffsetDirection(..), dateParser, dateTimeParser, decodeTimestamp, offsetDirectionParser, offsetParser, paddedIntParser, timeParser, zOffsetParser, zulu)
+import RFC3339 exposing (OffsetDirection(..), dateParser, dateTimeParser, decodeTimestamp, offsetDirectionParser, offsetParser, paddedIntParser, symbolIgnoreCase, timeParser, zOffsetParser, zulu)
 import Test exposing (Test, describe, test)
 import Time
 
@@ -293,6 +293,29 @@ dateTimeParserTest =
                 in
                 Expect.equal expected result
             )
+        , test "a but lowercase"
+            (\_ ->
+                let
+                    result =
+                        Parser.run dateTimeParser "1985-04-12t23:20:50z"
+
+                    expected =
+                        Result.Ok
+                            { date =
+                                { year = 1985
+                                , month = 4
+                                , day = 12
+                                }
+                            , time =
+                                { hours = 23
+                                , minutes = 20
+                                , seconds = 50
+                                }
+                            , offset = zulu
+                            }
+                in
+                Expect.equal expected result
+            )
         ]
 
 
@@ -358,5 +381,28 @@ toPosixTest =
                     , offset = zulu
                     }
                     |> Expect.equal (Just (Time.millisToPosix 2000000000000))
+            )
+        ]
+
+
+symbolIgnoreCaseTest : Test
+symbolIgnoreCaseTest =
+    describe "test case insensitive symbol parsing"
+        [ test "uppercase char"
+            (\_ ->
+                Parser.run (symbolIgnoreCase 'a') "A"
+                    |> Expect.ok
+            )
+        , test
+            "lowercase char"
+            (\_ ->
+                Parser.run (symbolIgnoreCase 'a') "A"
+                    |> Expect.ok
+            )
+        , test
+            "totally different char schould fail"
+            (\_ ->
+                Parser.run (symbolIgnoreCase 'b') "A"
+                    |> Expect.err
             )
         ]

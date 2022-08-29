@@ -1,4 +1,4 @@
-module RFC3339 exposing (Date, DateTime, Offset, OffsetDirection(..), Time, dateParser, dateTimeParser, decode, decodeTimestamp, offsetDirectionParser, offsetParser, paddedIntParser, timeParser, toPosix, zOffsetParser, zulu)
+module RFC3339 exposing (Date, DateTime, Offset, OffsetDirection(..), Time, dateParser, dateTimeParser, decode, decodeTimestamp, offsetDirectionParser, offsetParser, paddedIntParser, symbolIgnoreCase, timeParser, toPosix, zOffsetParser, zulu)
 
 {-| This module defines types parsers for a subset of RFC3339
 , allows conversion to Time.Posix and implements a Decoder to directly convert RFC3339 Json strings to Time.Posix.
@@ -131,8 +131,7 @@ dateTimeParser : Parser DateTime
 dateTimeParser =
     succeed DateTime
         |= dateParser
-        -- TODO should be case insensitive
-        |. symbol "T"
+        |. symbolIgnoreCase 't'
         |= timeParser
         |= offsetParser
 
@@ -178,7 +177,7 @@ offsetDirectionParser =
 
 zOffsetParser : Parser Offset
 zOffsetParser =
-    map (\_ -> { direction = Positive, hours = 0, minutes = 0 }) (symbol "Z")
+    map (\_ -> { direction = Positive, hours = 0, minutes = 0 }) (symbolIgnoreCase 'z')
 
 
 offsetParser : Parser Offset
@@ -234,3 +233,11 @@ decode =
                     Decode.fail ""
         )
         Decode.string
+
+
+symbolIgnoreCase : Char -> Parser ()
+symbolIgnoreCase char =
+    oneOf
+        [ symbol (String.fromChar (Char.toUpper char))
+        , symbol (String.fromChar (Char.toLower char))
+        ]
