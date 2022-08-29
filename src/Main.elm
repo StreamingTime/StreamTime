@@ -366,38 +366,7 @@ update msg model =
                 UrlMsg urlMsg ->
                     ( model, handleUrlMsg urlMsg urlInfo.navKey )
 
-                -- this msg should not be relevant for the LoadingScreen model
-                GotValidateTokenResponse _ ->
-                    ( model, Cmd.none )
-
-                GotRevokeTokenResponse ->
-                    ( model, Cmd.none )
-
-                GotStreamerProfilesForSidebar _ ->
-                    ( model, Cmd.none )
-
-                StreamerListMsg _ ->
-                    ( model, Cmd.none )
-
-                GotStreamerProfiles _ ->
-                    ( model, Cmd.none )
-
-                GotStreamingSchedule _ ->
-                    ( model, Cmd.none )
-
-                Logout ->
-                    ( model, Cmd.none )
-
-                HourlyValidation ->
-                    ( model, Cmd.none )
-
-                LoadingFinished _ ->
-                    ( model, Cmd.none )
-
-                GotVideos _ ->
-                    ( model, Cmd.none )
-
-                SwitchTab _ ->
+                _ ->
                     ( model, Cmd.none )
 
 
