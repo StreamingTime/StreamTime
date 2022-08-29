@@ -56,10 +56,11 @@ apiUrlBuilder =
     Url.Builder.crossOrigin "https://api.twitch.tv/helix"
 
 
+{-| Revoke a users token
 
--- revoke a users token
+<https://dev.twitch.tv/docs/authentication/revoke-tokens>
 
-
+-}
 revokeToken : ClientID -> Token -> Cmd (Result Http.Error ())
 revokeToken (ClientID clientId) (Token token) =
     let
@@ -280,14 +281,11 @@ decodeFollowRelation =
         (Decode.field "followed_at" Decode.string)
 
 
+{-| <https://dev.twitch.tv/docs/api/reference#get-users-follows>
 
-{-
-   https://dev.twitch.tv/docs/api/reference#get-users-follows
+Takes an optional cursor to fetch paginated results
 
-   Takes an optional cursor to fetch paginated results
 -}
-
-
 getUserFollowsTask : UserID -> Maybe String -> ClientID -> Token -> Task.Task Http.Error (PaginatedResponse (List FollowRelation))
 getUserFollowsTask (UserID userID) cursor =
     let
@@ -336,10 +334,8 @@ decodeUser =
         (Decode.field "login" Decode.string)
 
 
-
-{- https://dev.twitch.tv/docs/api/reference#get-users -}
-
-
+{-| <https://dev.twitch.tv/docs/api/reference#get-users>
+-}
 getUsers : List UserID -> ClientID -> Token -> Cmd (Result Http.Error (List User))
 getUsers userIDs clientID token =
     Task.attempt identity (getUsersTask userIDs clientID token)
@@ -359,10 +355,8 @@ getUsersTask userIDs =
     bearerGetRequestTask u (Decode.field "data" (Decode.list decodeUser))
 
 
-
-{- https://dev.twitch.tv/docs/api/reference#get-users -}
-
-
+{-| <https://dev.twitch.tv/docs/api/reference#get-users>
+-}
 getLoggedInUserTask : ClientID -> Token -> Task.Task Http.Error User
 getLoggedInUserTask =
     bearerGetRequestTask
@@ -385,10 +379,8 @@ decodeListHead listItemDecoder =
     Decode.andThen headOrFail (Decode.list listItemDecoder)
 
 
-
-{- create an HTTP.request with method post, ignore response body -}
-
-
+{-| create an HTTP.request with method post, ignore response body
+-}
 postRequest : String -> Http.Body -> Cmd (Result Http.Error ())
 postRequest url body =
     Http.request
@@ -402,10 +394,8 @@ postRequest url body =
         }
 
 
-
-{- create an HTTP.request with Bearer token and client id header -}
-
-
+{-| create an HTTP.request with Bearer token and client id header
+-}
 bearerRequest : String -> Decode.Decoder a -> ClientID -> Token -> Cmd (Result Http.Error a)
 bearerRequest url decoder (ClientID clientID) (Token token) =
     Http.request
@@ -506,10 +496,8 @@ decodeVideo =
         |> apply (Decode.field "type" decodeVideoType)
 
 
-
-{- https://dev.twitch.tv/docs/api/reference#get-videos -}
-
-
+{-| <https://dev.twitch.tv/docs/api/reference#get-videos>
+-}
 fetchVideos : Int -> UserID -> ClientID -> Token -> Cmd (Result Error (List Video))
 fetchVideos count (UserID userID) clientID token =
     let
@@ -523,29 +511,23 @@ fetchVideos count (UserID userID) clientID token =
     Cmd.map (Result.mapError Error.HttpError) (bearerRequest u (Decode.field "data" (Decode.list decodeVideo)) clientID token)
 
 
-
-{- replace the width and height placeholder in a video preview url with the given dimensions -}
-
-
+{-| replace the width and height placeholder in a video preview url with the given dimensions
+-}
 videoPreview : Int -> Int -> String -> String
 videoPreview width height =
     String.replace "%{width}x%{height}" (String.fromInt width ++ "x" ++ String.fromInt height)
 
 
-
-{- Wrapper to fetch paginated resources -}
-
-
+{-| Wrapper to fetch paginated resources
+-}
 type alias PaginatedResponse a =
     { cursor : Maybe String
     , data : a
     }
 
 
-
-{- Decode a paginated resource. Uses the passed decoder to decode the "data" field -}
-
-
+{-| Decode a paginated resource. Uses the passed decoder to decode the "data" field
+-}
 decodePaginated : Decode.Decoder a -> Decode.Decoder (PaginatedResponse a)
 decodePaginated dataDecoder =
     Decode.map2 PaginatedResponse
@@ -589,12 +571,8 @@ pagesWhile fetchFrom pred accumulator prevPage =
         Task.succeed (accumulator ++ [ prevPage.data ])
 
 
-
-{-
-   Construct a URL for the Twitch "Implicit grant flow" authentication method
+{-| Construct a URL for the Twitch "Implicit grant flow" authentication method
 -}
-
-
 loginFlowUrl : ClientID -> String -> String
 loginFlowUrl (ClientID clientID) redirectUri =
     Url.Builder.crossOrigin "https://id.twitch.tv"
