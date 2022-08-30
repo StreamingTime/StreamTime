@@ -139,7 +139,7 @@ fetchStreamingSchedule userID time token =
             Time.Extra.timeInOneWeek time
 
         fetchSchedulePage cursor =
-            Twitch.getStreamingSchedule userID (Just time) cursor TwitchConfig.clientId token
+            Twitch.getStreamingSchedule userID (Time.Extra.onlyDate time |> Just) cursor TwitchConfig.clientId token
     in
     fetchSchedulePage Nothing
         |> Task.andThen
