@@ -4,10 +4,8 @@ import Twitch
 import Url
 
 
-
-{- append a list to a Maybe list -}
-
-
+{-| append a list to a Maybe list
+-}
 concatMaybeList : Maybe (List a) -> List a -> List a
 concatMaybeList maybeList list =
     case maybeList of
@@ -29,12 +27,9 @@ filterFollowsByLogin name =
         )
 
 
-
-{- Compile a list of all user IDs for streamers that are part of the follows list, but whos profiles are not in the streamers list
-   (aka: the details are not fetched yet)
+{-| Compile a list of all user IDs for streamers that are part of the follows list, but whos profiles are not in the streamers list
+(aka: the details are not fetched yet)
 -}
-
-
 missingProfileLogins : List Twitch.FollowRelation -> List Twitch.User -> List Twitch.UserID
 missingProfileLogins follows streamers =
     follows
@@ -48,10 +43,8 @@ missingProfileLogins follows streamers =
             )
 
 
-
-{- pair every item of the second list with a bool indicating whether it is part of the selected streamers list -}
-
-
+{-| pair every item of the second list with a bool indicating whether it is part of the selected streamers list
+-}
 streamersWithSelection : List Twitch.User -> List Twitch.User -> List ( Twitch.User, Bool )
 streamersWithSelection selected users =
     users

@@ -4,6 +4,9 @@ import Dict exposing (Dict)
 
 
 {-| Sort items of a List into a dict that associates multiple values with a key derived from the items
+
+See tests/ListTest.elm for examples.
+
 -}
 groupBy : (v -> comparable) -> List v -> Dict comparable (List v)
 groupBy toKey =
