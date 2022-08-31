@@ -1,8 +1,8 @@
 module Views.ScheduleSegment exposing (scheduleSegmentView)
 
 import FormatTime
-import Html.Styled exposing (Html, div, img, p, span, text)
-import Html.Styled.Attributes exposing (alt, attribute, class, css, height, src, width)
+import Html.Styled exposing (Html, a, div, img, p, span, text)
+import Html.Styled.Attributes exposing (alt, attribute, class, css, height, href, src, width)
 import Icons
 import Tailwind.Utilities as Tw
 import Time
@@ -140,17 +140,19 @@ scheduleSegmentView zone { displayName, profileImageUrl } { title, startTime, en
                     ]
                 ]
     in
-    div
-        [ css [ Tw.rounded, Tw.bg_dark_800, Tw.flex, Tw.justify_between ]
-        ]
-        [ avatar
-        , div [ css [ Tw.flex, Tw.justify_center, Tw.flex_col, Tw.flex_grow ] ]
-            [ titleView
-            , div [ css [ Tw.flex ] ]
-                [ canceledInfoView
-                , categoryView
-                ]
-            , datesView
+    a [ href ("https://twitch.tv/" ++ displayName) ]
+        [ div
+            [ css [ Tw.rounded, Tw.bg_dark_800, Tw.flex, Tw.justify_between ]
             ]
-        , categoryImageView
+            [ avatar
+            , div [ css [ Tw.flex, Tw.justify_center, Tw.flex_col, Tw.flex_grow ] ]
+                [ titleView
+                , div [ css [ Tw.flex ] ]
+                    [ canceledInfoView
+                    , categoryView
+                    ]
+                , datesView
+                ]
+            , categoryImageView
+            ]
         ]
