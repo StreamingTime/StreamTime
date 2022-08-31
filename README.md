@@ -1,5 +1,10 @@
 # Abschlussprojekt
 
+
+[![Elm review](https://github.com/HS-Flensburg-DST/abschlussprojekt-fabian-w-und-florian/actions/workflows/elm-review.yml/badge.svg)](https://github.com/HS-Flensburg-DST/abschlussprojekt-fabian-w-und-florian/actions/workflows/elm-review.yml)
+[![Elm test](https://github.com/HS-Flensburg-DST/abschlussprojekt-fabian-w-und-florian/actions/workflows/elm-test.yml/badge.svg)](https://github.com/HS-Flensburg-DST/abschlussprojekt-fabian-w-und-florian/actions/workflows/elm-test.yml)
+[![Elm format](https://github.com/HS-Flensburg-DST/abschlussprojekt-fabian-w-und-florian/actions/workflows/elm-format.yml/badge.svg)](https://github.com/HS-Flensburg-DST/abschlussprojekt-fabian-w-und-florian/actions/workflows/elm-format.yml)
+
 ## What and why?
 
 Twitch allows streamers to create schedules to inform their community about when and what they will stream. Users can view this schedule when visiting a streamers profile page. Our application allows Twitch users to view multiple schedules at once, without the need to manually visit multiple profile pages.
