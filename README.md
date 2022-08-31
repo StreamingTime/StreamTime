@@ -121,6 +121,11 @@ local storage. The `index.html` contains a script which provides respective Java
 - [elm-tailwind-modules](https://github.com/matheus23/elm-tailwind-modules)
 - [daisyUI](https://v1.daisyui.com)
 
+## 3rd Party code
+
+- `Twitch.handleJsonResponse` from [Combining HTTP requests with Task in Elm](https://korban.net/posts/elm/2019-02-15-combining-http-requests-with-task-in-elm)
+- `RFC3339.toPosix` ported from [this C Code](https://de.wikipedia.org/wiki/Unixzeit)
+
 ## Assets
 - login_background.jpg (https://unsplash.com/photos/2mQSmmge7t8)
 - Google Material Icons ([License](https://github.com/google/material-design-icons#license))
@@ -128,3 +133,4 @@ local storage. The `index.html` contains a script which provides respective Java
   - [warning](https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsrounded/warning/default/48px.svg)
   - [check circle](https://fonts.google.com/icons?selected=Material%20Symbols%20Outlined%3Acheck_circle%3AFILL%400%3Bwght%40400%3BGRAD%400%3Bopsz%4048)
   - [info](https://fonts.google.com/icons?selected=Material%20Symbols%20Outlined%3Ainfo%3AFILL%400%3Bwght%40400%3BGRAD%400%3Bopsz%4048)
+  - [close](https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsoutlined/close/default/48px.svg)
