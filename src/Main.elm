@@ -330,11 +330,15 @@ update msg model =
 
                 GotStreamingSchedule response ->
                     case response of
-                        Err err ->
-                            ( LoggedIn { appData | schedules = RefreshData.map (ErrorWithData err) appData.schedules } urlInfo, Cmd.none )
-
                         Ok value ->
                             ( LoggedIn { appData | schedules = RefreshData.map (\oldSchedules -> Present (oldSchedules ++ [ value ])) appData.schedules } urlInfo, Cmd.none )
+
+                        -- Twitch responds with 404 when a streamer has no schedule
+                        Err (HttpError (Http.BadStatus 404)) ->
+                            ( LoggedIn { appData | schedules = RefreshData.map Present appData.schedules } urlInfo, Cmd.none )
+
+                        Err err ->
+                            ( LoggedIn { appData | schedules = RefreshData.map (ErrorWithData err) appData.schedules } urlInfo, Cmd.none )
 
                 Logout ->
                     ( NotLoggedIn Nothing urlInfo, Cmd.batch [ LocalStorage.removeData, revokeToken TwitchConfig.clientId appData.signedInUser.token ] )
