@@ -447,7 +447,7 @@ loginView err loginRedirectUrl =
                         , Tw.font_semibold
                         ]
                     ]
-                    [ text "All schedules from your favorite streamers in one place." ]
+                    [ text "All schedules and videos from your favorite streamers in one place." ]
                 , a
                     [ href (Twitch.loginFlowUrl TwitchConfig.clientId loginRedirectUrl) ]
                     [ button
