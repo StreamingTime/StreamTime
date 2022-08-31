@@ -2,7 +2,7 @@ module Main exposing (main)
 
 import Browser exposing (Document)
 import Browser.Navigation as Nav
-import Css
+import Css exposing (em, height)
 import Css.Global
 import Error exposing (Error(..))
 import Html.Styled as Html exposing (Html, a, button, div, h1, img, li, p, span, text, toUnstyled, ul)
@@ -538,6 +538,14 @@ appView appData =
                         ]
                     ]
                     [ tabButtons
+                    , span
+                        [ css [ height (em 1) ] ]
+                        [ if List.isEmpty appData.selectedStreamers then
+                            text "Select channels from the left to view schedules and videos."
+
+                          else
+                            text ""
+                        ]
                     , case appData.tab of
                         VideoTab ->
                             videoTabView appData
