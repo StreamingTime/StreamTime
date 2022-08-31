@@ -68,7 +68,7 @@ To build the app for production, use
 elm make src/Main.elm --optimize --output=main.js
 ````
 
-Then deploy `main.js` and `index.html` using a webserver of your choice. Make sure the domain/address and port of your server is included in the  _OAuth Redirect URLs_ list for your twitch app (See [Prerequisites](https://github.com/HS-Flensburg-DST/abschlussprojekt-fabian-w-und-florian#prerequisites)).
+Then deploy `main.js`, `assets`, `favicon.ico` and `index.html` using a webserver of your choice. Make sure the domain/address and port of your server is included in the  _OAuth Redirect URLs_ list for your twitch app (See [Prerequisites](https://github.com/HS-Flensburg-DST/abschlussprojekt-fabian-w-und-florian#prerequisites)).
 
 
 ## Miscellaneous
@@ -132,5 +132,4 @@ local storage. The `index.html` contains a script which provides respective Java
   - [repeat](https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsoutlined/repeat/default/48px.svg)
   - [warning](https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsrounded/warning/default/48px.svg)
   - [check circle](https://fonts.google.com/icons?selected=Material%20Symbols%20Outlined%3Acheck_circle%3AFILL%400%3Bwght%40400%3BGRAD%400%3Bopsz%4048)
-  - [info](https://fonts.google.com/icons?selected=Material%20Symbols%20Outlined%3Ainfo%3AFILL%400%3Bwght%40400%3BGRAD%400%3Bopsz%4048)
-  - [close](https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsoutlined/close/default/48px.svg)
+  - [calendar today (modified for the favicon)]([blob:null/d2d98612-e0b2-4f5d-8153-78d195b3b127](https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsoutlined/calendar_today/default/48px.svg))
