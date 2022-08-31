@@ -5,8 +5,8 @@ import Browser.Navigation as Nav
 import Css
 import Css.Global
 import Error exposing (Error(..))
-import Html.Styled as Html exposing (Html, a, button, div, h1, img, li, p, span, text, toUnstyled, ul)
-import Html.Styled.Attributes exposing (alt, class, classList, css, href, src, style, tabindex)
+import Html.Styled as Html exposing (Html, a, button, div, h1, img, li, node, p, span, text, toUnstyled, ul)
+import Html.Styled.Attributes exposing (alt, attribute, class, classList, css, href, rel, src, style, tabindex, type_)
 import Html.Styled.Events exposing (onClick)
 import Http
 import Icons
@@ -392,11 +392,27 @@ handleUrlMsg msg navKey =
 
 view : Model -> Document Msg
 view model =
-    { title = "Stream Time"
+    let
+        favicon size =
+            node
+                "link"
+                [ rel "icon"
+                , type_ "image/png"
+                , attribute "sizes" (sizeSquared size)
+                , href ("/assets/favicon-" ++ sizeSquared size ++ ".png")
+                ]
+                []
+
+        sizeSquared size =
+            String.fromInt size ++ "x" ++ String.fromInt size
+    in
+    { title = "Stream time"
     , body =
         [ toUnstyled <|
             div []
                 [ Css.Global.global Tw.globalStyles
+                , favicon 32
+                , favicon 64
                 , div []
                     [ case model of
                         NotLoggedIn err urlInfo ->
