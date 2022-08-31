@@ -23,22 +23,22 @@ Create a `TwitchConfig.elm` file with your Client ID in `src/`. We recommend to 
 npm ci
 ```
 
+The `package.json` contains all tools used in the commands below. We recommend `npx` to execute them, but you can execute them however you like or use globally installed versions.
+
 ### Generate Tailwind Elm code
 
 Repeat this step every time the Tailwind configuration changed.
 ```
-npx elm-tailwind-modules --dir ./gen --tailwind-config tailwind.config.js
+elm-tailwind-modules --dir ./gen --tailwind-config tailwind.config.js
 ```
 
 ## Review
 
 ```
-npx elm-review --ignore-dirs gen
+elm-review --ignore-dirs gen
 ```
 
 ## Test
-
-Make sure [elm-test](https://github.com/elm-explorations/test) is installed.
 
 ```
 elm-test
@@ -50,7 +50,7 @@ Make sure you have [installed dependencies](https://github.com/HS-Flensburg-DST/
 
 ### Development
 
-Verify [elm-live](https://github.com/wking-io/elm-live) is installed on your machine.
+We use [elm-live](https://github.com/wking-io/elm-live) to test our app locally with our `index.html`.
 
 To build the app for development purposes, use
 
