@@ -388,7 +388,7 @@ handleUrlMsg msg navKey =
 
 view : Model -> Document Msg
 view model =
-    { title = "Twitch schedule"
+    { title = "Stream Time"
     , body =
         [ toUnstyled <|
             div []
@@ -436,7 +436,7 @@ loginView err loginRedirectUrl =
                         , Tw.font_bold
                         ]
                     ]
-                    [ text "Twitch ", span [ css [ Tw.text_purple_400 ] ] [ text "Schedule" ] ]
+                    [ text "Stream ", span [ css [ Tw.text_purple_400 ] ] [ text "Time" ] ]
                 , p
                     [ css
                         [ Tw.mb_8
@@ -636,8 +636,8 @@ headerView user =
                     , Tw.text_white
                     ]
                 ]
-                [ text "Twitch "
-                , span [ css [ Tw.text_purple_400 ] ] [ text "Schedule" ]
+                [ text "Stream "
+                , span [ css [ Tw.text_purple_400 ] ] [ text "Time" ]
                 ]
             , userView user
             ]
