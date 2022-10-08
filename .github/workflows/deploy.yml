@@ -1,9 +1,9 @@
 # Simple workflow for deploying static content to GitHub Pages
-name: Deploy
+name: deploy
 
 on:
   workflow_run:
-    workflows: [ "Elm format", "Elm review", "Elm test" ]
+    workflows: [ "elm-format" ]
     branches: [ main ]
     types: [ completed ]
 
@@ -22,7 +22,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  elm_build:
+  deploy:
       environment:
           name: github-pages
           url: ${{ steps.deployment.outputs.page_url }}
