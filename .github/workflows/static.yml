@@ -34,6 +34,12 @@ jobs:
         - name: Generate tailwind code
           run: elm-tailwind-modules --dir ./gen --tailwind-config tailwind.config.js
 
+        - name: Create config file
+          run: cp src/TwitchConfig.elm.example src/TwitchConfig.elm
+        
+        - name: Insert twitch client id
+          run: sed -i 's/twitch_client_id/${{ secrets.TWITCH_CLIENT_ID }}/g' src/TwitchConfig.elm
+        
         - name: Create dist folder
           run: mkdir dist
 
