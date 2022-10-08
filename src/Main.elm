@@ -421,7 +421,7 @@ view model =
         sizeSquared size =
             String.fromInt size ++ "x" ++ String.fromInt size
     in
-    { title = "Stream time"
+    { title = "Stream Time"
     , body =
         [ toUnstyled <|
             div []
