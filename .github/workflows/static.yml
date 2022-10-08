@@ -3,7 +3,7 @@ name: Deploy static content to Pages
 
 on:
   workflow_run:
-    workflows: [ Elm format, Elm review, Elm test ]
+    workflows: [ "Elm format", "Elm review", "Elm test" ]
     branches: [ main, gh-pages-action ]
     types: [ completed ]
 
