@@ -21,6 +21,32 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  elm_build:
+      runs-on: ubuntu-latest
+      steps:
+        - uses: actions/checkout@v2
+
+        - run: yarn --frozen-lockfile
+
+        - name: Add elm, elm-tailwind-modules and elm-test to path
+          run: yarn bin >> $GITHUB_PATH
+
+        - name: Generate tailwind code
+          run: elm-tailwind-modules --dir ./gen --tailwind-config tailwind.config.js
+
+        - name: Create dist folder
+        - run: mkdir dist
+
+        - name: Build app
+          run: elm make src/Main.elm --optimize --output=dist/main.js
+          
+        - name: Copy assets
+        - run: cp assets/* dist/
+        
+        - run: cp index.html dist/
+        
+        - run: ls dist
+          
   # Single deploy job since we're just deploying
   deploy:
     environment:
@@ -36,7 +62,7 @@ jobs:
         uses: actions/upload-pages-artifact@v1
         with:
           # Upload entire repository
-          path: '.'
+          path: 'dist'
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v1
