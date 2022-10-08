@@ -3,7 +3,7 @@ name: deploy
 
 on:
   workflow_run:
-    workflows: [ "Elm format", "Elm review", "Elm test" ]
+    workflows: [ "elm-format" ]
     branches: [ main ]
     types: [ completed ]
 
