@@ -43,8 +43,10 @@ jobs:
         - name: Copy assets
         - run: cp assets/* dist/
         
+        - name: Copy index
         - run: cp index.html dist/
         
+        - name: List dist files
         - run: ls dist
           
   # Single deploy job since we're just deploying
