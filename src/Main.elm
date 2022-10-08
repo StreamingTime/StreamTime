@@ -78,11 +78,26 @@ init flags url navKey =
                                     (url.port_
                                         |> Maybe.map (\p -> ":" ++ String.fromInt p)
                                     )
+                                -- append the path but remove the last slash
+                                ++ (case url.path of
+                                        "/" ->
+                                            ""
+
+                                        "" ->
+                                            ""
+
+                                        s ->
+                                            if String.endsWith "/" s then
+                                                String.dropRight 1 s
+
+                                            else
+                                                s
+                                   )
                             )
                             []
                             []
                 in
-                -- remove trailing whitespace for the Twitch return url allowlist
+                -- remove trailing slash for the Twitch return url allowlist
                 if String.endsWith "/" rootUrl then
                     String.dropRight 1 rootUrl
 
