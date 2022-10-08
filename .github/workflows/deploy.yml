@@ -22,7 +22,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  elm_build:
+  deploy:
       environment:
           name: github-pages
           url: ${{ steps.deployment.outputs.page_url }}
