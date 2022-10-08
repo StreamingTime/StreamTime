@@ -57,6 +57,8 @@ jobs:
         
         - run: cp index.html dist/
         
+        - run: cp favicon.ico dist/
+        
         - run: ls dist
       
       # deploy stuff
