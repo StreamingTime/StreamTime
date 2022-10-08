@@ -35,18 +35,16 @@ jobs:
           run: elm-tailwind-modules --dir ./gen --tailwind-config tailwind.config.js
 
         - name: Create dist folder
-        - run: mkdir dist
+          run: mkdir dist
 
         - name: Build app
           run: elm make src/Main.elm --optimize --output=dist/main.js
           
         - name: Copy assets
-        - run: cp assets/* dist/
+          run: cp assets/* dist/
         
-        - name: Copy index
         - run: cp index.html dist/
         
-        - name: List dist files
         - run: ls dist
           
   # Single deploy job since we're just deploying
