@@ -1,5 +1,5 @@
 on: push
-name: Elm format
+name: elm-format
 jobs:
   elm_format:
     runs-on: ubuntu-latest
