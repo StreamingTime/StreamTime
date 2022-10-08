@@ -1,5 +1,5 @@
 on: push
-name: Elm review
+name: elm-review
 jobs:
   elm_review:
     runs-on: ubuntu-latest
