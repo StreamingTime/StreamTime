@@ -1,4 +1,4 @@
-# Abschlussprojekt
+# Stream Time
 
 
 [![Elm review](https://github.com/HS-Flensburg-DST/abschlussprojekt-fabian-w-und-florian/actions/workflows/elm-review.yml/badge.svg)](https://github.com/HS-Flensburg-DST/abschlussprojekt-fabian-w-und-florian/actions/workflows/elm-review.yml)
