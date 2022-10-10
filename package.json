@@ -8,7 +8,7 @@
     "tailwindcss": "^2.2.19"
   },
   "dependencies": {
-    "daisyui": "^1.25.4",
+    "daisyui": "^2.31.0",
     "elm": "^0.19.1-5",
     "elm-format": "^0.8.5"
   }
