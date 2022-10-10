@@ -485,10 +485,32 @@ loginView err loginRedirectUrl =
                         [ css
                             [ Tw.btn
                             , Tw.btn_primary
+                            , Tw.mb_8
                             , Css.hover [ Tw.bg_primary_focus ]
                             ]
                         ]
                         [ text "Login with twitch" ]
+                    ]
+                , a
+                    [ href "https://github.com/StreamingTime/StreamTime"
+                    , css [ Tw.block ]
+                    ]
+                    [ div
+                        [ css
+                            [ Tw.text_sm
+                            , Tw.flex
+                            , Tw.space_x_2
+                            , Tw.justify_center
+                            ]
+                        ]
+                        [ Icons.github
+                            [ Tw.w_5
+                            , Tw.h_5
+                            , Tw.text_white
+                            , Tw.stroke_current
+                            ]
+                        , p [] [ text "Source Code" ]
+                        ]
                     ]
                 , case err of
                     Just e ->
