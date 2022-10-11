@@ -10,3 +10,7 @@ updates:
       interval: "daily"
     ignore:
       - dependency-name: "daisyui"
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "daily"
