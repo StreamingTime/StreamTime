@@ -128,9 +128,9 @@ local storage. The `index.html` contains a script which provides respective Java
 
 ## Assets
 - login_background.jpg (https://unsplash.com/photos/2mQSmmge7t8)
+- GitHub-Mark-Light-32px.png (https://github.com/logos)
 - Google Material Icons ([License](https://github.com/google/material-design-icons#license))
   - [repeat](https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsoutlined/repeat/default/48px.svg)
   - [warning](https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsrounded/warning/default/48px.svg)
   - [check circle](https://fonts.google.com/icons?selected=Material%20Symbols%20Outlined%3Acheck_circle%3AFILL%400%3Bwght%40400%3BGRAD%400%3Bopsz%4048)
   - [calendar today (modified for the favicon)](https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsoutlined/calendar_today/default/48px.svg)
-  - [github](https://tabler-icons.io/static/tabler-icons/icons/brand-github.svg)

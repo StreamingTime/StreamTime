@@ -491,9 +491,17 @@ loginView err loginRedirectUrl =
                         ]
                         [ text "Login with twitch" ]
                     ]
-                , a
+                , case err of
+                    Just e ->
+                        div [ css [ Tw.mt_8 ] ]
+                            [ errorView (Error.toString e) ]
+
+                    Nothing ->
+                        text ""
+                ]
+            , div [ css [ Tw.fixed, Tw.bottom_5 ] ]
+                [ a
                     [ href "https://github.com/StreamingTime/StreamTime"
-                    , css [ Tw.block ]
                     ]
                     [ div
                         [ css
@@ -503,22 +511,10 @@ loginView err loginRedirectUrl =
                             , Tw.justify_center
                             ]
                         ]
-                        [ Icons.github
-                            [ Tw.w_5
-                            , Tw.h_5
-                            , Tw.text_white
-                            , Tw.stroke_current
-                            ]
+                        [ img [ src "assets/GitHub-Mark-Light-32px.png", css [ Tw.w_5, Tw.h_5 ] ] []
                         , p [] [ text "Source Code" ]
                         ]
                     ]
-                , case err of
-                    Just e ->
-                        div [ css [ Tw.mt_8 ] ]
-                            [ errorView (Error.toString e) ]
-
-                    Nothing ->
-                        text ""
                 ]
             ]
         ]
