@@ -18,6 +18,6 @@ jobs:
       - name: Add elm-review, elm and elm-format to path
         run: yarn bin >> $GITHUB_PATH
 
-      - uses: sparksp/elm-review-action@v1.0.6
+      - uses: sparksp/elm-review-action@v1.0.9
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
