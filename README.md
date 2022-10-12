@@ -1,9 +1,10 @@
 # Stream Time
 
 
-[![Elm review](https://github.com/HS-Flensburg-DST/abschlussprojekt-fabian-w-und-florian/actions/workflows/elm-review.yml/badge.svg)](https://github.com/HS-Flensburg-DST/abschlussprojekt-fabian-w-und-florian/actions/workflows/elm-review.yml)
-[![Elm test](https://github.com/HS-Flensburg-DST/abschlussprojekt-fabian-w-und-florian/actions/workflows/elm-test.yml/badge.svg)](https://github.com/HS-Flensburg-DST/abschlussprojekt-fabian-w-und-florian/actions/workflows/elm-test.yml)
-[![Elm format](https://github.com/HS-Flensburg-DST/abschlussprojekt-fabian-w-und-florian/actions/workflows/elm-format.yml/badge.svg)](https://github.com/HS-Flensburg-DST/abschlussprojekt-fabian-w-und-florian/actions/workflows/elm-format.yml)
+[![Elm review](https://github.com/StreamingTime/StreamTime/actions/workflows/elm-review.yml/badge.svg)](https://github.com/StreamingTime/StreamTime/actions/workflows/elm-review.yml)
+[![Elm test](https://github.com/StreamingTime/StreamTime/actions/workflows/elm-test.yml/badge.svg)](https://github.com/StreamingTime/StreamTime/actions/workflows/elm-test.yml)
+[![Elm format](https://github.com/StreamingTime/StreamTime/actions/workflows/elm-format.yml/badge.svg)](https://github.com/StreamingTime/StreamTime/actions/workflows/elm-format.yml)
+[![Deploy](https://github.com/StreamingTime/StreamTime/actions/workflows/deploy.yml/badge.svg)](https://github.com/StreamingTime/StreamTime/actions/workflows/deploy.yml)
 
 ## What and why?
 
@@ -46,7 +47,7 @@ elm-test
 
 ## Build
 
-Make sure you have [installed dependencies](https://github.com/HS-Flensburg-DST/abschlussprojekt-fabian-w-und-florian#install-dependencies) and [generated tailwind elm code](https://github.com/HS-Flensburg-DST/abschlussprojekt-fabian-w-und-florian#generate-tailwind-elm-code).
+Make sure you have [installed dependencies](https://github.com/StreamingTime/StreamTime#install-dependencies) and [generated tailwind elm code](https://github.com/StreamingTime/StreamTime#generate-tailwind-elm-code).
 
 ### Development
 
@@ -68,7 +69,7 @@ To build the app for production, use
 elm make src/Main.elm --optimize --output=main.js
 ````
 
-Then deploy `main.js`, `assets`, `favicon.ico` and `index.html` using a webserver of your choice. Make sure the domain/address and port of your server is included in the  _OAuth Redirect URLs_ list for your twitch app (See [Prerequisites](https://github.com/HS-Flensburg-DST/abschlussprojekt-fabian-w-und-florian#prerequisites)).
+Then deploy `main.js`, `assets`, `favicon.ico` and `index.html` using a webserver of your choice. Make sure the domain/address and port of your server is included in the  _OAuth Redirect URLs_ list for your twitch app (See [Prerequisites](https://github.com/StreamingTime/StreamTime#prerequisites)).
 
 
 ## Miscellaneous
@@ -78,9 +79,9 @@ Below, we want to give insights into some aspects we found particularly interest
 ### Time
 
 Twitch uses the RFC3339 format in its API responses, which can not be handled directly by elm.
-Using `elm/parser`, we implemented a parser that can convert RFC3339 strings to our own data structures. Our datatypes then can be converted to `Time.Posix` for further use. There is also a Json Decoder that directly decodes into `Time.Posix`. Our Implementation is tested against the examples contained in the RFC specification, but we deliberately ignore fractional seconds. See [RFC3339Test.elm](https://github.com/HS-Flensburg-DST/abschlussprojekt-fabian-w-und-florian/blob/master/tests/RFC3339Test.elm) for usage examples.
+Using `elm/parser`, we implemented a parser that can convert RFC3339 strings to our own data structures. Our datatypes then can be converted to `Time.Posix` for further use. There is also a Json Decoder that directly decodes into `Time.Posix`. Our Implementation is tested against the examples contained in the RFC specification, but we deliberately ignore fractional seconds. See [RFC3339Test.elm](https://github.com/StreamingTime/StreamTime/blob/master/tests/RFC3339Test.elm) for usage examples.
 
-To display time and date values to our users, we created our `FormatTime` module that creates humand readable and flexible text representations from a `Time.Posix` value, a `Time.Zone` and a format string. Using `elm/parser`, we convert the format string (e.g. "%DD.%MM.%YYYY") to tokens, which are then used to build the resulting string. See [FormatTimeTest.elm](https://github.com/HS-Flensburg-DST/abschlussprojekt-fabian-w-und-florian/blob/master/tests/FormatTimeTest.elm) for examples.
+To display time and date values to our users, we created our `FormatTime` module that creates humand readable and flexible text representations from a `Time.Posix` value, a `Time.Zone` and a format string. Using `elm/parser`, we convert the format string (e.g. "%DD.%MM.%YYYY") to tokens, which are then used to build the resulting string. See [FormatTimeTest.elm](https://github.com/StreamingTime/StreamTime/blob/master/tests/FormatTimeTest.elm) for examples.
 
 We use the browsers timezone and `elm/time` to display time and date values with the offset our users expect.
 
