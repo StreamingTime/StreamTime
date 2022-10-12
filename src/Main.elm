@@ -485,6 +485,7 @@ loginView err loginRedirectUrl =
                         [ css
                             [ Tw.btn
                             , Tw.btn_primary
+                            , Tw.mb_8
                             , Css.hover [ Tw.bg_primary_focus ]
                             ]
                         ]
@@ -497,6 +498,23 @@ loginView err loginRedirectUrl =
 
                     Nothing ->
                         text ""
+                ]
+            , div [ css [ Tw.fixed, Tw.bottom_5 ] ]
+                [ a
+                    [ href "https://github.com/StreamingTime/StreamTime"
+                    ]
+                    [ div
+                        [ css
+                            [ Tw.text_sm
+                            , Tw.flex
+                            , Tw.space_x_2
+                            , Tw.justify_center
+                            ]
+                        ]
+                        [ img [ src "assets/GitHub-Mark-Light-32px.png", css [ Tw.w_5, Tw.h_5 ] ] []
+                        , p [] [ text "Source Code" ]
+                        ]
+                    ]
                 ]
             ]
         ]

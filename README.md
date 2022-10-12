@@ -128,6 +128,7 @@ local storage. The `index.html` contains a script which provides respective Java
 
 ## Assets
 - login_background.jpg (https://unsplash.com/photos/2mQSmmge7t8)
+- GitHub-Mark-Light-32px.png (https://github.com/logos)
 - Google Material Icons ([License](https://github.com/google/material-design-icons#license))
   - [repeat](https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsoutlined/repeat/default/48px.svg)
   - [warning](https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsrounded/warning/default/48px.svg)
