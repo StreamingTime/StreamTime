@@ -1,5 +1,8 @@
-on: push
 name: elm-test
+
+on:
+  workflow_call:
+
 jobs:
   elm_test:
     runs-on: ubuntu-latest

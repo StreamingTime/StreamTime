@@ -4,5 +4,9 @@ on:
   push:
 
 jobs:
+  test:
+    uses: StreamingTime/StreamTime/.github/workflows/elm-test.yml@action-tests
+  review:
+    uses: StreamingTime/StreamTime/.github/workflows/elm-review.yml@action-tests
   format:
     uses: StreamingTime/StreamTime/.github/workflows/elm-format.yml@action-tests
