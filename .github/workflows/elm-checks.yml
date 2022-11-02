@@ -6,11 +6,14 @@ on:
       - main
   workflow_call:
 
+env:
+  COMMIT_SHA: ${GITHUB_SHA}
+
 jobs:
 
  test:
-    uses: StreamingTime/StreamTime/.github/workflows/elm-test.yml@${GITHUB_SHA}
+    uses: StreamingTime/StreamTime/.github/workflows/elm-test.yml@${{ env.COMMIT_SHA }}
  review:
-     uses: StreamingTime/StreamTime/.github/workflows/elm-review.yml@${GITHUB_SHA}
+     uses: StreamingTime/StreamTime/.github/workflows/elm-review.yml@${{ env.COMMIT_SHA }}
  format:
-     uses: StreamingTime/StreamTime/.github/workflows/elm-format.yml@${GITHUB_SHA}
+     uses: StreamingTime/StreamTime/.github/workflows/elm-format.yml@${{ env.COMMIT_SHA }}
