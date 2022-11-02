@@ -8,11 +8,13 @@ on:
 
 jobs:
   debug:
-    - run: echo $GITHUB_SHA
-    - run: echo ${{ GITHUB_SHA }}
-    - run: echo ${GITHUB_SHA}
-    - run: echo ${github.sha}
-    - run: echo ${github.ref}
+    runs-on: ubuntu-latest
+    steps:
+        - run: echo $GITHUB_SHA
+        - run: echo ${{ GITHUB_SHA }}
+        - run: echo ${GITHUB_SHA}
+        - run: echo ${github.sha}
+        - run: echo ${github.ref}
   # test:
   #   uses: StreamingTime/StreamTime/.github/workflows/elm-test.yml@${{ github.sha }}
   # review:
