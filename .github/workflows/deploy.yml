@@ -22,43 +22,46 @@ concurrency:
 jobs:
   checks:
     uses: StreamingTime/StreamTime/.github/workflows/elm-checks.yml@action-tests
-  deploy:
-      environment:
-          name: github-pages
-          url: ${{ steps.deployment.outputs.page_url }}
-      runs-on: ubuntu-latest
+  deploy-dummy:
+    steps:
+      - run: echo "Deploy stuff 🚀"
+  # deploy:
+  #     environment:
+  #         name: github-pages
+  #         url: ${{ steps.deployment.outputs.page_url }}
+  #     runs-on: ubuntu-latest
       
-      steps:
-        - uses: actions/checkout@v3
+  #     steps:
+  #       - uses: actions/checkout@v3
 
-        - run: yarn --frozen-lockfile
+  #       - run: yarn --frozen-lockfile
 
-        - name: Add elm, elm-tailwind-modules and elm-test to path
-          run: yarn bin >> $GITHUB_PATH
+  #       - name: Add elm, elm-tailwind-modules and elm-test to path
+  #         run: yarn bin >> $GITHUB_PATH
 
-        - name: Generate tailwind code
-          run: elm-tailwind-modules --dir ./gen --tailwind-config tailwind.config.js
+  #       - name: Generate tailwind code
+  #         run: elm-tailwind-modules --dir ./gen --tailwind-config tailwind.config.js
 
-        - name: Create config file
-          run: cp src/TwitchConfig.elm.example src/TwitchConfig.elm
+  #       - name: Create config file
+  #         run: cp src/TwitchConfig.elm.example src/TwitchConfig.elm
         
-        - name: Insert twitch client id
-          run: sed -i 's/twitch_client_id/${{ secrets.TWITCH_CLIENT_ID }}/g' src/TwitchConfig.elm
+  #       - name: Insert twitch client id
+  #         run: sed -i 's/twitch_client_id/${{ secrets.TWITCH_CLIENT_ID }}/g' src/TwitchConfig.elm
         
-        - name: Create dist folder
-          run: mkdir dist
+  #       - name: Create dist folder
+  #         run: mkdir dist
 
-        - name: Build app
-          run: elm make src/Main.elm --optimize --output=dist/main.js
+  #       - name: Build app
+  #         run: elm make src/Main.elm --optimize --output=dist/main.js
           
-        - name: Copy assets
-          run: cp -r assets/ dist/
+  #       - name: Copy assets
+  #         run: cp -r assets/ dist/
         
-        - run: cp index.html dist/
+  #       - run: cp index.html dist/
         
-        - run: cp favicon.ico dist/
+  #       - run: cp favicon.ico dist/
         
-        - run: ls dist
+  #       - run: ls dist
       
       # deploy stuff
       
