@@ -13,9 +13,9 @@ jobs:
     - run: echo ${GITHUB_SHA}
     - run: echo ${github.sha}
     - run: echo ${github.ref}
-  test:
-    uses: StreamingTime/StreamTime/.github/workflows/elm-test.yml@${{ github.sha }}
-  review:
-    uses: StreamingTime/StreamTime/.github/workflows/elm-review.yml@${{ github.sha }}
-  format:
-    uses: StreamingTime/StreamTime/.github/workflows/elm-format.yml@${{ github.sha }}
+  # test:
+  #   uses: StreamingTime/StreamTime/.github/workflows/elm-test.yml@${{ github.sha }}
+  # review:
+  #   uses: StreamingTime/StreamTime/.github/workflows/elm-review.yml@${{ github.sha }}
+  # format:
+  #   uses: StreamingTime/StreamTime/.github/workflows/elm-format.yml@${{ github.sha }}
