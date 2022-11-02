@@ -8,8 +8,8 @@ on:
 
 jobs:
   test:
-    uses: StreamingTime/StreamTime/.github/workflows/elm-test.yml@${{github.sha}}
+    uses: StreamingTime/StreamTime/.github/workflows/elm-test.yml@${{ github.sha }}
   review:
-    uses: StreamingTime/StreamTime/.github/workflows/elm-review.yml@${{github.sha}}
+    uses: StreamingTime/StreamTime/.github/workflows/elm-review.yml@${{ github.sha }}
   format:
-    uses: StreamingTime/StreamTime/.github/workflows/elm-format.yml@${{github.sha}}
+    uses: StreamingTime/StreamTime/.github/workflows/elm-format.yml@${{ github.sha }}
