@@ -1,0 +1,9 @@
+name: Run elm checks
+
+on:
+  push:
+  workflow_run:
+
+jobs:
+  format:
+    uses: StreamingTime/StreamTime/.github/workflows/elm-format.yml
