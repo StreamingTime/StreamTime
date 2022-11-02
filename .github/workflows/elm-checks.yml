@@ -2,6 +2,7 @@ name: Run elm checks
 
 on:
   push:
+  workflow_call:
 
 jobs:
   test:

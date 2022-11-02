@@ -2,10 +2,8 @@
 name: deploy
 
 on:
-  workflow_run:
-    workflows: [ "elm-format" ]
-    branches: [ main ]
-    types: [ completed ]
+  # TODO: restrict to main branch pushes
+  push:
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
@@ -22,6 +20,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  checks:
+    uses: StreamingTime/StreamTime/.github/workflows/elm-checks.yml@action-tests
   deploy:
       environment:
           name: github-pages
