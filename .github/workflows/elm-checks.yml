@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
         - run: echo $GITHUB_SHA
-        - run: echo ${{ GITHUB_SHA }}
+       # - run: echo ${{ GITHUB_SHA }}
         - run: echo ${GITHUB_SHA}
         - run: echo ${github.sha}
         - run: echo ${github.ref}
