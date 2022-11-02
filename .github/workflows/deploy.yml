@@ -30,7 +30,6 @@ jobs:
       
       steps:
         - uses: actions/checkout@v3
-        - uses: ahmadnassri/action-workflow-run-wait@v1
 
         - run: yarn --frozen-lockfile
 
