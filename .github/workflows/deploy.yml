@@ -20,6 +20,7 @@ jobs:
   checks:
     uses: StreamingTime/StreamTime/.github/workflows/elm-checks.yml@action-tests
   deploy-dummy:
+    runs-on: ubuntu-latest
     steps:
       - run: echo "Deploy stuff 🚀"
   # deploy:
