@@ -6,14 +6,13 @@ on:
       - main
   workflow_call:
 
-env:
-  COMMIT_SHA: ${GITHUB_SHA}
-
 jobs:
 
  test:
-    uses: StreamingTime/StreamTime/.github/workflows/elm-test.yml@main
+    uses: StreamingTime/StreamTime/.github/workflows/elm-test.yml@fix-review-action
  review:
-     uses: StreamingTime/StreamTime/.github/workflows/elm-review.yml@main
+     uses: StreamingTime/StreamTime/.github/workflows/elm-review.yml@fix-review-action
  format:
-     uses: StreamingTime/StreamTime/.github/workflows/elm-format.yml@main
+     uses: StreamingTime/StreamTime/.github/workflows/elm-format.yml@fix-review-action
+     with:
+      - gh_token: ${{ secrets.gh_token }}

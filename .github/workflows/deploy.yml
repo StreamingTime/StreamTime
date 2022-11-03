@@ -20,7 +20,7 @@ concurrency:
 
 jobs:
   checks:
-    uses: StreamingTime/StreamTime/.github/workflows/elm-checks.yml@main
+    uses: StreamingTime/StreamTime/.github/workflows/elm-checks.yml@fix-review-action
   deploy-dummy:
     runs-on: ubuntu-latest
     needs: [checks]

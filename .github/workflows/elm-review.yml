@@ -2,6 +2,9 @@ name: elm-review
 
 on:
   workflow_call:
+    secrets:
+        gh_token:
+          required: true
 
 jobs:
   elm_review:
@@ -16,4 +19,4 @@ jobs:
 
       - uses: sparksp/elm-review-action@v1.0.9
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.gh_token }}
