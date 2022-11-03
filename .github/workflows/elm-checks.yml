@@ -14,5 +14,5 @@ jobs:
      uses: StreamingTime/StreamTime/.github/workflows/elm-review.yml@fix-review-action
  format:
      uses: StreamingTime/StreamTime/.github/workflows/elm-format.yml@fix-review-action
-     with:
+     secrets:
       gh_token: ${{ github.token }}
