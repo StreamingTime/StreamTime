@@ -12,8 +12,8 @@ env:
 jobs:
 
  test:
-    uses: StreamingTime/StreamTime/.github/workflows/elm-test.yml@${{ env.COMMIT_SHA }}
+    uses: StreamingTime/StreamTime/.github/workflows/elm-test.yml@main
  review:
-     uses: StreamingTime/StreamTime/.github/workflows/elm-review.yml@${{ env.COMMIT_SHA }}
+     uses: StreamingTime/StreamTime/.github/workflows/elm-review.yml@main
  format:
-     uses: StreamingTime/StreamTime/.github/workflows/elm-format.yml@${{ env.COMMIT_SHA }}
+     uses: StreamingTime/StreamTime/.github/workflows/elm-format.yml@main
