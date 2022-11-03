@@ -15,4 +15,4 @@ jobs:
  format:
      uses: StreamingTime/StreamTime/.github/workflows/elm-format.yml@fix-review-action
      with:
-      - gh_token: ${{ secrets.gh_token }}
+      gh_token: ${{ secrets.gh_token }}
