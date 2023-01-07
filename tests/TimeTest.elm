@@ -63,12 +63,12 @@ sameDayTest =
         [ test "same day"
             (\_ ->
                 Time.Extra.sameDay Time.utc (Time.millisToPosix 0) (Time.millisToPosix 82800000)
-                    |> Expect.true "Expected to be the same day"
+                    |> Expect.equal True
             )
         , test "not same day"
             (\_ ->
                 Time.Extra.sameDay Time.utc (Time.millisToPosix 0) (Time.millisToPosix 90000000)
-                    |> Expect.false "Expected not to be the same day"
+                    |> Expect.equal False
             )
         ]
 
