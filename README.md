@@ -1,6 +1,7 @@
 # Stream Time
 
-[![CI](https://github.com/StreamingTime/StreamTime/actions/workflows/ci.yml/badge.svg)](https://github.com/StreamingTime/StreamTime/actions/workflows/ci.yml)
+[![Test](https://github.com/StreamingTime/StreamTime/actions/workflows/test.yml/badge.svg)](https://github.com/StreamingTime/StreamTime/actions/workflows/test.yml)
+[![Deploy](https://github.com/StreamingTime/StreamTime/actions/workflows/deploy.yml/badge.svg)](https://github.com/StreamingTime/StreamTime/actions/workflows/deploy.yml)
 
 ## What and why?
 
