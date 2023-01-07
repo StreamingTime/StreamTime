@@ -1,0 +1,104 @@
+name: ci
+
+# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Allow one concurrent deployment
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
+on:
+  push:
+
+jobs:
+  elm_checks:
+    runs-on: ubuntu-latest
+    steps:
+      # Setup
+      - uses: actions/checkout@v3
+
+      - run: yarn --frozen-lockfile
+
+      - name: Add elm-review, elm and elm-format to path
+        run: yarn bin >> $GITHUB_PATH
+
+      # Run elm-format
+      - uses: sparksp/elm-format-action@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Run elm-test
+      - name: Generate tailwind code
+        run: elm-tailwind-modules --dir ./gen --tailwind-config tailwind.config.js
+
+      - name: Run tests
+        run: elm-test --report junit > report.xml
+
+      - name: Test report
+        uses: mikepenz/action-junit-report@v3
+        if: always()
+        with:
+          report_paths: "report.xml"
+
+      # Run elm-review
+      - uses: sparksp/elm-review-action@v1.0.9
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  
+  deploy:
+      environment:
+          name: github-pages
+          url: ${{ steps.deployment.outputs.page_url }}
+      runs-on: ubuntu-latest
+      needs: elm_checks
+      if: github.ref == 'refs/heads/main'
+      
+      steps:
+        # Setup
+        - uses: actions/checkout@v3
+
+        - run: yarn --frozen-lockfile
+
+        - name: Add elm, elm-tailwind-modules and elm-test to path
+          run: yarn bin >> $GITHUB_PATH
+
+        - name: Generate tailwind code
+          run: elm-tailwind-modules --dir ./gen --tailwind-config tailwind.config.js
+
+        - name: Create config file
+          run: cp src/TwitchConfig.elm.example src/TwitchConfig.elm
+        
+        - name: Insert twitch client id
+          run: sed -i 's/twitch_client_id/${{ secrets.TWITCH_CLIENT_ID }}/g' src/TwitchConfig.elm
+        
+        - name: Create dist folder
+          run: mkdir dist
+
+        - name: Build app
+          run: elm make src/Main.elm --optimize --output=dist/main.js
+          
+        - name: Copy assets
+          run: cp -r assets/ dist/
+        
+        - run: cp index.html dist/
+        
+        - run: cp favicon.ico dist/
+        
+        - run: ls dist
+      
+        # Deploy
+        - name: Setup Pages
+          uses: actions/configure-pages@v2
+
+        - name: Upload artifact
+          uses: actions/upload-pages-artifact@v1
+          with:
+            path: 'dist'
+
+        - name: Deploy to GitHub Pages
+          id: deployment
+          uses: actions/deploy-pages@v1
