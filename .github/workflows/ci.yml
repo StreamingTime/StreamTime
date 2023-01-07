@@ -5,6 +5,9 @@ concurrency:
   group: "pages"
   cancel-in-progress: true
 
+permissions:
+  id-token: write
+
 on:
   push:
 
@@ -44,8 +47,6 @@ jobs:
           report_paths: "report.xml"
   
   deploy:
-      permissions:
-        id-token: write
       environment:
           name: github-pages
           url: ${{ steps.deployment.outputs.page_url }}
