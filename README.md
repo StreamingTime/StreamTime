@@ -1,10 +1,6 @@
 # Stream Time
 
-
-[![Elm review](https://github.com/StreamingTime/StreamTime/actions/workflows/elm-review.yml/badge.svg)](https://github.com/StreamingTime/StreamTime/actions/workflows/elm-review.yml)
-[![Elm test](https://github.com/StreamingTime/StreamTime/actions/workflows/elm-test.yml/badge.svg)](https://github.com/StreamingTime/StreamTime/actions/workflows/elm-test.yml)
-[![Elm format](https://github.com/StreamingTime/StreamTime/actions/workflows/elm-format.yml/badge.svg)](https://github.com/StreamingTime/StreamTime/actions/workflows/elm-format.yml)
-[![Deploy](https://github.com/StreamingTime/StreamTime/actions/workflows/deploy.yml/badge.svg)](https://github.com/StreamingTime/StreamTime/actions/workflows/deploy.yml)
+[![CI](https://github.com/StreamingTime/StreamTime/actions/workflows/ci.yml/badge.svg)](https://github.com/StreamingTime/StreamTime/actions/workflows/ci.yml)
 
 ## What and why?
 
