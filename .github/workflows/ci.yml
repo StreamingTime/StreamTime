@@ -24,7 +24,7 @@ jobs:
       - uses: sparksp/elm-review-action@v1.0.9
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          
+
       # Run elm-format
       - uses: sparksp/elm-format-action@v1
         env:
@@ -44,6 +44,8 @@ jobs:
           report_paths: "report.xml"
   
   deploy:
+      permissions:
+        id-token: write
       environment:
           name: github-pages
           url: ${{ steps.deployment.outputs.page_url }}
