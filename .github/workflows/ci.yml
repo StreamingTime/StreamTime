@@ -1,4 +1,4 @@
-name: ci
+name: CI
 
 # Allow one concurrent deployment
 concurrency:
