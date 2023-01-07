@@ -1,0 +1,40 @@
+name: Test
+
+on:
+  push:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      # Setup
+      - uses: actions/checkout@v3
+
+      - run: yarn --frozen-lockfile
+
+      - name: Add elm-review, elm and elm-format to path
+        run: yarn bin >> $GITHUB_PATH
+
+      # Run elm-review
+      - uses: sparksp/elm-review-action@v1.0.9
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Run elm-format
+      - uses: sparksp/elm-format-action@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Run elm-test
+      - name: Generate tailwind code
+        run: elm-tailwind-modules --dir ./gen --tailwind-config tailwind.config.js
+
+      - name: Run tests
+        run: elm-test --report junit > report.xml
+
+      - name: Test report
+        uses: mikepenz/action-junit-report@v3
+        if: always()
+        with:
+          report_paths: "report.xml"
+  
