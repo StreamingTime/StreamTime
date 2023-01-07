@@ -20,6 +20,11 @@ jobs:
       - name: Add elm-review, elm and elm-format to path
         run: yarn bin >> $GITHUB_PATH
 
+      # Run elm-review
+      - uses: sparksp/elm-review-action@v1.0.9
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          
       # Run elm-format
       - uses: sparksp/elm-format-action@v1
         env:
@@ -37,11 +42,6 @@ jobs:
         if: always()
         with:
           report_paths: "report.xml"
-
-      # Run elm-review
-      - uses: sparksp/elm-review-action@v1.0.9
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   
   deploy:
       environment:
