@@ -3,6 +3,7 @@ name: Test
 permissions:
   id-token: write
   contents: read
+  checks: write
 
 on:
   push:
