@@ -3,7 +3,7 @@
     "elm-live": "^4.0.2",
     "elm-review": "^2.9.1",
     "elm-tailwind-modules": "^0.4.1",
-    "elm-test": "^0.19.1-revision11",
+    "elm-test": "^0.19.1-revision12",
     "postcss": "^8.4.21",
     "tailwindcss": "^2.2.19"
   },
