@@ -1,7 +1,7 @@
 {
   "devDependencies": {
     "elm-live": "^4.0.2",
-    "elm-review": "^2.10.1",
+    "elm-review": "^2.10.2",
     "elm-tailwind-modules": "^0.4.1",
     "elm-test": "^0.19.1-revision12",
     "postcss": "^8.4.23",
