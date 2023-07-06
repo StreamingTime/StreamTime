@@ -5,7 +5,7 @@ import Html.Styled exposing (Html, div, text)
 import Html.Styled.Attributes exposing (css, style)
 import Icons
 import Tailwind.Utilities as Tw
-
+import Tailwind.Theme as Theme
 
 loadingSpinner : List Css.Style -> Html msg
 loadingSpinner styles =
@@ -15,7 +15,7 @@ loadingSpinner styles =
                 [ styles
                 , [ Tw.border_4
                   , Tw.border_solid
-                  , Tw.border_white
+                  , Tw.border_color Theme.white
                   , Tw.rounded_full
                   , Tw.animate_spin
                   ]

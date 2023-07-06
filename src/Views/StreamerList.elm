@@ -11,6 +11,7 @@ import Tailwind.Utilities as Tw
 import Twitch
 import Utils exposing (filterFollowsByLogin)
 import Views.Components exposing (errorView, loadingSpinner)
+import Tailwind.Theme as Theme
 
 
 type StreamerListMsg
@@ -48,7 +49,7 @@ streamerListView streamersData follows showCount filterString =
                 )
 
         linkButtonStyle =
-            css [ Tw.text_primary_standalone, Tw.underline ]
+            css [ Tw.text_color Theme.primary_standalone, Tw.underline ]
 
         moreAvailable =
             List.length unselectedStreamers > showCount || List.length follows > List.length streamers
@@ -143,8 +144,8 @@ streamerListView streamersData follows showCount filterString =
                         ]
                         [ Icons.close
                             [ Tw.w_6
-                            , Tw.text_dark_200
-                            , Tw.fill_current
+                            , Tw.text_color Theme.dark_200
+                            , Tw.fill_color Theme.current
                             ]
                         ]
 
@@ -274,7 +275,7 @@ streamerView streamer isSelected =
             [ Tw.block
             , Tw.px_2
             , Tw.py_1
-            , Css.hover [ Tw.bg_purple_500 ]
+            , Css.hover [ Tw.bg_color Theme.purple_500 ]
             , Tw.cursor_pointer
             ]
         , onClick
@@ -293,8 +294,8 @@ streamerView streamer isSelected =
                 ++ (if isSelected then
                         [ Icons.checkCircle
                             [ Tw.w_6
-                            , Tw.text_green_400
-                            , Tw.fill_current
+                            , Tw.text_color Theme.green_400
+                            , Tw.fill_color Theme.current
                             ]
                         ]
 

@@ -14,6 +14,7 @@ import Json.Encode as Encode
 import Loading
 import LocalStorage
 import RefreshData exposing (RefreshData(..))
+import Tailwind.Theme as Theme
 import Tailwind.Utilities as Tw
 import Task
 import Time
@@ -471,7 +472,7 @@ loginView err loginRedirectUrl =
                         , Tw.font_bold
                         ]
                     ]
-                    [ text "Stream ", span [ css [ Tw.text_purple_400 ] ] [ text "Time" ] ]
+                    [ text "Stream ", span [ css [ Tw.text_color Theme.purple_400 ] ] [ text "Time" ] ]
                 , p
                     [ css
                         [ Tw.mb_8
@@ -617,8 +618,8 @@ appView appData =
                                 ]
                                 [ Icons.info
                                     [ Tw.h_5
-                                    , Tw.fill_current
-                                    , Tw.text_blue_300
+                                    , Tw.fill_color Theme.current
+                                    , Tw.text_color Theme.blue_300
                                     ]
                                 , p [] [ text "Select channels from the left to view schedules and videos." ]
                                 ]
@@ -696,11 +697,11 @@ headerView user =
                 [ css
                     [ Tw.text_xl
                     , Tw.font_semibold
-                    , Tw.text_white
+                    , Tw.text_color Theme.white
                     ]
                 ]
                 [ text "Stream "
-                , span [ css [ Tw.text_purple_400 ] ] [ text "Time" ]
+                , span [ css [ Tw.text_color Theme.purple_400 ] ] [ text "Time" ]
                 ]
             , userView user
             ]
@@ -731,7 +732,7 @@ userView user =
                 , Tw.p_2
                 , Tw.shadow
                 , Tw.menu
-                , Tw.bg_dark_600
+                , Tw.bg_color Theme.dark_600
                 , Tw.rounded_xl
                 , Tw.w_36
                 ]
@@ -742,7 +743,7 @@ userView user =
             , li
                 [ css
                     [ Tw.border_t_2
-                    , Tw.border_dark_700
+                    , Tw.border_color Theme.dark_700
                     , Tw.mt_2
                     ]
                 ]
@@ -751,14 +752,14 @@ userView user =
                         [ Tw.btn
                         , Tw.btn_ghost
                         , Tw.border_0
-                        , Css.hover [ Tw.bg_transparent ]
+                        , Css.hover [ Tw.bg_color Theme.transparent ]
                         ]
                     , onClick Logout
                     ]
                     [ p
                         [ css
                             [ Tw.font_bold
-                            , Tw.text_red_500
+                            , Tw.text_color Theme.red_500
                             ]
                         ]
                         [ text "Logout" ]

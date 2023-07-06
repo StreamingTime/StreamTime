@@ -8,6 +8,7 @@ import List.Extra
 import Tailwind.Utilities as Tw
 import Time
 import Twitch exposing (VideoType(..))
+import Tailwind.Theme as Theme
 
 
 dayString : Time.Posix -> String
@@ -74,7 +75,7 @@ videoView { title, thumbnailURL, videoType, duration, userName, url } =
                     [ bottomRight
                     , css
                         [ Tw.rounded
-                        , Tw.bg_black
+                        , Tw.bg_color Theme.black
                         , Tw.text_sm
                         ]
                     ]
@@ -110,7 +111,7 @@ videoView { title, thumbnailURL, videoType, duration, userName, url } =
             [ Tw.p_5
             , Tw.rounded
             , Tw.inline_block
-            , Tw.bg_dark_800
+            , Tw.bg_color Theme.dark_800
             ]
         ]
         [ a [ href url ] [ thumbnailView ]

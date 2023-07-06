@@ -12,6 +12,7 @@ import Time.Extra
 import Twitch
 import Utils exposing (findUserByID)
 import Views.ScheduleSegment exposing (scheduleSegmentView)
+import Tailwind.Theme as Theme
 
 
 calendarView : Time.Zone -> Time.Posix -> RefreshData Error (List Twitch.User) -> RefreshData Error (List Twitch.Schedule) -> List Twitch.User -> Html msg
@@ -19,7 +20,7 @@ calendarView timezone time streamers schedules selected =
     div
         [ css
             [ Tw.rounded_md
-            , Tw.bg_dark_500
+            , Tw.bg_color Theme.dark_500
             , Tw.py_4
             , Tw.px_2
             , Tw.overflow_x_auto
@@ -198,7 +199,7 @@ scheduleTimeSegment timeZone row segment =
     div
         [ css
             [ Tw.rounded_sm
-            , Tw.bg_purple_700
+            , Tw.bg_color Theme.purple_700
             ]
         , style "grid-row-start" (String.fromInt row)
         , style "grid-column" (String.concat [ String.fromInt start, " / ", String.fromInt end ])

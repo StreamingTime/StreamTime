@@ -77,6 +77,7 @@ config =
         , ( "Json.Encode", "Encode" )
         , ( "Html.Styled", "Html" )
         , ( "Tailwind.Utilities", "Tw" )
+        , ( "Tailwind.Theme", "Theme" )
         ]
         |> NoInconsistentAliases.noMissingAliases
         |> NoInconsistentAliases.rule

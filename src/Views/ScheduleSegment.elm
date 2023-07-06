@@ -7,6 +7,7 @@ import Icons
 import Tailwind.Utilities as Tw
 import Time
 import Twitch
+import Tailwind.Theme as Theme
 
 
 scheduleSegmentView : Time.Zone -> Twitch.User -> Twitch.Segment -> Html msg
@@ -142,7 +143,7 @@ scheduleSegmentView zone { displayName, profileImageUrl } { title, startTime, en
     in
     a [ href ("https://twitch.tv/" ++ displayName) ]
         [ div
-            [ css [ Tw.rounded, Tw.bg_dark_800, Tw.flex, Tw.justify_between ]
+            [ css [ Tw.rounded, Tw.bg_color Theme.dark_800, Tw.flex, Tw.justify_between ]
             ]
             [ avatar
             , div [ css [ Tw.flex, Tw.justify_center, Tw.flex_col, Tw.flex_grow ] ]
