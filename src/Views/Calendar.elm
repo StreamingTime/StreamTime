@@ -6,13 +6,13 @@ import Html.Styled exposing (Html, div, p, text)
 import Html.Styled.Attributes exposing (css, style)
 import List.Extra
 import RefreshData exposing (RefreshData)
+import Tailwind.Theme as Theme
 import Tailwind.Utilities as Tw
 import Time
 import Time.Extra
 import Twitch
 import Utils exposing (findUserByID)
 import Views.ScheduleSegment exposing (scheduleSegmentView)
-import Tailwind.Theme as Theme
 
 
 calendarView : Time.Zone -> Time.Posix -> RefreshData Error (List Twitch.User) -> RefreshData Error (List Twitch.Schedule) -> List Twitch.User -> Html msg

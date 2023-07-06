@@ -5,10 +5,10 @@ import FormatTime
 import Html.Styled exposing (Html, a, div, img, p, text)
 import Html.Styled.Attributes exposing (css, height, href, src, width)
 import List.Extra
+import Tailwind.Theme as Theme
 import Tailwind.Utilities as Tw
 import Time
 import Twitch exposing (VideoType(..))
-import Tailwind.Theme as Theme
 
 
 dayString : Time.Posix -> String

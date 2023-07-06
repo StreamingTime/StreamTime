@@ -7,11 +7,11 @@ import Html.Styled.Attributes exposing (css, href, placeholder, src, type_, valu
 import Html.Styled.Events exposing (onClick, onInput)
 import Icons
 import RefreshData exposing (RefreshData)
+import Tailwind.Theme as Theme
 import Tailwind.Utilities as Tw
 import Twitch
 import Utils exposing (filterFollowsByLogin)
 import Views.Components exposing (errorView, loadingSpinner)
-import Tailwind.Theme as Theme
 
 
 type StreamerListMsg

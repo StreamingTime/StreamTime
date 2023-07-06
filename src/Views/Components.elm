@@ -4,8 +4,9 @@ import Css
 import Html.Styled exposing (Html, div, text)
 import Html.Styled.Attributes exposing (css, style)
 import Icons
-import Tailwind.Utilities as Tw
 import Tailwind.Theme as Theme
+import Tailwind.Utilities as Tw
+
 
 loadingSpinner : List Css.Style -> Html msg
 loadingSpinner styles =

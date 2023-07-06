@@ -4,10 +4,10 @@ import FormatTime
 import Html.Styled exposing (Html, a, div, img, p, span, text)
 import Html.Styled.Attributes exposing (alt, attribute, class, css, height, href, src, width)
 import Icons
+import Tailwind.Theme as Theme
 import Tailwind.Utilities as Tw
 import Time
 import Twitch
-import Tailwind.Theme as Theme
 
 
 scheduleSegmentView : Time.Zone -> Twitch.User -> Twitch.Segment -> Html msg
