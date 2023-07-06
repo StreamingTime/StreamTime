@@ -1,4 +1,3 @@
-
 name: Test
 
 permissions:
@@ -21,13 +20,8 @@ jobs:
       - name: Add elm-review, elm and elm-format to path
         run: yarn bin >> $GITHUB_PATH
 
-      - name: Generate tailwind code
-        run: elm-tailwind-modules --dir ./gen --tailwind-config tailwind.config.js
-
       # Run elm-review
       - uses: sparksp/elm-review-action@v1.0.9
-        with:
-          elm_review: elm_review --ignore-dirs gen
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -37,6 +31,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       # Run elm-test
+      - name: Generate tailwind code
+        run: elm-tailwind-modules --dir ./gen --tailwind-config tailwind.config.js
 
       - name: Run tests
         run: elm-test --report junit > report.xml
