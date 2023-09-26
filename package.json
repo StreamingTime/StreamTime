@@ -4,7 +4,7 @@
     "elm-review": "^2.10.2",
     "elm-tailwind-modules": "^0.4.1",
     "elm-test": "^0.19.1-revision12",
-    "postcss": "^8.4.29",
+    "postcss": "^8.4.30",
     "tailwindcss": "^2.2.19"
   },
   "dependencies": {
