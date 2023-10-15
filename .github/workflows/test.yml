@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       # Setup
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - run: yarn --frozen-lockfile
 
@@ -38,7 +38,7 @@ jobs:
         run: elm-test --report junit > report.xml
 
       - name: Test report
-        uses: mikepenz/action-junit-report@v3
+        uses: mikepenz/action-junit-report@v4
         if: always()
         with:
           report_paths: "report.xml"
