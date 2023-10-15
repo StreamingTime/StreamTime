@@ -14,7 +14,8 @@
             "elm/parser": "1.1.0",
             "elm/time": "1.0.0",
             "elm/url": "1.0.0",
-            "rtfeldman/elm-css": "18.0.0"
+            "rtfeldman/elm-css": "18.0.0",
+            "matheus23/elm-tailwind-modules-base": "1.0.0"
         },
         "indirect": {
             "elm/bytes": "1.0.8",

@@ -6,6 +6,7 @@ import Html.Styled exposing (Html, div, p, text)
 import Html.Styled.Attributes exposing (css, style)
 import List.Extra
 import RefreshData exposing (RefreshData)
+import Tailwind.Theme as Theme
 import Tailwind.Utilities as Tw
 import Time
 import Time.Extra
@@ -19,7 +20,7 @@ calendarView timezone time streamers schedules selected =
     div
         [ css
             [ Tw.rounded_md
-            , Tw.bg_dark_500
+            , Tw.bg_color Theme.dark_500
             , Tw.py_4
             , Tw.px_2
             , Tw.overflow_x_auto
@@ -198,7 +199,7 @@ scheduleTimeSegment timeZone row segment =
     div
         [ css
             [ Tw.rounded_sm
-            , Tw.bg_purple_700
+            , Tw.bg_color Theme.purple_700
             ]
         , style "grid-row-start" (String.fromInt row)
         , style "grid-column" (String.concat [ String.fromInt start, " / ", String.fromInt end ])

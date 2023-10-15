@@ -4,6 +4,7 @@ import FormatTime
 import Html.Styled exposing (Html, a, div, img, p, span, text)
 import Html.Styled.Attributes exposing (alt, attribute, class, css, height, href, src, width)
 import Icons
+import Tailwind.Theme as Theme
 import Tailwind.Utilities as Tw
 import Time
 import Twitch
@@ -142,7 +143,7 @@ scheduleSegmentView zone { displayName, profileImageUrl } { title, startTime, en
     in
     a [ href ("https://twitch.tv/" ++ displayName) ]
         [ div
-            [ css [ Tw.rounded, Tw.bg_dark_800, Tw.flex, Tw.justify_between ]
+            [ css [ Tw.rounded, Tw.bg_color Theme.dark_800, Tw.flex, Tw.justify_between ]
             ]
             [ avatar
             , div [ css [ Tw.flex, Tw.justify_center, Tw.flex_col, Tw.flex_grow ] ]
