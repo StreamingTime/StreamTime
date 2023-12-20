@@ -5,7 +5,7 @@
     "elm-tailwind-modules": "^0.5.0",
     "elm-test": "^0.19.1-revision12",
     "postcss": "^8.4.31",
-    "tailwindcss": "^3.3.5"
+    "tailwindcss": "^3.4.0"
   },
   "dependencies": {
     "daisyui": "^1.25.4",
