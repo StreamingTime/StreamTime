@@ -4,17 +4,29 @@ updates:
     directory: "/"
     schedule:
       interval: "daily"
+    reviewers:
+      - "Flo0807"
+      - "tufteddeer"
   - package-ecosystem: "elm"
     directory: "/review"
     schedule:
       interval: "daily"
+    reviewers:
+      - "Flo0807"
+      - "tufteddeer"
   - package-ecosystem: "npm"
     directory: "/"
     schedule:
       interval: "daily"
     ignore:
       - dependency-name: "daisyui"
+    reviewers:
+      - "Flo0807"
+      - "tufteddeer"
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "daily"
+    reviewers:
+      - "Flo0807"
+      - "tufteddeer"
