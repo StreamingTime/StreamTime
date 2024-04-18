@@ -577,9 +577,9 @@ loginFlowUrl (ClientID clientID) redirectUri =
     Url.Builder.crossOrigin "https://id.twitch.tv"
         [ "oauth2", "authorize" ]
         [ Url.Builder.string "client_id" clientID
+        , Url.Builder.string "scope" "user:read:follows"
         , Url.Builder.string "redirect_uri" redirectUri
         , Url.Builder.string "response_type" "token"
-        , Url.Builder.string "scope" "user:read:follows"
         ]
 
 
