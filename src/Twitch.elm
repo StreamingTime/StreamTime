@@ -542,7 +542,6 @@ allPages fetchFromCursor =
     fetchFromCursor Nothing
         |> Task.andThen (pagesWhile fetchFromCursor (\_ -> True) [])
         |> Task.map List.concat
-        |> Task.map identity
 
 
 {-| Recursively fetch a pages using fetchFrom with the new cursor value and collect results into the accumulator
