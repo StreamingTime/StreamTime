@@ -26,8 +26,7 @@ videoListView videos =
             -- Time.Posix is not comparable, so we build the date heading here and use it as key to group the videos
             |> List.Extra.groupBy (\video -> dayString video.createdAt)
             |> Dict.map dayView
-            |> Dict.toList
-            |> List.map Tuple.second
+            |> Dict.values
         )
 
 
