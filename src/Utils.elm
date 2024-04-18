@@ -48,7 +48,7 @@ missingProfileLogins follows streamers =
 streamersWithSelection : List Twitch.User -> List Twitch.User -> List ( Twitch.User, Bool )
 streamersWithSelection selected users =
     users
-        |> List.map (\u -> ( u, List.any ((==) u) selected ))
+        |> List.map (\u -> ( u, List.member u selected ))
 
 
 findUserByID : Twitch.UserID -> List Twitch.User -> Maybe Twitch.User
