@@ -223,7 +223,7 @@ getStreamingSchedule (UserID userID) startTime cursor (ClientID clientID) (Token
                     Task.mapError HttpError (Http.task { request | url = requestUrlWithoutParams (params ++ [ Url.Builder.string "start_time" t ]) })
 
                 Err _ ->
-                    Task.mapError StringError (Task.fail "failed to format start time")
+                    Task.fail (StringError "failed to format start time")
 
 
 
