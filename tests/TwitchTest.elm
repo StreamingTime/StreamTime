@@ -48,7 +48,7 @@ accessTokenFromUrlTest =
             (\_ ->
                 let
                     urlString =
-                        Url.fromString "https://localhost:3000/#access_token=73d0f8mkabpbmjp921asv2jaidwxn&scope=channel%3Amanage%3Apolls+channel%3Aread%3Apolls&state=c3ab8aa609ea11e793ae92361f002671&token_type=bearer"
+                        Url.fromString "https://localhost:3000/#access_token=73d0f8mkabpbmjp921asv2jaidwxn&scope=channel%3Amanage%3Apolls+channel%3Aread%3Apolls+user%3Aread%3Afollows&state=c3ab8aa609ea11e793ae92361f002671&token_type=bearer"
                 in
                 case urlString of
                     Just u ->
@@ -62,7 +62,7 @@ accessTokenFromUrlTest =
             (\_ ->
                 let
                     urlString =
-                        Url.fromString "https://localhost:3000/#scope=channel%3Amanage%3Apolls+channel%3Aread%3Apolls&state=c3ab8aa609ea11e793ae92361f002671&token_type=bearer"
+                        Url.fromString "https://localhost:3000/#scope=channel%3Amanage%3Apolls+channel%3Aread%3Apolls+user%3Aread%3Afollows&state=c3ab8aa609ea11e793ae92361f002671&token_type=bearer"
                 in
                 case urlString of
                     Just u ->
