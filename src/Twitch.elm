@@ -290,7 +290,7 @@ getUserFollowsTask : UserID -> Maybe String -> ClientID -> Token -> Task.Task Ht
 getUserFollowsTask (UserID userID) cursor =
     let
         params =
-            [ Url.Builder.string "from_id" userID
+            [ Url.Builder.string "user_id" userID
 
             -- fetch up to 100 users per page (yes, this is the "first" parameter)
             , Url.Builder.int "first" 100
@@ -298,7 +298,7 @@ getUserFollowsTask (UserID userID) cursor =
 
         u =
             apiUrlBuilder
-                [ "users", "follows" ]
+                [ "channels", "followed" ]
                 (case cursor of
                     Just c ->
                         -- pagination
