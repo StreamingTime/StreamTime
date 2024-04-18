@@ -579,6 +579,7 @@ loginFlowUrl (ClientID clientID) redirectUri =
         [ Url.Builder.string "client_id" clientID
         , Url.Builder.string "redirect_uri" redirectUri
         , Url.Builder.string "response_type" "token"
+        , Url.Builder.string "scope" "user:read:follows"
         ]
 
 
