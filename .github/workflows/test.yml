@@ -21,7 +21,7 @@ jobs:
         run: yarn bin >> $GITHUB_PATH
 
       # Run elm-review
-      - uses: sparksp/elm-review-action@v1.0.9
+      - uses: sparksp/elm-review-action@v1.1.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
