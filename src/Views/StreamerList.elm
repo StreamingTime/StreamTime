@@ -169,7 +169,7 @@ streamerListView streamersData follows showCount filterString =
                                             let
                                                 streamerProfile =
                                                     streamers
-                                                        |> List.filter (\( user, _ ) -> user.id == follow.toID)
+                                                        |> List.filter (\( user, _ ) -> user.id == follow.broadcasterId)
                                                         |> List.head
                                             in
                                             case streamerProfile of

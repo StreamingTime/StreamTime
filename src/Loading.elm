@@ -114,7 +114,7 @@ getFirstStreamerProfiles streamerListPageSteps { follows, signedInUser, time, zo
         streamerIDs =
             follows
                 |> List.take streamerListPageSteps
-                |> List.map .toID
+                |> List.map .broadcasterId
     in
     Twitch.getUsersTask streamerIDs TwitchConfig.clientId signedInUser.token
         |> Task.map

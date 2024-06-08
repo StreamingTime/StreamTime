@@ -20,7 +20,7 @@ filterFollowsByLogin : String -> List Twitch.FollowRelation -> List Twitch.Follo
 filterFollowsByLogin name =
     List.filter
         (\f ->
-            f.toLogin
+            f.broadcasterLogin
                 |> String.toLower
                 |> String.contains
                     (String.toLower name)
@@ -35,11 +35,11 @@ missingProfileLogins follows streamers =
     follows
         |> List.filterMap
             (\follow ->
-                if List.any (\streamer -> follow.toLogin == streamer.loginName) streamers then
+                if List.any (\streamer -> follow.broadcasterLogin == streamer.loginName) streamers then
                     Nothing
 
                 else
-                    Just follow.toID
+                    Just follow.broadcasterId
             )
 
 

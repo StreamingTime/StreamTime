@@ -27,12 +27,9 @@ filterFollowsByLoginTest =
         follows =
             List.map
                 (\login ->
-                    { fromID = Twitch.UserID ""
-                    , fromLogin = ""
-                    , fromName = ""
-                    , toID = Twitch.UserID ""
-                    , toName = ""
-                    , toLogin = login
+                    { broadcasterId = Twitch.UserID ""
+                    , broadcasterLogin = login
+                    , broadcasterName = ""
                     , followedAt = ""
                     }
                 )
@@ -43,21 +40,21 @@ filterFollowsByLoginTest =
             (\_ ->
                 follows
                     |> filterFollowsByLogin "foo"
-                    |> List.map .toLogin
+                    |> List.map .broadcasterLogin
                     |> Expect.equal [ "foo" ]
             )
         , test "search existing item in different case"
             (\_ ->
                 follows
                     |> filterFollowsByLogin "FOO"
-                    |> List.map .toLogin
+                    |> List.map .broadcasterLogin
                     |> Expect.equal [ "foo" ]
             )
         , test "search non existing item"
             (\_ ->
                 follows
                     |> filterFollowsByLogin "ABCDEF"
-                    |> List.map .toLogin
+                    |> List.map .broadcasterLogin
                     |> Expect.equal []
             )
         ]
@@ -71,12 +68,9 @@ missingProfileLoginsTest =
                 follows =
                     List.map
                         (\( id, login ) ->
-                            { fromID = Twitch.UserID ""
-                            , fromLogin = ""
-                            , fromName = ""
-                            , toID = id
-                            , toName = ""
-                            , toLogin = login
+                            { broadcasterId = id
+                            , broadcasterLogin = login
+                            , broadcasterName = ""
                             , followedAt = ""
                             }
                         )

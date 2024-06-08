@@ -123,18 +123,20 @@ decodeFollowRelationTest =
         (\_ ->
             Expect.equal
                 (Result.Ok
-                    { fromID = Twitch.UserID "171003792"
-                    , fromLogin = "iiisutha067iii"
-                    , fromName = "IIIsutha067III"
-                    , toID = Twitch.UserID "23161357"
-                    , followedAt = "2017-08-22T22:55:24Z"
-                    , toName = "LIRIK"
-                    , toLogin = "lirik"
+                    { broadcasterId = Twitch.UserID "11111"
+                    , broadcasterLogin = "userloginname"
+                    , broadcasterName = "UserDisplayName"
+                    , followedAt = "2022-05-24T22:22:08Z"
                     }
                 )
                 (Decode.decodeString
                     Twitch.decodeFollowRelation
-                    "{\"from_id\": \"171003792\",\"from_login\": \"iiisutha067iii\",\"from_name\": \"IIIsutha067III\",\"to_id\": \"23161357\",\"to_name\": \"LIRIK\",\"followed_at\": \"2017-08-22T22:55:24Z\", \"to_login\": \"lirik\"}"
+                    """{
+                          "broadcaster_id": "11111",
+                          "broadcaster_login": "userloginname",
+                          "broadcaster_name": "UserDisplayName",
+                          "followed_at": "2022-05-24T22:22:08Z"
+                        }"""
                 )
         )
 

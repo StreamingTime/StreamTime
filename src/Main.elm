@@ -283,7 +283,7 @@ update msg model =
                                 appData.follows
                                     |> List.drop appData.sidebarStreamerCount
                                     |> List.take streamerListPageSteps
-                                    |> List.map .toID
+                                    |> List.map .broadcasterId
                         in
                         ( LoggedIn { appData | streamers = RefreshData.map RefreshData.LoadingMore appData.streamers } urlInfo
                         , fetchStreamerProfilesForSidebar nextIDs appData.signedInUser.token

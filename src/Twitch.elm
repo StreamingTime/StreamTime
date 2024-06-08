@@ -259,29 +259,23 @@ handleJsonResponse decoder response =
 
 
 type alias FollowRelation =
-    { fromID : UserID
-    , fromLogin : String
-    , fromName : String
-    , toID : UserID
-    , toName : String
-    , toLogin : String
+    { broadcasterId : UserID
+    , broadcasterLogin : String
+    , broadcasterName : String
     , followedAt : String
     }
 
 
 decodeFollowRelation : Decode.Decoder FollowRelation
 decodeFollowRelation =
-    Decode.map7 FollowRelation
-        (Decode.field "from_id" decodeUserID)
-        (Decode.field "from_login" Decode.string)
-        (Decode.field "from_name" Decode.string)
-        (Decode.field "to_id" decodeUserID)
-        (Decode.field "to_name" Decode.string)
-        (Decode.field "to_login" Decode.string)
+    Decode.map4 FollowRelation
+        (Decode.field "broadcaster_id" decodeUserID)
+        (Decode.field "broadcaster_login" Decode.string)
+        (Decode.field "broadcaster_name" Decode.string)
         (Decode.field "followed_at" Decode.string)
 
 
-{-| <https://dev.twitch.tv/docs/api/reference#get-users-follows>
+{-| <https://dev.twitch.tv/docs/api/reference/#get-followed-channels>
 
 Takes an optional cursor to fetch paginated results
 
