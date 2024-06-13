@@ -374,13 +374,17 @@ isLeapyearTest =
                 , 1996
                 , 2096
                 , 2196
+                , 2096
+                , 2196
+                , 4000
+                , 8000
                 ]
                     |> List.all RFC3339.isLeapyear
                     |> Expect.equal True
             )
         , test "with normal years"
             (\_ ->
-                [ 2021, 2022, 2015, 1905, 2195 ]
+                [ 2000, 2021, 2022, 2015, 1905, 2195 ]
                     |> List.all RFC3339.isLeapyear
                     |> Expect.equal False
             )
