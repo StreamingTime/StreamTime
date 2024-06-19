@@ -3,21 +3,21 @@ updates:
   - package-ecosystem: "elm"
     directory: "/"
     schedule:
-      interval: "daily"
+      interval: "weekly"
     reviewers:
       - "Flo0807"
       - "tufteddeer"
   - package-ecosystem: "elm"
     directory: "/review"
     schedule:
-      interval: "daily"
+      interval: "weekly"
     reviewers:
       - "Flo0807"
       - "tufteddeer"
   - package-ecosystem: "npm"
     directory: "/"
     schedule:
-      interval: "daily"
+      interval: "weekly"
     ignore:
       - dependency-name: "daisyui"
     reviewers:
@@ -26,7 +26,7 @@ updates:
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      interval: "daily"
+      interval: "weekly"
     reviewers:
       - "Flo0807"
       - "tufteddeer"
