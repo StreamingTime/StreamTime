@@ -1,4 +1,4 @@
-module RFC3339Test exposing (dateParserTest, dateTimeParserTest, decodeTimestampTest, offsetDirectionParserTest, offsetParserTest, paddedIntParserTest, symbolIgnoreCaseTest, timeParserTest, toPosixTest, zOffsetParserTest)
+module RFC3339Test exposing (dateParserTest, dateTimeParserTest, decodeTimestampTest, isLeapyearTest, offsetDirectionParserTest, offsetParserTest, paddedIntParserTest, symbolIgnoreCaseTest, timeParserTest, toPosixTest, zOffsetParserTest)
 
 import Expect
 import Json.Decode as Decode
@@ -345,6 +345,50 @@ decodeTimestampTest =
         )
 
 
+isLeapyearTest : Test
+isLeapyearTest =
+    describe "correctly determines if a year is a isLeapyearTest"
+        [ test "with leapyears"
+            (\_ ->
+                [ 1904
+                , 1944
+                , 1948
+                , 1952
+                , 1972
+                , 1976
+                , 1996
+                , 2040
+                , 2044
+                , 2048
+                , 2052
+                , 2068
+                , 2072
+                , 2076
+                , 2092
+                , 2096
+                , 2140
+                , 2144
+                , 2148
+                , 2168
+                , 2172
+                , 2176
+                , 2192
+                , 2196
+                , 4000
+                , 8000
+                ]
+                    |> List.all RFC3339.isLeapyear
+                    |> Expect.equal True
+            )
+        , test "with normal years"
+            (\_ ->
+                [ 2000, 2021, 2022, 2015, 1905, 2195 ]
+                    |> List.all RFC3339.isLeapyear
+                    |> Expect.equal False
+            )
+        ]
+
+
 toPosixTest : Test
 toPosixTest =
     describe "convert DateTime to posix"
@@ -381,6 +425,40 @@ toPosixTest =
                     , offset = zulu
                     }
                     |> Expect.equal (Just (Time.millisToPosix 2000000000000))
+            )
+        , test "post february leapyear"
+            (\_ ->
+                RFC3339.toPosix
+                    { date =
+                        { day = 17
+                        , month = 6
+                        , year = 2024
+                        }
+                    , time =
+                        { hours = 15
+                        , minutes = 0
+                        , seconds = 0
+                        }
+                    , offset = zulu
+                    }
+                    |> Expect.equal (Just (Time.millisToPosix 1718636400000))
+            )
+        , test "pre february leapyear"
+            (\_ ->
+                RFC3339.toPosix
+                    { date =
+                        { day = 11
+                        , month = 1
+                        , year = 2024
+                        }
+                    , time =
+                        { hours = 15
+                        , minutes = 37
+                        , seconds = 19
+                        }
+                    , offset = zulu
+                    }
+                    |> Expect.equal (Just (Time.millisToPosix 1704987439000))
             )
         ]
 

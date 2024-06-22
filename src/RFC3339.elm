@@ -1,4 +1,4 @@
-module RFC3339 exposing (Date, DateTime, Offset, OffsetDirection(..), Time, dateParser, dateTimeParser, decode, decodeTimestamp, offsetDirectionParser, offsetParser, paddedIntParser, symbolIgnoreCase, timeParser, toPosix, zOffsetParser, zulu)
+module RFC3339 exposing (Date, DateTime, Offset, OffsetDirection(..), Time, dateParser, dateTimeParser, decode, decodeTimestamp, isLeapyear, offsetDirectionParser, offsetParser, paddedIntParser, symbolIgnoreCase, timeParser, toPosix, zOffsetParser, zulu)
 
 {-| This module defines types parsers for a subset of RFC3339
 , allows conversion to Time.Posix and implements a Decoder to directly convert RFC3339 Json strings to Time.Posix.
@@ -84,6 +84,11 @@ type alias DateTime =
     }
 
 
+isLeapyear : Int -> Bool
+isLeapyear year =
+    remainderBy 4 year == 0 && remainderBy 100 year /= 0 || (remainderBy 400 year == 0)
+
+
 {-| Convert DateTime to Time.Posix. Ported from the C example at <https://de.wikipedia.org/wiki/Unixzeit>
 -}
 toPosix : DateTime -> Maybe Time.Posix
@@ -103,7 +108,7 @@ toPosix { date, time } =
                     (date.year - 1970) * 365 + leapyears + daysSinceYearBegin + date.day - 1
 
                 daysSince1970 =
-                    if (date.month > 2) && (remainderBy date.year 4 == 0 && (remainderBy date.year 100 /= 0 || (remainderBy date.year 400 == 0))) then
+                    if (date.month > 2) && isLeapyear date.year then
                         daysSince1970Base + 1
 
                     else
